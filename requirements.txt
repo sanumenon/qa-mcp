@@ -1,0 +1,7 @@
+mcp
+pydantic
+pydantic-settings
+PyYAML
+python-dotenv
+boto3
+pytest

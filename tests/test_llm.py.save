@@ -1,0 +1,39 @@
+import pytest
+
+from qa_mcp.core.llm import MockLLM, create_llm
+
+
+def test_mock_llm_generates_response():
+    llm = MockLLM(response="hello")
+
+    assert llm.generate("test prompt") == "hello"
+
+
+def test_mock_llm_rejects_empty_prompt():
+    llm = MockLLM()
+
+    with pytest.raises(ValueError):
+        llm.generate("")
+
+
+def test_create_llm_uses_mock_provider():
+    config = {
+        "llm": {
+            "provider": "mock"
+        }
+    }
+
+    llm = create_llm(config)
+
+    assert isinstance(llm, MockLLM)
+
+
+def test_create_llm_rejects_unknown_provider():
+    config = {
+        "llm": {
+            "provider": "unknown"
+        }
+    }
+
+    with pytest.raises(ValueError):
+        create_llm(config)
