@@ -98,3 +98,28 @@ class QAProjectExport(BaseModel):
     suite_versions: list[
         QASuiteVersion
     ] = Field(default_factory=list)
+
+
+class JiraIssue(BaseModel):
+    """Normalized Jira issue representation."""
+
+    key: str
+    summary: str
+    description: str = ""
+    issue_type: str = ""
+    status: str = ""
+    priority: str = ""
+    project_key: str = ""
+    project_name: str = ""
+    assignee: str = ""
+    reporter: str = ""
+    url: str = ""
+
+class JiraSearchResult(BaseModel):
+    """Normalized Jira search result."""
+
+    issues: list[JiraIssue] = Field(
+        default_factory=list
+    )
+
+    total: int = 0

@@ -3,6 +3,10 @@ from mcp.server.fastmcp import FastMCP
 from qa_mcp.core.config import load_config
 from qa_mcp.core.llm import create_llm
 
+from qa_mcp.core.jira.factory import (
+    create_jira_service,
+)
+
 from qa_mcp.models.schemas import (
     RequirementRequest,
     TestCaseGenerationRequest,
@@ -52,10 +56,6 @@ from qa_mcp.core.import_export.service import (
     QAImportExportService,
 )
 
-from qa_mcp.infrastructure.versioning.sqlite_version_repository import (
-    SQLiteRequirementVersionRepository,
-    SQLiteSuiteVersionRepository,
-)
 
 # ---------------------------------------------------------
 # Configuration
@@ -91,6 +91,10 @@ qa_suite_workflow = QASuiteWorkflow(
     llm
 )
 
+jira_service = create_jira_service(
+    config
+)
+
 project_repository = SQLiteProjectRepository()
 
 project_context = ProjectContext(
@@ -113,10 +117,6 @@ import_export_service = QAImportExportService(
     suite_repository=(
         suite_version_repository
     ),
-)
-
-requirement_version_repository = (
-    SQLiteRequirementVersionRepository()
 )
 
 suite_version_repository = (
@@ -317,8 +317,50 @@ def generate_qa_suite(
 
 
 # ---------------------------------------------------------
+# Jira
+# ---------------------------------------------------------
+
+@mcp.tool()
+def get_jira_issue(
+    issue_key: str,
+) -> dict:
+    """Retrieve a Jira issue by key."""
+
+    if jira_service is None:
+        raise ValueError(
+            "Jira connector is not configured"
+        )
+
+    result = jira_service.get_issue(
+        issue_key
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def search_jira_issues(
+    jql: str,
+    max_results: int = 50,
+) -> dict:
+    """Search Jira issues using JQL."""
+
+    if jira_service is None:
+        raise ValueError(
+            "Jira connector is not configured"
+        )
+
+    result = jira_service.search_issues(
+        jql=jql,
+        max_results=max_results,
+    )
+
+    return result.model_dump()
+
+# ---------------------------------------------------------
 # Application Entry Point
 # ---------------------------------------------------------
+
 
 # ---------------------------------------------------------
 # QA Project Context

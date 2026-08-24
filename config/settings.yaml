@@ -11,3 +11,8 @@ features:
   testcase_reviewer: true
   jira_connector: false
   automation_generator: false
+
+jira:
+  url: ""
+  email: ""
+  api_token: ""

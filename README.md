@@ -26,6 +26,7 @@ An extensible Model Context Protocol (MCP) server designed to become a unified A
 | 2 | SQLite Persistence | COMPLETED |
 | 3 | QA Suite Versioning | COMPLETED |
 | 4 | Import / Export | COMPLETED |
+| 5 | Jira Connector | COMPLETED |
 
 ---
 
@@ -465,7 +466,256 @@ The remaining warning is the known external `pydantic_settings` warning concerni
 
 ---
 
-# 8. Project Structure
+
+# 8. Phase 2 Step 5 — Jira Connector
+
+**Status: COMPLETED**
+
+The QA MCP server now has a Jira integration layer designed to remain usable without Jira access.
+
+The connector is intentionally read-only at this stage.
+
+## Jira architecture
+
+```text
+MCP Jira Tools
+      |
+      v
+ JiraService
+      |
+      v
+ JiraClient
+   /      \
+  v        v
+Mock      Cloud
+Client    Client
+            |
+            v
+       Jira Cloud REST API
+```
+
+The architecture keeps Jira-specific transport and authentication outside the core QA business logic.
+
+## Jira configuration
+
+Jira is disabled by default:
+
+```yaml
+features:
+  jira_connector: false
+```
+
+The default Jira configuration in:
+
+```text
+config/settings.yaml
+```
+
+is:
+
+```yaml
+jira:
+  url: ""
+  email: ""
+  api_token: ""
+```
+
+Environment variables override these values.
+
+### Required `.env` variables
+
+Create a `.env` file in the **repository root**:
+
+```text
+qa-mcp/
+├── .env
+├── config/
+├── src/
+├── tests/
+└── README.md
+```
+
+Use the following template:
+
+```dotenv
+# LLM
+LLM_PROVIDER=mock
+
+# Jira Cloud
+JIRA_URL=https://your-company.atlassian.net
+JIRA_EMAIL=your-email@company.com
+JIRA_API_TOKEN=your-token
+```
+
+Replace the placeholder values with the values supplied by your organisation.
+
+**Important:**
+
+- `JIRA_URL` is your Jira Cloud base URL.
+- `JIRA_EMAIL` is the Jira account email used for API authentication.
+- `JIRA_API_TOKEN` is the Jira Cloud API token.
+- Never commit the real `.env` file.
+- Never put the real Jira API token in `config/settings.yaml`.
+- Never put a real token into tests.
+- `.env` and `.env.local` are already excluded by `.gitignore`.
+
+For a developer who does not have Jira access yet, leave the Jira values empty and keep:
+
+```yaml
+jira_connector: false
+```
+
+The application and test suite are designed to continue working in this mode.
+
+## Jira configuration flow
+
+```text
+.env
+  |
+  | JIRA_URL
+  | JIRA_EMAIL
+  | JIRA_API_TOKEN
+  v
+load_config()
+  |
+  v
+config["jira"]
+  |
+  v
+create_jira_service()
+  |
+  +------------------------------+
+  |                              |
+  | jira_connector = false       | valid configuration
+  | or missing credentials       |
+  v                              v
+No Jira service              JiraService
+                                  |
+                                  v
+                           JiraCloudClient
+```
+
+The Jira factory also rejects whitespace-only credentials so invalid configuration does not accidentally activate the connector.
+
+## Jira client abstraction
+
+The core abstraction is:
+
+```text
+JiraClient
+├── get_issue()
+└── search_issues()
+```
+
+This allows tests to use a mock implementation without making network calls.
+
+## Normalized Jira models
+
+Jira responses are normalized into:
+
+```text
+JiraIssue
+JiraSearchResult
+```
+
+`JiraIssue` contains fields including:
+
+```text
+key
+summary
+description
+issue_type
+status
+priority
+project_key
+project_name
+assignee
+reporter
+url
+```
+
+## Current Jira MCP tools
+
+### Get a Jira issue
+
+```text
+get_jira_issue(issue_key)
+```
+
+### Search Jira issues
+
+```text
+search_jira_issues(jql, max_results=50)
+```
+
+These operations are currently **read-only**.
+
+The following operations are deliberately not part of the current Jira scope:
+
+```text
+Create issue
+Update issue
+Add comment
+Transition issue
+Delete issue
+```
+
+They may be considered in a later phase only after the read-only integration is stable.
+
+## Jira without Jira access
+
+Real Jira credentials are **not required** to develop or test QA MCP.
+
+The project supports:
+
+```text
+Local development
+      |
+      v
+Mock Jira Client
+      |
+      v
+No external Jira dependency
+```
+
+When real configuration is available:
+
+```text
+Jira enabled
+      |
+      v
+JiraCloudClient
+      |
+      v
+Jira Cloud
+```
+
+No Jira network call is required by the automated test suite.
+
+## Jira verification
+
+Jira-focused tests currently verify:
+
+```text
+Configuration                 OK
+Environment loading          OK
+Client abstraction           OK
+Jira service                 OK
+Cloud client                 OK
+Factory                      OK
+Read-only MCP tools          OK
+Whitespace credential guard  OK
+```
+
+Current Jira-focused baseline:
+
+```text
+28 passed
+```
+
+---
+
+# 17. Project Structure
 
 Current important source structure:
 
@@ -515,7 +765,7 @@ qa-mcp/
 
 ---
 
-# 9. Local Setup
+# 17. Local Setup
 
 ```bash
 python3 -m venv .venv
@@ -532,7 +782,7 @@ pytest -q
 Current verified baseline:
 
 ```text
-49 passed
+77 passed, 1 warning
 ```
 
 Run the MCP server:
@@ -549,7 +799,7 @@ python -c "from qa_mcp.server import mcp; print('MCP server imports OK')"
 
 ---
 
-# 10. Development Guidelines
+# 17. Development Guidelines
 
 We follow this workflow for every implementation step:
 
@@ -601,7 +851,7 @@ Rules:
 
 ---
 
-# 11. Architectural Principles
+# 17. Architectural Principles
 
 1. **Core business logic belongs in `core`.**
 2. **Persistence belongs in `infrastructure`.**
@@ -620,7 +870,7 @@ Rules:
 
 ---
 
-# 12. Phase 2 Roadmap
+# 17. Phase 2 Roadmap
 
 | Step | Capability | Status |
 |---|---|---|
@@ -628,7 +878,8 @@ Rules:
 | 2 | SQLite Persistence | COMPLETED |
 | 3 | QA Suite Versioning | COMPLETED |
 | 4 | Import / Export | COMPLETED |
-| 5 | Jira Connector | NEXT |
+| 5 | Jira Connector | COMPLETED |
+| 5 | Jira Connector | COMPLETED |
 | 6 | Jira → QA Workflow | Planned |
 | 7 | Automation Case Generator | Planned |
 | 8 | QA Agent | Planned |
@@ -637,7 +888,7 @@ Rules:
 
 ---
 
-# 13. Planned Final Architecture
+# 17. Planned Final Architecture
 
 ```text
                     MCP CLIENT / AI ASSISTANT
@@ -674,7 +925,7 @@ Rules:
 
 ---
 
-# 14. Current Baseline
+# 17. Current Baseline
 
 ```text
 Phase 1
@@ -685,12 +936,13 @@ Phase 2
   Step 2 — SQLite Persistence       COMPLETED
   Step 3 — QA Suite Versioning      COMPLETED
   Step 4 — Import / Export          COMPLETED
+  Step 5 — Jira Connector           COMPLETED
 ```
 
 Current verification:
 
 ```text
-49 tests passed
+77 tests passed
 SQLite persistence verified
 Requirement versioning verified
 Suite versioning verified
@@ -698,6 +950,14 @@ Import/export contract verified
 Import validation verified
 Round-trip persistence verified
 MCP import/export verified
+Jira configuration verified
+Jira client abstraction verified
+Jira service verified
+Jira Cloud client verified
+Jira factory verified
+Jira read-only MCP tools verified
+Jira offline/mock path verified
+Jira credential validation verified
 MCP server imports successfully
 Test isolation verified
 ```
@@ -712,22 +972,76 @@ Field 'lifespan'
 
 This is an external dependency warning and is not currently blocking functionality or tests.
 
----
-
-# 15. Next Development Step
+Current warning policy:
 
 ```text
-Phase 2 → Step 5
-       |
-       v
-Jira Connector
+Do not hide the warning merely to obtain clean test output.
+Investigate separately if it becomes relevant.
 ```
-
-The next phase of implementation should begin only after this README checkpoint has been retained.
 
 ---
 
-# 16. Milestone History
+# 15. Current Development Checkpoint
+
+```text
++------------------------------------------------------+
+|              QA MCP DEVELOPMENT CHECKPOINT           |
++------------------------------------------------------+
+| Phase:        Phase 2                                |
+| Step:         Step 5 — Jira Connector                |
+| Status:       COMPLETED                              |
+| Jira tests:   28 passed                              |
+| Full tests:   77 passed                              |
+| Warning:      1 known external warning               |
++------------------------------------------------------+
+```
+
+The repository is safe to continue without Jira credentials.
+
+The real Jira configuration can be enabled later by:
+
+1. Creating `.env`.
+2. Filling `JIRA_URL`.
+3. Filling `JIRA_EMAIL`.
+4. Filling `JIRA_API_TOKEN`.
+5. Setting `jira_connector: true`.
+6. Running the regression suite.
+7. Performing a controlled real Jira connectivity verification when organisation access is available.
+
+---
+
+# 16. Next Development Step
+
+```text
+Phase 2
+   |
+   v
+Step 5 — Jira Connector
+   |
+   | COMPLETE
+   v
+Next planned Phase 2 capability
+```
+
+Before starting the next step:
+
+```bash
+git pull
+source .venv/bin/activate
+pytest -q
+```
+
+The expected baseline is:
+
+```text
+77 passed, 1 warning
+```
+
+Do not restart Jira implementation. Continue from this checkpoint.
+
+---
+
+# 19. Milestone History
 
 ```text
 Phase 1
@@ -749,9 +1063,75 @@ Phase 2
   +-- SQLite Persistence
   +-- Requirement/Suite Versioning
   +-- Import / Export
+  +-- Jira Connector
   |
   v
-Phase 2 Step 4 COMPLETE
+Phase 2 Step 5 COMPLETE
 ```
 
 This README represents the project state after successful verification of **Phase 2 → Step 4 — Import / Export**.
+
+
+---
+
+# 20. Continuity / Handover Instructions
+
+This README is the **authoritative development checkpoint** for continuing QA MCP development across sessions.
+
+When starting a new development session:
+
+```text
+1. Read README.md
+2. Check Git status
+3. Pull the latest checkpoint
+4. Activate .venv
+5. Run pytest -q
+6. Confirm the baseline
+7. Continue from "Next Development Step"
+```
+
+Recommended commands:
+
+```bash
+git status
+git pull
+source .venv/bin/activate
+pytest -q
+```
+
+If the baseline is different from the documented checkpoint, stop and investigate before implementing new functionality.
+
+## Current handover state
+
+```text
+Phase 1                              COMPLETE
+Phase 2 / Step 1                     COMPLETE
+Phase 2 / Step 2                     COMPLETE
+Phase 2 / Step 3                     COMPLETE
+Phase 2 / Step 4                     COMPLETE
+Phase 2 / Step 5                     COMPLETE
+
+Current regression                   77 passed
+Known external warnings              1
+Real Jira credentials required       NO
+Real Jira integration tested         NOT YET
+```
+
+The Jira connector is architecturally ready, but organisation-specific Jira credentials and a controlled live connectivity check are intentionally separate from the automated test baseline.
+
+At every future milestone, update this README with:
+
+```text
+- phase and step
+- implementation status
+- architecture changes
+- diagrams where useful
+- setup/configuration changes
+- environment variables
+- focused test count
+- full regression count
+- known warnings
+- next development step
+```
+
+This prevents the development context from being lost when work resumes in a later chat or environment.

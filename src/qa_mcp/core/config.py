@@ -10,11 +10,50 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 
 def load_config() -> dict:
-    with CONFIG_FILE.open("r", encoding="utf-8") as file:
-        config = yaml.safe_load(file) or {}
+    with CONFIG_FILE.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+
+        config = yaml.safe_load(
+            file
+        ) or {}
 
     config["llm"]["provider"] = os.getenv(
         "LLM_PROVIDER",
-        config["llm"].get("provider", "mock"),
+        config["llm"].get(
+            "provider",
+            "mock",
+        ),
     )
+
+    config.setdefault(
+        "jira",
+        {}
+    )
+
+    config["jira"]["url"] = os.getenv(
+        "JIRA_URL",
+        config["jira"].get(
+            "url",
+            "",
+        ),
+    )
+
+    config["jira"]["email"] = os.getenv(
+        "JIRA_EMAIL",
+        config["jira"].get(
+            "email",
+            "",
+        ),
+    )
+
+    config["jira"]["api_token"] = os.getenv(
+        "JIRA_API_TOKEN",
+        config["jira"].get(
+            "api_token",
+            "",
+        ),
+    )
+
     return config
