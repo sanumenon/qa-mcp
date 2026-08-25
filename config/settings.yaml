@@ -10,9 +10,15 @@ features:
   testcase_generator: true
   testcase_reviewer: true
   jira_connector: false
+  github_connector: false
   automation_generator: false
 
 jira:
   url: ""
   email: ""
   api_token: ""
+
+github:
+  url: "https://api.github.com"
+  token: ""
+  owner: ""

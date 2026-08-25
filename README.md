@@ -1,1137 +1,991 @@
-# QA MCP Server
+# QA MCP
 
-An extensible Model Context Protocol (MCP) server designed to become a unified AI-powered QA platform.
+QA MCP is a Model Context Protocol (MCP) server for structured
+software-quality workflows.
 
-## Current Status
+The project is developed incrementally using a layered architecture,
+test-first implementation, persistent SQLite storage, immutable QA
+versioning, project import/export, and safe external connectors.
 
-### Phase 1 — Foundation & QA Intelligence
+> **Current checkpoint:** Phase 2 → GitHub Connector COMPLETE through
+> S6.9\
+> **Current regression:** **111 tests passing**\
+> **Known warning:** one non-blocking third-party `pydantic_settings`
+> warning related to `lifespan`.
 
-**COMPLETED**
+------------------------------------------------------------------------
 
-| Step | Capability | Status |
-|---|---|---|
-| 1 | Project foundation | COMPLETED |
-| 2 | MCP server + health | COMPLETED |
-| 3 | LLM provider abstraction | COMPLETED |
-| 4 | Requirement Analyzer | COMPLETED |
-| 5 | Test Case Generator | COMPLETED |
-| 6 | Test Case Reviewer | COMPLETED |
-| 7 | End-to-End QA Workflow | COMPLETED |
+# 1. Current Development Status
 
-### Phase 2 — Project Context, Persistence, Versioning & Portability
+## Phase 1 --- Foundation
 
-| Step | Capability | Status |
-|---|---|---|
-| 1 | QA Project Context | COMPLETED |
-| 2 | SQLite Persistence | COMPLETED |
-| 3 | QA Suite Versioning | COMPLETED |
-| 4 | Import / Export | COMPLETED |
-| 5 | Jira Connector | COMPLETED |
+**Status: COMPLETE**
 
----
+-   MCP server foundation
+-   Configuration loading
+-   LLM abstraction
+-   Requirement analysis
+-   Test-case generation
+-   Test-case review
+-   Complete QA-suite workflow
 
-# 1. Vision
+## Phase 2 --- QA Platform Foundation
 
-The long-term goal is to build a reusable QA MCP platform exposing QA capabilities to MCP-compatible AI clients.
+  Step    Capability                       Status
+  ------- -------------------------------- -------------
+  P2-S1   Project Context                  ✅ Complete
+  P2-S2   SQLite Persistence               ✅ Complete
+  P2-S3   Requirement & Suite Versioning   ✅ Complete
+  P2-S4   Project Import / Export          ✅ Complete
+  P2-S5   Jira Connector                   ✅ Complete
+  P2-S6   GitHub Connector                 ✅ Complete
 
-```text
-MCP Client / AI Assistant
-          |
-          v
-      QA MCP Server
-          |
-   +------+------+------+
-   |             |      |
-   v             v      v
-QA Intelligence Connectors Automation
-   |             |      |
-Analyze        Jira    UI
-Generate       GitHub  API
-Review         Slack   Mobile
-                       Performance
-          |
-          v
-       QA Agent
-          |
-          v
- Persistent QA Context
-          |
-          v
- Project / Requirement / Suite Versions
-          |
-          v
- Import / Export
+### Jira checkpoints
+
+  Sub-step                                Status
+  --------------------------------------- --------
+  S5.1 Configuration                      ✅
+  S5.2 Client Abstraction                 ✅
+  S5.3 Service                            ✅
+  S5.4 Cloud Client                       ✅
+  S5.5 Read-only MCP Tools                ✅
+  S5.6 Configuration Wiring               ✅
+  S5.7 Controlled Integration Readiness   ✅
+
+### GitHub checkpoints
+
+  Sub-step                                     Status
+  -------------------------------------------- --------
+  S6.1 Configuration                           ✅
+  S6.2 Client Abstraction + Models             ✅
+  S6.3 Mock Client                             ✅
+  S6.4 Service                                 ✅
+  S6.5 Cloud/API Client                        ✅
+  S6.6 Factory                                 ✅
+  S6.7 Runtime Wiring                          ✅
+  S6.8 Read-only MCP Tools + Disabled Safety   ✅
+  S6.9 MCP Registration + Regression           ✅
+  S6.10 README + Git Checkpoint                ⏳
+
+Do not skip ahead without preserving this checkpoint.
+
+------------------------------------------------------------------------
+
+# 2. Development Guidelines
+
+These rules are the baseline for all future development.
+
+1.  **Incremental phases:** implement one phase/sub-step at a time.
+2.  **Test first:** focused tests → fix → feature group → full
+    regression.
+3.  **Never weaken tests** just to obtain green output.
+4.  **Preserve architecture:** MCP → Core Service → Infrastructure
+    Interface → Concrete Implementation.
+5.  **External integrations must be mockable.**
+6.  **Never commit secrets** or real `.env` files.
+7.  **README is part of every verified checkpoint.**
+8.  **Inspect existing files before modifying them.**
+9.  **Keep unrelated cleanup separate.**
+10. **`pytest -q` is the authoritative regression baseline.**
+11. Core business logic remains independent of MCP transport.
+12. Persistence remains behind repository interfaces.
+13. LLM providers remain replaceable.
+14. AI output must be validated before downstream use.
+15. Do not delete persistent databases merely to make tests pass.
+16. A major feature is not complete until its runtime/MCP path is
+    verified.
+17. This README is the authoritative continuity checkpoint for future
+    chats.
+
+The recurring development sequence is:
+
+``` text
+Focused test
+    ↓
+Implementation
+    ↓
+Focused tests green
+    ↓
+Feature test group green
+    ↓
+Full regression green
+    ↓
+Runtime/MCP verification
+    ↓
+README checkpoint
+    ↓
+Git commit + push
 ```
 
----
+------------------------------------------------------------------------
 
-# 2. Phase 1 Architecture
+# 3. Architecture
 
-```text
-Requirement
-     |
-     v
-Requirement Analyzer
-     |
-     v
-RequirementAnalysis
-     |
-     v
-Test Case Generator
-     |
-     v
-TestCaseResponse
-     |
-     v
-Test Case Reviewer
-     |
-     v
-TestCaseReview
-     |
-     v
-QASuiteResult
+``` text
+                         QA MCP Server
+                              │
+                              ▼
+                        MCP Tool Layer
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+  QA Workflows         Project Context       External Services
+        │                     │                     │
+        │                     ▼              ┌──────┴──────┐
+        │               SQLite Repos         │             │
+        │                                   Jira        GitHub
+        │                                    │             │
+        │                               JiraService   GitHubService
+        │                                    │             │
+        │                               JiraClient    GitHubClient
+        │                              /      \        /      \
+        │                            Mock    Cloud   Mock    Cloud
+        │
+        ├── Requirement Analyzer
+        ├── Test Case Generator
+        └── Test Case Reviewer
 ```
 
-Core MCP capabilities:
+Layer responsibilities:
 
-```text
+``` text
+models/          Domain/data schemas
+core/            Business/application services and factories
+infrastructure/  Repositories and external clients
+tools/           QA workflows
+server.py        MCP transport and tool registration
+```
+
+------------------------------------------------------------------------
+
+# 4. Repository Structure
+
+``` text
+src/qa_mcp/
+├── core/
+│   ├── config.py
+│   ├── llm.py
+│   ├── import_export/
+│   ├── github/
+│   │   ├── __init__.py
+│   │   ├── factory.py
+│   │   └── service.py
+│   ├── jira/
+│   │   ├── __init__.py
+│   │   ├── factory.py
+│   │   └── service.py
+│   ├── project/
+│   └── versioning/
+├── infrastructure/
+│   ├── github/
+│   │   ├── __init__.py
+│   │   ├── client.py
+│   │   ├── mock_client.py
+│   │   └── cloud_client.py
+│   ├── jira/
+│   │   ├── client.py
+│   │   ├── mock_client.py
+│   │   └── cloud_client.py
+│   ├── project_repository.py
+│   ├── sqlite_project_repository.py
+│   └── versioning/
+├── models/
+│   └── schemas.py
+├── tools/
+└── server.py
+
+tests/
+data/qa_mcp.db
+```
+
+------------------------------------------------------------------------
+
+# 5. Requirements
+
+Current `requirements.txt`:
+
+``` text
+mcp
+pydantic
+pydantic-settings
+PyYAML
+python-dotenv
+boto3
+pytest
+requests
+```
+
+Python 3.12 is the current development environment.
+
+`requests` is required by the GitHub Cloud REST client.
+
+------------------------------------------------------------------------
+
+# 6. Initial Setup
+
+``` bash
+git clone https://github.com/sanumenon/qa-mcp.git
+cd qa-mcp
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
+```
+
+Current baseline:
+
+``` text
+111 passed, 1 warning
+```
+
+------------------------------------------------------------------------
+
+# 7. `.env` Configuration --- IMPORTANT
+
+The application loads `.env` from the project root.
+
+The real `.env` must **never be committed**.
+
+`.gitignore` excludes:
+
+``` text
+.env
+.env.local
+```
+
+Create locally:
+
+``` bash
+touch .env
+```
+
+## Complete `.env` template
+
+Use this template and replace the placeholder values locally:
+
+``` dotenv
+# ---------------------------------------------------------
+# LLM
+# ---------------------------------------------------------
+LLM_PROVIDER=mock
+
+# ---------------------------------------------------------
+# Jira
+# ---------------------------------------------------------
+JIRA_URL=https://your-company.atlassian.net
+JIRA_EMAIL=your-email
+JIRA_API_TOKEN=your-token
+
+# ---------------------------------------------------------
+# GitHub
+# ---------------------------------------------------------
+GITHUB_URL=https://api.github.com
+GITHUB_TOKEN=your-github-token
+GITHUB_OWNER=your-github-username-or-org
+```
+
+All values above are placeholders.
+
+Never put real credentials into README or source control.
+
+Verify `.env` is ignored:
+
+``` bash
+git check-ignore .env
+```
+
+------------------------------------------------------------------------
+
+# 8. Feature Flags
+
+Default `config/settings.yaml` keeps external connectors disabled:
+
+``` yaml
+features:
+  requirement_analyzer: true
+  testcase_generator: true
+  testcase_reviewer: true
+  jira_connector: false
+  github_connector: false
+  automation_generator: false
+```
+
+Therefore a fresh clone runs without Jira or GitHub access.
+
+------------------------------------------------------------------------
+
+# 9. Configuration Loading
+
+``` text
+.env
+  ↓
+load_config()
+  ↓
+environment variables override YAML
+  ↓
+application configuration
+```
+
+Supported connector variables:
+
+``` text
+JIRA_URL
+JIRA_EMAIL
+JIRA_API_TOKEN
+
+GITHUB_URL
+GITHUB_TOKEN
+GITHUB_OWNER
+```
+
+------------------------------------------------------------------------
+
+# 10. Jira Connector
+
+Current architecture:
+
+``` text
+MCP
+ │
+ ▼
+JiraService
+ │
+ ▼
+JiraClient
+ ├── MockJiraClient
+ └── JiraCloudClient
+```
+
+The factory creates the service only when:
+
+``` yaml
+jira_connector: true
+```
+
+and all required values are non-empty after whitespace validation.
+
+Read-only MCP tools:
+
+``` text
+get_jira_issue(issue_key)
+search_jira_issues(jql, max_results=50)
+```
+
+Current real operations:
+
+``` text
+GET issue
+JQL issue search
+```
+
+No Jira write operations are currently implemented.
+
+Real Jira credentials are not required for unit tests.
+
+------------------------------------------------------------------------
+
+# 11. GitHub Connector
+
+Current architecture:
+
+``` text
+MCP
+ │
+ ▼
+GitHubService
+ │
+ ▼
+GitHubClient
+ ├── MockGitHubClient
+ └── GitHubCloudClient
+          │
+          ▼
+    GitHub REST API
+```
+
+The factory creates the service only when:
+
+``` yaml
+github_connector: true
+```
+
+and all three values are valid:
+
+``` text
+GITHUB_URL
+GITHUB_TOKEN
+GITHUB_OWNER
+```
+
+Whitespace-only values are rejected.
+
+## Safe default
+
+``` yaml
+github_connector: false
+```
+
+means:
+
+``` text
+GitHub disabled
+      ↓
+github_service = None
+      ↓
+Server still starts
+      ↓
+No GitHub network access
+```
+
+Calling a GitHub MCP tool while disabled produces:
+
+``` text
+GitHub connector is not configured
+```
+
+## Current read-only GitHub MCP tools
+
+``` text
+get_github_repository(owner, repository)
+
+get_github_issue(owner, repository, issue_number)
+
+get_github_pull_request(owner, repository, pull_number)
+
+search_github_issues(query, max_results=50)
+```
+
+No GitHub write operations are currently implemented.
+
+## GitHub Cloud operations
+
+``` text
+GET repository
+GET issue
+GET pull request
+GET /search/issues
+```
+
+Cloud-client tests mock HTTP requests, so real GitHub access is not
+required.
+
+------------------------------------------------------------------------
+
+# 12. Project Context, Versioning and Import/Export
+
+## Project context
+
+``` text
+QAProject
+  │
+  ├── Application
+  ├── Environment
+  ├── Requirements
+  └── Test Suites
+```
+
+Duplicate project creation is rejected.
+
+## Requirement versioning
+
+``` text
+Requirement V1
+Requirement V2
+Requirement V3
+```
+
+Requirements are immutable versions.
+
+## Suite versioning
+
+``` text
+Requirement Version
+        ↓
+QA Suite Version
+        ├── Test Cases
+        └── Review
+```
+
+## Import/export
+
+``` text
+QA Project
+    ↓
+QAProjectExport
+    ↓
+JSON payload
+    ↓
+Import
+```
+
+Import validates the structure and protects against duplicate project
+IDs.
+
+------------------------------------------------------------------------
+
+# 13. Current MCP Capabilities
+
+``` text
+health
+test_llm
+
 analyze_requirement
 generate_test_cases
 review_test_cases
 generate_qa_suite
-```
 
----
-
-# 3. LLM Architecture
-
-```text
-LLMProvider
-     |
-     +---- MockLLM
-     |
-     +---- BedrockLLM
-```
-
-LLM access is provider-independent so the QA tools can be tested locally and later connected to AWS Bedrock or another provider.
-
-AI output is validated using Pydantic models before downstream processing.
-
----
-
-# 4. Phase 2 Step 1 — QA Project Context
-
-**Status: COMPLETED**
-
-A QA project contains:
-
-```text
-QAProject
- |
- +-- project_id
- +-- name
- +-- description
- +-- application
- +-- environment
- +-- metadata
-```
-
-Core service:
-
-```text
-ProjectContext
- |
- +-- create_project()
- +-- get_project()
-```
-
-MCP tools:
-
-```text
 create_qa_project
 get_qa_project
-```
 
----
-
-# 5. Phase 2 Step 2 — SQLite Persistence
-
-**Status: COMPLETED**
-
-Projects are persisted in:
-
-```text
-data/qa_mcp.db
-```
-
-SQLite table:
-
-```text
-qa_projects
-```
-
-Architecture:
-
-```text
-ProjectContext
-       |
-       v
-ProjectRepository
-       |
-       v
-SQLiteProjectRepository
-       |
-       v
-SQLite
-```
-
-The core context does not depend directly on SQLite.
-
-Persistence was verified across separate Python processes.
-
----
-
-# 6. Phase 2 Step 3 — QA Suite Versioning
-
-**Status: COMPLETED**
-
-QA requirements and generated suites are versioned and persisted independently.
-
-## Requirement versions
-
-```text
-QA Project
-   |
-   +-- Requirement v1
-   +-- Requirement v2
-   +-- Requirement v3
-```
-
-Each requirement version contains:
-
-- `version_id`
-- `project_id`
-- `version`
-- `requirement`
-- `application`
-- `environment`
-- `created_at`
-
-Versions are maintained independently per project.
-
-## Suite versions
-
-Each suite records the requirement version that produced it:
-
-```text
-Requirement v1
-      |
-      v
-Suite v1
-
-Requirement v2
-      |
-      v
-Suite v2
-```
-
-Each suite version contains:
-
-- `suite_id`
-- `project_id`
-- `requirement_version_id`
-- `version`
-- `test_cases`
-- `review`
-- `created_at`
-
-## Architecture
-
-```text
-core/
-└── versioning/
-    └── service.py
-        |
-        v
-infrastructure/
-└── versioning/
-    ├── repositories.py
-    └── sqlite_version_repository.py
-        |
-        v
-      SQLite
-```
-
-The two `versioning` folders are intentional:
-
-- `core/versioning` contains business logic.
-- `infrastructure/versioning` contains repository interfaces and SQLite implementations.
-
-## Core services
-
-```text
-QARequirementVersioningService
-QASuiteVersioningService
-```
-
-## Repository interfaces
-
-```text
-RequirementVersionRepository
-SuiteVersionRepository
-```
-
-## SQLite implementations
-
-```text
-SQLiteRequirementVersionRepository
-SQLiteSuiteVersionRepository
-```
-
-## MCP tools
-
-Requirement:
-
-```text
 create_requirement_version
 get_requirement_version
 list_requirement_versions
-```
 
-Suite:
-
-```text
 create_suite_version
 get_suite_version
 list_suite_versions
-```
 
----
-
-# 7. Phase 2 Step 4 — Import / Export
-
-**Status: COMPLETED**
-
-The QA MCP server now supports portable project artifacts containing:
-
-```text
-QA Project
-    |
-    +-- Requirement Versions
-    |
-    +-- Suite Versions
-```
-
-## Export
-
-The export flow is:
-
-```text
-SQLite
-   |
-   +-- Project
-   +-- Requirement Versions
-   +-- Suite Versions
-           |
-           v
-QAImportExportService
-           |
-           v
-QAProjectExport
-           |
-           v
-JSON
-```
-
-Export is based on persisted data, not caller-assembled objects.
-
-MCP tool:
-
-```text
 export_qa_project
-```
-
-Input:
-
-```text
-project_id
-```
-
-Output:
-
-```text
-{
-    "project_id": "...",
-    "export_version": "1.0",
-    "payload": "..."
-}
-```
-
-## Import
-
-The import flow is:
-
-```text
-JSON
-  |
-  v
-Parse
-  |
-  v
-QAProjectExport validation
-  |
-  v
-Relationship validation
-  |
-  v
-Duplicate project check
-  |
-  v
-SQLite persistence
-```
-
-MCP tool:
-
-```text
 import_qa_project
+
+get_jira_issue
+search_jira_issues
+
+get_github_repository
+get_github_issue
+get_github_pull_request
+search_github_issues
 ```
 
-Import validates:
+------------------------------------------------------------------------
 
-- Export JSON
-- Export structure
-- Project identity
-- Requirement → project relationship
-- Suite → project relationship
-- Suite → requirement-version relationship
-- Duplicate project protection
+# 14. Running the Server
 
-Existing projects are **not silently overwritten**.
-
-## Round-trip verification
-
-The complete round trip has been verified:
-
-```text
-SQLite DB A
-    |
-    v
-EXPORT
-    |
-    v
-JSON
-    |
-    v
-IMPORT
-    |
-    v
-SQLite DB B
-    |
-    v
-Compare
-```
-
-Verified artifacts:
-
-```text
-Project           ✅
-Requirements      ✅
-Suites            ✅
-Relationships     ✅
-```
-
-## Test isolation
-
-MCP import/export tests use isolated temporary SQLite databases.
-
-This prevents test execution from polluting:
-
-```text
-data/qa_mcp.db
-```
-
-and allows repeated test execution without relying on previous test state.
-
-## P2-S4 verification baseline
-
-```text
-Import/Export focused tests: 7 passed
-MCP Import/Export tests:     2 passed
-Full regression:            49 passed
-Application-code warnings:   0
-Known external warning:      1
-```
-
-The remaining warning is the known external `pydantic_settings` warning concerning the `lifespan` field's unresolved forward reference.
-
----
-
-
-# 8. Phase 2 Step 5 — Jira Connector
-
-**Status: COMPLETED**
-
-The QA MCP server now has a Jira integration layer designed to remain usable without Jira access.
-
-The connector is intentionally read-only at this stage.
-
-## Jira architecture
-
-```text
-MCP Jira Tools
-      |
-      v
- JiraService
-      |
-      v
- JiraClient
-   /      \
-  v        v
-Mock      Cloud
-Client    Client
-            |
-            v
-       Jira Cloud REST API
-```
-
-The architecture keeps Jira-specific transport and authentication outside the core QA business logic.
-
-## Jira configuration
-
-Jira is disabled by default:
-
-```yaml
-features:
-  jira_connector: false
-```
-
-The default Jira configuration in:
-
-```text
-config/settings.yaml
-```
-
-is:
-
-```yaml
-jira:
-  url: ""
-  email: ""
-  api_token: ""
-```
-
-Environment variables override these values.
-
-### Required `.env` variables
-
-Create a `.env` file in the **repository root**:
-
-```text
-qa-mcp/
-├── .env
-├── config/
-├── src/
-├── tests/
-└── README.md
-```
-
-Use the following template:
-
-```dotenv
-# LLM
-LLM_PROVIDER=mock
-
-# Jira Cloud
-JIRA_URL=https://your-company.atlassian.net
-JIRA_EMAIL=your-email@company.com
-JIRA_API_TOKEN=your-token
-```
-
-Replace the placeholder values with the values supplied by your organisation.
-
-**Important:**
-
-- `JIRA_URL` is your Jira Cloud base URL.
-- `JIRA_EMAIL` is the Jira account email used for API authentication.
-- `JIRA_API_TOKEN` is the Jira Cloud API token.
-- Never commit the real `.env` file.
-- Never put the real Jira API token in `config/settings.yaml`.
-- Never put a real token into tests.
-- `.env` and `.env.local` are already excluded by `.gitignore`.
-
-For a developer who does not have Jira access yet, leave the Jira values empty and keep:
-
-```yaml
-jira_connector: false
-```
-
-The application and test suite are designed to continue working in this mode.
-
-## Jira configuration flow
-
-```text
-.env
-  |
-  | JIRA_URL
-  | JIRA_EMAIL
-  | JIRA_API_TOKEN
-  v
-load_config()
-  |
-  v
-config["jira"]
-  |
-  v
-create_jira_service()
-  |
-  +------------------------------+
-  |                              |
-  | jira_connector = false       | valid configuration
-  | or missing credentials       |
-  v                              v
-No Jira service              JiraService
-                                  |
-                                  v
-                           JiraCloudClient
-```
-
-The Jira factory also rejects whitespace-only credentials so invalid configuration does not accidentally activate the connector.
-
-## Jira client abstraction
-
-The core abstraction is:
-
-```text
-JiraClient
-├── get_issue()
-└── search_issues()
-```
-
-This allows tests to use a mock implementation without making network calls.
-
-## Normalized Jira models
-
-Jira responses are normalized into:
-
-```text
-JiraIssue
-JiraSearchResult
-```
-
-`JiraIssue` contains fields including:
-
-```text
-key
-summary
-description
-issue_type
-status
-priority
-project_key
-project_name
-assignee
-reporter
-url
-```
-
-## Current Jira MCP tools
-
-### Get a Jira issue
-
-```text
-get_jira_issue(issue_key)
-```
-
-### Search Jira issues
-
-```text
-search_jira_issues(jql, max_results=50)
-```
-
-These operations are currently **read-only**.
-
-The following operations are deliberately not part of the current Jira scope:
-
-```text
-Create issue
-Update issue
-Add comment
-Transition issue
-Delete issue
-```
-
-They may be considered in a later phase only after the read-only integration is stable.
-
-## Jira without Jira access
-
-Real Jira credentials are **not required** to develop or test QA MCP.
-
-The project supports:
-
-```text
-Local development
-      |
-      v
-Mock Jira Client
-      |
-      v
-No external Jira dependency
-```
-
-When real configuration is available:
-
-```text
-Jira enabled
-      |
-      v
-JiraCloudClient
-      |
-      v
-Jira Cloud
-```
-
-No Jira network call is required by the automated test suite.
-
-## Jira verification
-
-Jira-focused tests currently verify:
-
-```text
-Configuration                 OK
-Environment loading          OK
-Client abstraction           OK
-Jira service                 OK
-Cloud client                 OK
-Factory                      OK
-Read-only MCP tools          OK
-Whitespace credential guard  OK
-```
-
-Current Jira-focused baseline:
-
-```text
-28 passed
-```
-
----
-
-# 17. Project Structure
-
-Current important source structure:
-
-```text
-qa-mcp/
-|
-+-- src/
-|   +-- qa_mcp/
-|       |
-|       +-- core/
-|       |   +-- config.py
-|       |   +-- llm.py
-|       |   +-- project/
-|       |   |   +-- context.py
-|       |   |
-|       |   +-- versioning/
-|       |   |   +-- service.py
-|       |   |
-|       |   +-- import_export/
-|       |       +-- service.py
-|       |
-|       +-- infrastructure/
-|       |   +-- project_repository.py
-|       |   +-- sqlite_project_repository.py
-|       |   |
-|       |   +-- versioning/
-|       |       +-- repositories.py
-|       |       +-- sqlite_version_repository.py
-|       |
-|       +-- models/
-|       |   +-- schemas.py
-|       |
-|       +-- tools/
-|       |   +-- requirement/
-|       |   +-- testcase/
-|       |   +-- workflow/
-|       |
-|       +-- server.py
-|
-+-- tests/
-+-- config/
-+-- data/
-|   +-- qa_mcp.db
-|
-+-- README.md
-```
-
----
-
-# 17. Local Setup
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Run tests:
-
-```bash
-pytest -q
-```
-
-Current verified baseline:
-
-```text
-77 passed, 1 warning
-```
-
-Run the MCP server:
-
-```bash
+``` bash
 python -m qa_mcp.server
 ```
 
-Verify server imports:
+Import verification:
 
-```bash
-python -c "from qa_mcp.server import mcp; print('MCP server imports OK')"
+``` bash
+python -c "from qa_mcp.server import mcp; print('MCP Server import OK')"
 ```
 
----
+GitHub integration verification:
 
-# 17. Development Guidelines
-
-We follow this workflow for every implementation step:
-
-```text
-IMPLEMENT
-    |
-    v
-FOCUSED TESTS
-    |
-    v
-FULL REGRESSION
-    |
-    v
-RUNTIME / MCP VERIFICATION
-    |
-    v
-FIX / REFINE
-    |
-    v
-MARK STEP COMPLETE
-    |
-    v
-UPDATE README
-    |
-    v
-DOWNLOAD NEW README CHECKPOINT
-    |
-    v
-NEXT STEP
+``` bash
+python -c "from qa_mcp.server import mcp; print('MCP GitHub integration import OK')"
 ```
 
-Rules:
+Verify registered GitHub tools:
 
-1. Implement one step at a time.
-2. Test every feature.
-3. Existing tests must remain green.
-4. No step is complete until locally verified.
-5. Update README at every verified milestone.
-6. Core business logic must remain independent of MCP transport.
-7. Persistence and external integrations stay behind interfaces.
-8. LLM providers remain replaceable.
-9. AI output must be validated.
-10. Tests must remain repeatable against persistent storage.
-11. Do not delete persistent databases merely to make tests pass.
-12. Use isolated databases for persistence-focused tests.
-13. Do not manually copy assistant conversation into README.
-14. The README is the authoritative development checkpoint.
-15. No major feature is complete until its MCP/runtime path is verified.
-
----
-
-# 17. Architectural Principles
-
-1. **Core business logic belongs in `core`.**
-2. **Persistence belongs in `infrastructure`.**
-3. **MCP transport belongs in `server.py` and MCP-facing tools.**
-4. **Domain/data models belong in `models`.**
-5. **Core services must not depend directly on SQLite implementations.**
-6. **External integrations must be isolated behind interfaces.**
-7. **LLM providers remain replaceable.**
-8. **AI-generated output must be validated before downstream use.**
-9. **Persistent data must not be confused with test fixtures.**
-10. **Tests must be repeatable.**
-11. **Import operations must validate relationships before persistence.**
-12. **Imports must not silently overwrite existing projects.**
-13. **Completed milestones require regression verification.**
-14. **README updates are part of milestone completion.**
-
----
-
-# 17. Phase 2 Roadmap
-
-| Step | Capability | Status |
-|---|---|---|
-| 1 | QA Project Context | COMPLETED |
-| 2 | SQLite Persistence | COMPLETED |
-| 3 | QA Suite Versioning | COMPLETED |
-| 4 | Import / Export | COMPLETED |
-| 5 | Jira Connector | COMPLETED |
-| 5 | Jira Connector | COMPLETED |
-| 6 | Jira → QA Workflow | Planned |
-| 7 | Automation Case Generator | Planned |
-| 8 | QA Agent | Planned |
-| 9 | GitHub / CI Integration | Planned |
-| 10 | Internet Deployment | Planned |
-
----
-
-# 17. Planned Final Architecture
-
-```text
-                    MCP CLIENT / AI ASSISTANT
-                              |
-                              v
-                       +-------------+
-                       |   QA MCP    |
-                       |   Server    |
-                       +------+------+
-                              |
-              +---------------+----------------+
-              |               |                |
-              v               v                v
-        QA Intelligence   Connectors      Automation
-              |               |                |
-        +-----+-----+     +---+---+       +----+----+
-        |     |     |     |   |   |       |    |    |
-     Analyze Gen  Review Jira GitHub    UI   API  Perf
-                                            Mobile
-              |
-              v
-          QA Agent
-              |
-              v
-       Persistent Context
-              |
-              v
-     Project / Requirement
-        / Suite Versions
-              |
-              v
-       Import / Export
+``` bash
+python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools() if 'github' in t.name])"
 ```
 
----
+Expected:
 
-# 17. Current Baseline
-
-```text
-Phase 1
-  Steps 1–7  COMPLETED
-
-Phase 2
-  Step 1 — QA Project Context       COMPLETED
-  Step 2 — SQLite Persistence       COMPLETED
-  Step 3 — QA Suite Versioning      COMPLETED
-  Step 4 — Import / Export          COMPLETED
-  Step 5 — Jira Connector           COMPLETED
+``` text
+['get_github_repository', 'get_github_issue', 'get_github_pull_request', 'search_github_issues']
 ```
 
-Current verification:
+------------------------------------------------------------------------
 
-```text
-77 tests passed
-SQLite persistence verified
-Requirement versioning verified
-Suite versioning verified
-Import/export contract verified
-Import validation verified
-Round-trip persistence verified
-MCP import/export verified
-Jira configuration verified
-Jira client abstraction verified
-Jira service verified
-Jira Cloud client verified
-Jira factory verified
-Jira read-only MCP tools verified
-Jira offline/mock path verified
-Jira credential validation verified
-MCP server imports successfully
-Test isolation verified
+# 15. Testing Strategy
+
+Every meaningful feature follows:
+
+``` text
+Configuration
+    ↓
+Client abstraction
+    ↓
+Mock client
+    ↓
+Service
+    ↓
+Cloud client
+    ↓
+Factory
+    ↓
+Runtime wiring
+    ↓
+MCP tools
+    ↓
+MCP registration
+    ↓
+Full regression
 ```
 
-Known warning:
+GitHub tests:
 
-```text
-pydantic_settings
-IncompleteFieldDefinitionWarning
-Field 'lifespan'
+``` text
+tests/test_github_config.py
+tests/test_github_client.py
+tests/test_github_mock_client.py
+tests/test_github_service.py
+tests/test_github_cloud_client.py
+tests/test_github_factory.py
+tests/test_github_tools.py
 ```
 
-This is an external dependency warning and is not currently blocking functionality or tests.
+Run the GitHub suite:
 
-Current warning policy:
-
-```text
-Do not hide the warning merely to obtain clean test output.
-Investigate separately if it becomes relevant.
+``` bash
+pytest -q \
+ tests/test_github_config.py \
+ tests/test_github_client.py \
+ tests/test_github_mock_client.py \
+ tests/test_github_service.py \
+ tests/test_github_cloud_client.py \
+ tests/test_github_factory.py \
+ tests/test_github_tools.py
 ```
 
----
+Current full regression:
 
-# 15. Current Development Checkpoint
-
-```text
-+------------------------------------------------------+
-|              QA MCP DEVELOPMENT CHECKPOINT           |
-+------------------------------------------------------+
-| Phase:        Phase 2                                |
-| Step:         Step 5 — Jira Connector                |
-| Status:       COMPLETED                              |
-| Jira tests:   28 passed                              |
-| Full tests:   77 passed                              |
-| Warning:      1 known external warning               |
-+------------------------------------------------------+
-```
-
-The repository is safe to continue without Jira credentials.
-
-The real Jira configuration can be enabled later by:
-
-1. Creating `.env`.
-2. Filling `JIRA_URL`.
-3. Filling `JIRA_EMAIL`.
-4. Filling `JIRA_API_TOKEN`.
-5. Setting `jira_connector: true`.
-6. Running the regression suite.
-7. Performing a controlled real Jira connectivity verification when organisation access is available.
-
----
-
-# 16. Next Development Step
-
-```text
-Phase 2
-   |
-   v
-Step 5 — Jira Connector
-   |
-   | COMPLETE
-   v
-Next planned Phase 2 capability
-```
-
-Before starting the next step:
-
-```bash
-git pull
-source .venv/bin/activate
+``` bash
 pytest -q
 ```
 
-The expected baseline is:
+Result:
 
-```text
-77 passed, 1 warning
+``` text
+111 passed, 1 warning
 ```
 
-Do not restart Jira implementation. Continue from this checkpoint.
+------------------------------------------------------------------------
 
----
+# 16. Known Warning
 
-# 19. Milestone History
+Current warning:
 
-```text
+``` text
+IncompleteFieldDefinitionWarning:
+Field 'lifespan' has an incomplete definition
+```
+
+Source:
+
+``` text
+pydantic_settings
+```
+
+Policy:
+
+-   known
+-   non-blocking
+-   does not fail tests
+-   does not prevent MCP import
+-   not caused by Jira or GitHub
+-   do not suppress merely to make output clean
+-   investigate separately if it becomes relevant
+
+------------------------------------------------------------------------
+
+# 17. SQLite Persistence
+
+Database:
+
+``` text
+data/qa_mcp.db
+```
+
+Do not delete persistent databases merely to make tests pass.
+
+Persistence-focused tests should use isolated database state.
+
+------------------------------------------------------------------------
+
+# 18. Security Rules
+
+Never commit:
+
+``` text
+.env
+real Jira tokens
+real GitHub tokens
+passwords
+AWS credentials
+private keys
+organisation secrets
+```
+
+Before pushing:
+
+``` bash
+git status
+git diff
+git check-ignore .env
+```
+
+Do not embed a personal access token in a Git remote URL.
+
+Use:
+
+``` text
+https://github.com/sanumenon/qa-mcp.git
+```
+
+If a real token was ever exposed in a remote URL, revoke/rotate it.
+
+------------------------------------------------------------------------
+
+# 19. Git Checkpoint Procedure
+
+After completing a phase/sub-step:
+
+``` bash
+pytest -q
+git status
+git diff
+```
+
+Review the changes and confirm no secrets are staged.
+
+Then:
+
+``` bash
+git add .
+git commit -m "Complete <checkpoint>"
+git push
+```
+
+Verify:
+
+``` bash
+git status
+git branch -vv
+git log --oneline --decorate -10
+```
+
+Goal:
+
+``` text
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+```
+
+------------------------------------------------------------------------
+
+# 20. Current Development Checkpoint
+
+``` text
++-----------------------------------------------------------+
+|                 QA MCP DEVELOPMENT CHECKPOINT             |
++-----------------------------------------------------------+
+| Phase:             Phase 2                                |
+| Capability:        GitHub Connector                       |
+| Status:            COMPLETE through S6.9                 |
+| Jira:              COMPLETE                               |
+| GitHub:            COMPLETE through S6.9                 |
+| Full regression:   111 passed                            |
+| Warning:           1 known external warning              |
++-----------------------------------------------------------+
+```
+
+Verified:
+
+``` text
+GitHub configuration                 ✅
+Client abstraction + models          ✅
+Mock client                          ✅
+Service                              ✅
+Cloud/API client                     ✅
+Factory                              ✅
+Runtime wiring                       ✅
+Read-only MCP tools                  ✅
+Disabled connector safety            ✅
+MCP registration                     ✅
+Full regression                      ✅
+```
+
+------------------------------------------------------------------------
+
+# 21. Milestone History
+
+``` text
 Phase 1
   |
   +-- Foundation
+  +-- MCP
   +-- LLM abstraction
   +-- Requirement analysis
   +-- Test generation
   +-- Test review
   +-- QA suite workflow
-  +-- MCP integration
   |
   v
 Phase 1 COMPLETE
-
-Phase 2
-  |
-  +-- QA Project Context
-  +-- SQLite Persistence
-  +-- Requirement/Suite Versioning
-  +-- Import / Export
-  +-- Jira Connector
   |
   v
-Phase 2 Step 5 COMPLETE
+Phase 2
+  |
+  +-- S1 QA Project Context
+  +-- S2 SQLite Persistence
+  +-- S3 Requirement/Suite Versioning
+  +-- S4 Import / Export
+  +-- S5 Jira Connector
+  +-- S6 GitHub Connector
+  |
+  v
+CURRENT CHECKPOINT
 ```
 
-This README represents the project state after successful verification of **Phase 2 → Step 4 — Import / Export**.
+------------------------------------------------------------------------
 
+# 22. Phase 2 Roadmap
 
----
+  Step   Capability                    Status
+  ------ ----------------------------- -----------
+  1      QA Project Context            COMPLETED
+  2      SQLite Persistence            COMPLETED
+  3      QA Suite Versioning           COMPLETED
+  4      Import / Export               COMPLETED
+  5      Jira Connector                COMPLETED
+  6      GitHub Connector              COMPLETED
+  7      Automation Case Generator     Planned
+  8      QA Agent                      Planned
+  9      CI/CD / broader integration   Planned
+  10     Internet Deployment           Planned
 
-# 20. Continuity / Handover Instructions
+The roadmap can be refined deliberately, but completed work must not be
+recreated.
 
-This README is the **authoritative development checkpoint** for continuing QA MCP development across sessions.
+------------------------------------------------------------------------
 
-When starting a new development session:
+# 23. Deliberately Not Implemented Yet
 
-```text
-1. Read README.md
-2. Check Git status
-3. Pull the latest checkpoint
-4. Activate .venv
-5. Run pytest -q
-6. Confirm the baseline
-7. Continue from "Next Development Step"
+### Jira
+
+``` text
+create/update issues
+comments
+transitions
+test-case publishing
+Jira → QA end-to-end workflow
 ```
 
-Recommended commands:
+### GitHub
 
-```bash
-git status
-git pull
+``` text
+create/update issues
+comments
+pull request creation
+pull request merge
+repository writes
+CI workflow mutation
+```
+
+### QA platform
+
+``` text
+automation code generation
+QA agent/orchestrator
+CI/CD execution
+broader integrations
+production deployment
+```
+
+Each future capability receives its own design, focused tests,
+implementation, regression, and README checkpoint.
+
+------------------------------------------------------------------------
+
+# 24. Continuity / Handover Instructions
+
+This README is the **authoritative development checkpoint** for
+continuing QA MCP across chat sessions.
+
+When starting a fresh session:
+
+``` bash
+cd qa-mcp
 source .venv/bin/activate
+git pull
 pytest -q
+git status
+git log --oneline --decorate -10
 ```
 
-If the baseline is different from the documented checkpoint, stop and investigate before implementing new functionality.
+Confirm:
 
-## Current handover state
-
-```text
-Phase 1                              COMPLETE
-Phase 2 / Step 1                     COMPLETE
-Phase 2 / Step 2                     COMPLETE
-Phase 2 / Step 3                     COMPLETE
-Phase 2 / Step 4                     COMPLETE
-Phase 2 / Step 5                     COMPLETE
-
-Current regression                   77 passed
-Known external warnings              1
-Real Jira credentials required       NO
-Real Jira integration tested         NOT YET
+``` text
+111 passed, 1 warning
 ```
 
-The Jira connector is architecturally ready, but organisation-specific Jira credentials and a controlled live connectivity check are intentionally separate from the automated test baseline.
+Then read this README and continue from the documented checkpoint.
 
-At every future milestone, update this README with:
+## Fresh-chat handover statement
 
-```text
-- phase and step
-- implementation status
-- architecture changes
-- diagrams where useful
-- setup/configuration changes
-- environment variables
-- focused test count
-- full regression count
-- known warnings
-- next development step
+``` text
+Resume QA MCP development from the GitHub/README checkpoint.
+
+Phase 1 is complete.
+
+Phase 2 completed:
+- S1 Project Context
+- S2 SQLite Persistence
+- S3 Requirement & Suite Versioning
+- S4 Import / Export
+- S5 Jira Connector
+- S6 GitHub Connector through S6.9
+
+Current regression:
+111 tests passing, 1 known non-blocking pydantic_settings warning.
+
+Jira:
+- read-only
+- mock + Cloud clients
+- factory
+- runtime wiring
+- MCP tools
+
+GitHub:
+- read-only
+- mock + Cloud clients
+- factory
+- runtime wiring
+- MCP tools
+- disabled-without-credentials behavior verified
+- MCP registration verified
+
+Follow README development rules:
+test-first, one step at a time, preserve architecture,
+keep integrations mockable, never weaken tests, never commit secrets,
+run full regression before closing a step, and update README at every
+verified checkpoint.
+
+Do not recreate completed Jira or GitHub work.
+Read the repository and README first, verify pytest, then continue with
+the next planned Phase 2 capability.
 ```
 
-This prevents the development context from being lost when work resumes in a later chat or environment.
+------------------------------------------------------------------------
+
+# Final Reminder
+
+This README is the **development checkpoint document**, not a substitute
+for source code.
+
+The repository, tests, configuration files, and Git history remain the
+authoritative implementation sources.
+
+When continuing development:
+
+1.  Read this README.
+2.  Verify Git status.
+3.  Pull the latest checkpoint.
+4.  Run the regression suite.
+5.  Confirm the baseline.
+6.  Inspect existing code before modifying it.
+7.  Continue from the next documented development step.
+8.  Follow the development guidelines.
+9.  Update this README again at the next verified milestone.
+
+**Current baseline: 111 passed, 1 warning.**
+
+**Current completed connector milestone: Jira + GitHub read-only
+integrations.**

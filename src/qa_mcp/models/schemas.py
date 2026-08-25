@@ -123,3 +123,39 @@ class JiraSearchResult(BaseModel):
     )
 
     total: int = 0
+
+class GitHubRepository(BaseModel):
+    """Normalized GitHub repository representation."""
+
+    full_name: str
+    name: str
+    owner: str
+    description: str = ""
+    url: str = ""
+    default_branch: str = ""
+
+
+class GitHubIssue(BaseModel):
+    """Normalized GitHub issue representation."""
+
+    number: int
+    title: str
+    state: str = ""
+    body: str = ""
+    url: str = ""
+    repository: str = ""
+    author: str = ""
+
+
+class GitHubPullRequest(BaseModel):
+    """Normalized GitHub pull request representation."""
+
+    number: int
+    title: str
+    state: str = ""
+    body: str = ""
+    url: str = ""
+    repository: str = ""
+    author: str = ""
+    head_branch: str = ""
+    base_branch: str = ""

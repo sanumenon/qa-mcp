@@ -7,6 +7,10 @@ from qa_mcp.core.jira.factory import (
     create_jira_service,
 )
 
+from qa_mcp.core.github.factory import (
+    create_github_service,
+)
+
 from qa_mcp.models.schemas import (
     RequirementRequest,
     TestCaseGenerationRequest,
@@ -92,6 +96,10 @@ qa_suite_workflow = QASuiteWorkflow(
 )
 
 jira_service = create_jira_service(
+    config
+)
+
+github_service = create_github_service(
     config
 )
 
@@ -579,6 +587,104 @@ def import_qa_project(
     )
 
     return project.model_dump()
+
+# ---------------------------------------------------------
+# GitHub Read-Only Operations
+# ---------------------------------------------------------
+
+@mcp.tool()
+def get_github_repository(
+    owner: str,
+    repository: str,
+) -> dict:
+    """Retrieve a GitHub repository."""
+
+    if github_service is None:
+        raise RuntimeError(
+            "GitHub connector is not configured"
+        )
+
+    result = (
+        github_service.get_repository(
+            owner=owner,
+            repository=repository,
+        )
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def get_github_issue(
+    owner: str,
+    repository: str,
+    issue_number: int,
+) -> dict:
+    """Retrieve a GitHub issue."""
+
+    if github_service is None:
+        raise RuntimeError(
+            "GitHub connector is not configured"
+        )
+
+    result = (
+        github_service.get_issue(
+            owner=owner,
+            repository=repository,
+            issue_number=issue_number,
+        )
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def get_github_pull_request(
+    owner: str,
+    repository: str,
+    pull_number: int,
+) -> dict:
+    """Retrieve a GitHub pull request."""
+
+    if github_service is None:
+        raise RuntimeError(
+            "GitHub connector is not configured"
+        )
+
+    result = (
+        github_service.get_pull_request(
+            owner=owner,
+            repository=repository,
+            pull_number=pull_number,
+        )
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def search_github_issues(
+    query: str,
+    max_results: int = 50,
+) -> list[dict]:
+    """Search GitHub issues."""
+
+    if github_service is None:
+        raise RuntimeError(
+            "GitHub connector is not configured"
+        )
+
+    results = (
+        github_service.search_issues(
+            query=query,
+            max_results=max_results,
+        )
+    )
+
+    return [
+        item.model_dump()
+        for item in results
+    ]
 
 if __name__ == "__main__":
     mcp.run()

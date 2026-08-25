@@ -56,4 +56,33 @@ def load_config() -> dict:
         ),
     )
 
+    config.setdefault(
+        "github",
+        {}
+    )
+
+    config["github"]["url"] = os.getenv(
+        "GITHUB_URL",
+        config["github"].get(
+            "url",
+            "https://api.github.com",
+        ),
+    )
+
+    config["github"]["token"] = os.getenv(
+        "GITHUB_TOKEN",
+        config["github"].get(
+            "token",
+            "",
+        ),
+    )
+
+    config["github"]["owner"] = os.getenv(
+        "GITHUB_OWNER",
+        config["github"].get(
+            "owner",
+            "",
+        ),
+    )
+
     return config
