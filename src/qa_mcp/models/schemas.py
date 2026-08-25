@@ -159,3 +159,43 @@ class GitHubPullRequest(BaseModel):
     author: str = ""
     head_branch: str = ""
     base_branch: str = ""
+
+class SlackChannel(BaseModel):
+    """Normalized Slack channel representation."""
+
+    id: str
+    name: str
+    is_private: bool = False
+    is_archived: bool = False
+    url: str = ""
+
+
+class SlackMessage(BaseModel):
+    """Normalized Slack message representation."""
+
+    ts: str
+    text: str = ""
+    user: str = ""
+    channel: str = ""
+    thread_ts: str = ""
+    url: str = ""
+
+
+class SlackSearchResult(BaseModel):
+    """Normalized Slack message search result."""
+
+    messages: list[SlackMessage] = Field(
+        default_factory=list
+    )
+
+    total: int = 0
+
+
+class SlackThread(BaseModel):
+    """Normalized Slack thread representation."""
+
+    channel: str
+    thread_ts: str
+    messages: list[SlackMessage] = Field(
+        default_factory=list
+    )

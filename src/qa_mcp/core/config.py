@@ -85,4 +85,33 @@ def load_config() -> dict:
         ),
     )
 
+    config.setdefault(
+        "slack",
+        {}
+    )
+
+    config["slack"]["url"] = os.getenv(
+        "SLACK_URL",
+        config["slack"].get(
+            "url",
+            "https://slack.com/api",
+        ),
+    )
+
+    config["slack"]["token"] = os.getenv(
+        "SLACK_TOKEN",
+        config["slack"].get(
+            "token",
+            "",
+        ),
+    )
+
+    config["slack"]["default_channel"] = os.getenv(
+        "SLACK_DEFAULT_CHANNEL",
+        config["slack"].get(
+            "default_channel",
+            "",
+        ),
+    )
+
     return config

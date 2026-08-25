@@ -11,6 +11,10 @@ from qa_mcp.core.github.factory import (
     create_github_service,
 )
 
+from qa_mcp.core.slack.factory import (
+    create_slack_service,
+)
+
 from qa_mcp.models.schemas import (
     RequirementRequest,
     TestCaseGenerationRequest,
@@ -96,6 +100,10 @@ qa_suite_workflow = QASuiteWorkflow(
 )
 
 jira_service = create_jira_service(
+    config
+)
+
+slack_service = create_slack_service(
     config
 )
 
@@ -686,5 +694,84 @@ def search_github_issues(
         for item in results
     ]
 
+@mcp.tool()
+def get_slack_channel(
+    channel: str,
+) -> dict:
+    """Retrieve a Slack channel."""
+
+    if slack_service is None:
+        raise RuntimeError(
+            "Slack connector is not configured"
+        )
+
+    result = slack_service.get_channel(
+        channel
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def get_slack_messages(
+    channel: str,
+    limit: int = 50,
+) -> list[dict]:
+    """Retrieve recent Slack messages."""
+
+    if slack_service is None:
+        raise RuntimeError(
+            "Slack connector is not configured"
+        )
+
+    results = slack_service.get_messages(
+        channel,
+        limit=limit,
+    )
+
+    return [
+        item.model_dump()
+        for item in results
+    ]
+
+
+@mcp.tool()
+def search_slack_messages(
+    query: str,
+    max_results: int = 50,
+) -> dict:
+    """Search Slack messages."""
+
+    if slack_service is None:
+        raise RuntimeError(
+            "Slack connector is not configured"
+        )
+
+    result = slack_service.search_messages(
+        query,
+        max_results=max_results,
+    )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def get_slack_thread(
+    channel: str,
+    thread_ts: str,
+) -> dict:
+    """Retrieve a Slack message thread."""
+
+    if slack_service is None:
+        raise RuntimeError(
+            "Slack connector is not configured"
+        )
+
+    result = slack_service.get_thread(
+        channel,
+        thread_ts,
+    )
+
+    return result.model_dump()
 if __name__ == "__main__":
     mcp.run()
