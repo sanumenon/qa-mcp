@@ -199,3 +199,37 @@ class SlackThread(BaseModel):
     messages: list[SlackMessage] = Field(
         default_factory=list
     )
+
+class AutomationCase(BaseModel):
+    """Normalized automation candidate representation."""
+
+    id: str
+    test_case_id: str
+    title: str
+    automation_type: str = ""
+    framework: str = ""
+    priority: str = ""
+    confidence: str = ""
+    preconditions: list[str] = Field(
+        default_factory=list
+    )
+    test_data: list[str] = Field(
+        default_factory=list
+    )
+    steps: list[str] = Field(
+        default_factory=list
+    )
+    assertions: list[str] = Field(
+        default_factory=list
+    )
+    limitations: list[str] = Field(
+        default_factory=list
+    )
+
+
+class AutomationCaseResponse(BaseModel):
+    """Normalized automation case generation response."""
+
+    automation_cases: list[AutomationCase] = Field(
+        default_factory=list
+    )

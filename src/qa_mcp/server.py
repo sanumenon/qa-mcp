@@ -3,6 +3,8 @@ from mcp.server.fastmcp import FastMCP
 from qa_mcp.core.config import load_config
 from qa_mcp.core.llm import create_llm
 
+from pydantic import ValidationError
+
 from qa_mcp.core.jira.factory import (
     create_jira_service,
 )
@@ -33,6 +35,14 @@ from qa_mcp.tools.testcase.reviewer import (
     TestCaseReviewer,
 )
 
+from qa_mcp.core.automation.service import (
+    AutomationService,
+)
+
+from qa_mcp.tools.automation.generator import (
+    AutomationCaseGenerator,
+)
+
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
 )
@@ -40,6 +50,7 @@ from qa_mcp.tools.workflow.qa_suite import (
 from qa_mcp.models.schemas import (
     QAProject,
     RequirementRequest,
+    TestCase,
     TestCaseGenerationRequest,
     TestCaseResponse,
 )
@@ -109,6 +120,14 @@ slack_service = create_slack_service(
 
 github_service = create_github_service(
     config
+)
+
+automation_case_generator = AutomationCaseGenerator(
+    llm
+)
+
+automation_service = AutomationService(
+    automation_case_generator
 )
 
 project_repository = SQLiteProjectRepository()
@@ -773,5 +792,27 @@ def get_slack_thread(
     )
 
     return result.model_dump()
+
+@mcp.tool()
+def generate_automation(
+    test_case: dict,
+) -> dict:
+    """Generate automation candidates for a test case."""
+
+    try:
+        qa_test_case = TestCase(
+            **test_case
+        )
+    except Exception as exc:
+        raise ValueError(
+            "Invalid test case"
+        ) from exc
+
+    result = automation_service.generate_automation(
+        qa_test_case
+    )
+
+    return result.model_dump()
+
 if __name__ == "__main__":
     mcp.run()
