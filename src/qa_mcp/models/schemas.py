@@ -233,3 +233,16 @@ class AutomationCaseResponse(BaseModel):
     automation_cases: list[AutomationCase] = Field(
         default_factory=list
     )
+
+class AutomationCandidateResult(BaseModel):
+    """Result of automation candidate selection."""
+
+    candidate_ids: list[str] = Field(
+        default_factory=list
+    )
+
+    manual_ids: list[str] = Field(
+        default_factory=list
+    )
+
+    total: int = 0

@@ -17,10 +17,12 @@ from qa_mcp.core.slack.factory import (
     create_slack_service,
 )
 
-from qa_mcp.models.schemas import (
-    RequirementRequest,
-    TestCaseGenerationRequest,
-    TestCaseResponse,
+from qa_mcp.core.automation.candidate_selector import (
+    AutomationCandidateSelector,
+)
+
+from qa_mcp.core.automation.candidate_service import (
+    AutomationCandidateService,
 )
 
 from qa_mcp.tools.requirement.analyzer import (
@@ -73,6 +75,10 @@ from qa_mcp.core.versioning.service import (
 
 from qa_mcp.core.import_export.service import (
     QAImportExportService,
+)
+
+from qa_mcp.core.automation.candidate_generation_service import (
+    AutomationCandidateGenerationService,
 )
 
 
@@ -130,6 +136,19 @@ automation_service = AutomationService(
     automation_case_generator
 )
 
+automation_candidate_service = (
+    AutomationCandidateService(
+        AutomationCandidateSelector()
+    )
+)
+
+automation_candidate_generation_service = (
+    AutomationCandidateGenerationService(
+        candidate_service=automation_candidate_service,
+        automation_service=automation_service,
+    )
+)
+
 project_repository = SQLiteProjectRepository()
 
 project_context = ProjectContext(
@@ -154,9 +173,6 @@ import_export_service = QAImportExportService(
     ),
 )
 
-suite_version_repository = (
-    SQLiteSuiteVersionRepository()
-)
 
 requirement_versioning_service = (
     QARequirementVersioningService(
@@ -813,6 +829,63 @@ def generate_automation(
     )
 
     return result.model_dump()
+
+@mcp.tool()
+def select_automation_candidates(
+    test_cases: list[dict],
+) -> dict:
+    """Select test cases suitable for automation."""
+
+    try:
+        qa_test_cases = [
+            TestCase(
+                **test_case
+            )
+            for test_case in test_cases
+        ]
+
+        result = (
+            automation_candidate_service.select_candidates(
+                qa_test_cases
+            )
+        )
+
+        return result.model_dump()
+
+    except Exception as exc:
+        raise ValueError(
+            f"Invalid test cases: {exc}"
+        ) from exc
+
+@mcp.tool()
+def generate_automation_for_candidates(
+    test_cases: list[dict],
+) -> list[dict]:
+    """Select automation candidates and generate automation for them."""
+
+    try:
+        qa_test_cases = [
+            TestCase(
+                **test_case
+            )
+            for test_case in test_cases
+        ]
+
+        result = (
+            automation_candidate_generation_service.generate(
+                qa_test_cases
+            )
+        )
+
+        return [
+            automation_case.model_dump()
+            for automation_case in result
+        ]
+
+    except Exception as exc:
+        raise ValueError(
+            f"Invalid test cases: {exc}"
+        ) from exc
 
 if __name__ == "__main__":
     mcp.run()
