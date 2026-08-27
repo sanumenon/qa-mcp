@@ -19,98 +19,60 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 - Eventual QA-agent orchestration
 - Eventual CI/CD and hosted product capabilities
 
-> **Continuity Rule:** This README is the authoritative development checkpoint for future QA MCP development sessions. Read it before starting new development. Do not recreate completed work.
+> **CONTINUITY RULE:** This README is the authoritative development, deployment, roadmap, and continuity checkpoint for future QA MCP development sessions. Read it before starting new development. Do not recreate completed work.
 
 ---
 
-# 1. Current Development Checkpoint
+# 1. CURRENT DEVELOPMENT CHECKPOINT
 
 ## Repository checkpoint
 
 ```text
-Branch:             main
-Latest commit:      3bdf761 Implement controlled automation execution
+Repository:          https://github.com/sanumenon/qa-mcp/tree/main
+Branch:              main
+Latest commit:       add5ba2 Update project continuity roadmap
+Previous commit:    3bdf761 Implement controlled automation execution
 Previous commit:    703cdb1 Complete automation execution foundation
-Remote:             origin/main
-Working tree:       clean
-Current milestone:  Controlled Automation Execution
-Current checkpoint: P2-S8.9 — Controlled Automation Execution COMPLETE
+Remote:              origin/main
+Working tree:        clean
+Current checkpoint:  P2-S9.1 — Execution Hardening
+Next implementation: Execution hardening / execution evidence
 ```
 
-The repository has now progressed beyond the original execution-foundation contract.
-
-## Latest verified regression
+## Latest verified baseline
 
 ```text
+pytest -q
 190 passed
 7 warnings
 0 failures
-```
 
-Focused execution suite:
-
-```text
-16 passed
-1 warning
-```
-
-Execution-service suite:
-
-```text
-7 passed
-```
-
-Latest verification performed before the checkpoint:
-
-```bash
-pytest -q
 git diff --check
+clean
+
 git status
+working tree clean
 ```
 
-Result:
+The warnings are known non-blocking technical debt and are documented below.
+
+## Latest completed automation checkpoint
 
 ```text
-190 passed, 7 warnings
-git diff --check -> clean
-working tree -> clean
+P2-S8.6   Automation Candidate Selection          COMPLETE
+P2-S8.7   Candidate → Automation Generation       COMPLETE
+P2-S8.8   Automation Case Validation              COMPLETE
+P2-S8.8+  Automation Code Generation              COMPLETE
+P2-S8.9   Controlled Automation Execution         COMPLETE
 ```
 
-## Latest committed implementation
-
-The current committed execution pipeline contains:
-
-```text
-GeneratedAutomationArtifact
-        |
-        v
-AutomationExecutionConfig
-        |
-        v
-AutomationWorkspace
-        |
-        v
-AutomationExecutionRunner
-        |
-        v
-AutomationExecutionService
-        |
-        v
-AutomationExecutionResult
-        |
-        v
-MCP execute_automation_code
-```
-
-The implementation is deliberately limited to a controlled local execution boundary. It is **not yet the final production-grade sandbox/container/cloud execution architecture**.
+**Do not rebuild or redesign these completed checkpoints.**
 
 ---
 
-# 2. Product Vision
+# 2. PRODUCT VISION
 
 The long-term goal is to evolve QA MCP from a collection of QA utilities into an intelligent QA agent/platform.
-
-The intended end-to-end flow is:
 
 ```text
 Requirement
@@ -158,7 +120,7 @@ Reporting / Analysis
 QA Agent / Orchestration
 ```
 
-Eventually the platform should support integrations such as:
+Eventually the platform should support:
 
 ```text
 Jira
@@ -168,19 +130,21 @@ CI/CD
 Test repositories
 Automation environments
 Cloud execution
+Interactive UI
+Hosted/cloud product
 ```
 
-The UI/hosted product layer should be introduced after the core QA capabilities and agent workflow are sufficiently stable.
+The UI/hosted product layer must be introduced only after the core QA-agent capabilities are sufficiently stable.
 
 ---
 
-# 3. Development Rules — MUST FOLLOW
+# 3. DEVELOPMENT RULES — MUST FOLLOW
 
 These rules apply to every future change.
 
 1. Implement one phase/sub-step at a time.
 2. Test first wherever practical.
-3. Focused tests must pass before moving to the next implementation increment.
+3. Focused tests must pass before moving to the next increment.
 4. The relevant feature test group must pass.
 5. The full regression suite must pass before closing a milestone.
 6. Never weaken or delete tests merely to obtain green output.
@@ -191,35 +155,48 @@ These rules apply to every future change.
 11. External integrations must remain mockable.
 12. LLM providers must remain replaceable.
 13. AI output must be validated before downstream use.
-14. Do not commit secrets or real `.env` files.
-15. Do not delete persistent databases merely to make tests pass.
+14. Never commit secrets or a real `.env` file.
+15. Never delete persistent databases merely to make tests pass.
 16. Keep unrelated refactoring separate from feature work.
 17. A major capability is not complete until its MCP/runtime path is verified.
 18. Update this README at every verified milestone.
-19. Commit only after the feature, tests, README, and checkpoint have been reviewed.
+19. Commit only after feature, tests, README, and checkpoint have been reviewed.
 20. Do not recreate completed work from earlier milestones.
 21. Do not introduce production-grade container/cloud complexity before the local execution contract is stable.
 22. Keep generated automation execution behind explicit framework validation and controlled command construction.
+23. Preserve traceability:
+    `Requirement → Test Case → Automation Case → Artifact → Execution Result`.
+24. Do not silently change established contracts.
+25. Prefer deterministic behavior over clever behavior.
+26. Keep execution safety ahead of execution convenience.
+27. Deployment/configuration details must remain documented here.
+28. A new chat/session must begin from this README and the current GitHub `main` branch.
 
-The recurring development sequence is:
+## Mandatory development sequence
 
 ```text
-Understand current checkpoint
+Read README / current checkpoint
         |
         v
-Inspect repository
+Inspect GitHub main + repository state
+        |
+        v
+Inspect existing implementation
+        |
+        v
+Define ONE next sub-step
         |
         v
 Write/update focused tests
         |
         v
-Implement one increment
+Implement smallest production change
         |
         v
 Focused tests green
         |
         v
-Feature test group green
+Feature tests green
         |
         v
 Full regression green
@@ -231,17 +208,18 @@ Runtime/MCP verification
 Update README
         |
         v
-Review git diff
+git diff --check
         |
         v
 Commit + push
+        |
+        v
+Verify clean working tree
 ```
 
 ---
 
-# 4. Architecture
-
-The fundamental architecture is:
+# 4. ARCHITECTURE
 
 ```text
                          MCP CLIENT / AI ASSISTANT
@@ -298,9 +276,9 @@ Core business logic must not become coupled to MCP transport.
 
 ---
 
-# 5. Repository Structure
+# 5. REPOSITORY STRUCTURE
 
-Current important structure:
+Important current structure:
 
 ```text
 qa-mcp/
@@ -357,13 +335,13 @@ qa-mcp/
 
 ---
 
-# 6. Completed Product Capabilities
+# 6. COMPLETED PRODUCT CAPABILITIES
 
 ## Phase 1 — Foundation & QA Intelligence
 
-**Status: COMPLETE**
+**STATUS: COMPLETE**
 
-Completed capabilities include:
+Completed:
 
 - MCP server foundation
 - Configuration loading
@@ -374,34 +352,7 @@ Completed capabilities include:
 - Test-case review
 - End-to-end QA suite workflow
 
-Core flow:
-
-```text
-Requirement
-    |
-    v
-Requirement Analyzer
-    |
-    v
-RequirementAnalysis
-    |
-    v
-Test Case Generator
-    |
-    v
-TestCaseResponse
-    |
-    v
-Test Case Reviewer
-    |
-    v
-TestCaseReview
-    |
-    v
-QASuiteResult
-```
-
-Core MCP capabilities include:
+Core MCP capabilities:
 
 ```text
 health
@@ -412,11 +363,7 @@ review_test_cases
 generate_qa_suite
 ```
 
----
-
-# 7. Phase 2 — QA Platform Foundation
-
-Completed milestones:
+## Phase 2 — QA Platform Foundation
 
 | Milestone | Capability | Status |
 |---|---|---|
@@ -426,20 +373,18 @@ Completed milestones:
 | P2-S4 | Project Import / Export | COMPLETE |
 | P2-S5 | Jira Connector | COMPLETE |
 | P2-S6 | GitHub Connector | COMPLETE |
-| P2-S8 | Automation Pipeline | COMPLETE through current automation checkpoints |
+| P2-S8 | Automation Pipeline | COMPLETE through current checkpoints |
 | P2-S8.6 | Automation Candidate Selection | COMPLETE |
 | P2-S8.7 | Candidate → Automation Generation | COMPLETE |
 | P2-S8.8 | Automation Case Validation | COMPLETE |
 | P2-S8.8+ | Automation Code Generation | COMPLETE |
 | P2-S8.9 | Controlled Automation Execution | COMPLETE |
 
-Slack integration also exists behind service/client abstractions.
+Slack integration exists behind service/client abstractions.
 
 ---
 
-# 8. Project Context and Persistence
-
-QA project context is represented by persistent project data.
+# 7. PROJECT CONTEXT AND PERSISTENCE
 
 Conceptually:
 
@@ -456,7 +401,7 @@ QAProject
     +-- test suites
 ```
 
-Persistence architecture:
+Persistence:
 
 ```text
 ProjectContext
@@ -477,46 +422,17 @@ Database:
 data/qa_mcp.db
 ```
 
-Important rule:
-
-> Never delete the persistent database merely to make tests pass.
+**Important:** Never delete the persistent database merely to make tests pass.
 
 Persistence-focused tests should use isolated database state.
 
 ---
 
-# 9. Requirement and Suite Versioning
-
-Requirements are immutable versions:
-
-```text
-Requirement V1
-Requirement V2
-Requirement V3
-```
-
-Suite versions retain their relationship to requirement versions:
-
-```text
-Requirement Version
-        |
-        v
-QA Suite Version
-        |
-        +-- Test Cases
-        |
-        +-- Review
-```
-
-Import/export validates structure and protects against duplicate project IDs.
-
----
-
-# 10. External Connectors
+# 8. EXTERNAL CONNECTORS
 
 ## Jira
 
-Jira is implemented behind an abstraction:
+Abstraction:
 
 ```text
 MCP
@@ -530,7 +446,7 @@ JiraClient
  +-- JiraCloudClient
 ```
 
-Current real Jira operations are read-only:
+Current real operations are read-only:
 
 ```text
 get_jira_issue(issue_key)
@@ -539,11 +455,9 @@ search_jira_issues(jql, max_results=50)
 
 No Jira write operations are part of the completed connector milestone.
 
-The connector remains disabled by default unless configured.
-
 ## GitHub
 
-GitHub follows the same isolation pattern:
+Abstraction:
 
 ```text
 MCP
@@ -555,12 +469,9 @@ GitHubService
 GitHubClient
  +-- MockGitHubClient
  +-- GitHubCloudClient
-          |
-          v
-      GitHub REST API
 ```
 
-Current read-only MCP tools:
+Current read-only tools:
 
 ```text
 get_github_repository(owner, repository)
@@ -573,7 +484,7 @@ No GitHub write operations are part of the completed connector milestone.
 
 ## Slack
 
-Slack is implemented behind:
+Abstraction:
 
 ```text
 SlackService
@@ -584,7 +495,7 @@ SlackClient
     +-- SlackCloudClient
 ```
 
-Current Slack MCP tools include:
+Current tools include:
 
 ```text
 get_slack_channel
@@ -595,11 +506,7 @@ get_slack_thread
 
 ---
 
-# 11. Automation Pipeline
-
-The automation work has progressed well beyond the original automation-case-generator milestone.
-
-Current pipeline:
+# 9. AUTOMATION PIPELINE
 
 ```text
 Test Cases
@@ -626,9 +533,7 @@ Controlled Execution
 AutomationExecutionResult
 ```
 
-The project deliberately does not blindly automate every generated test case.
-
-Candidate selection distinguishes:
+Candidate selection deliberately distinguishes:
 
 ```text
 Recommended for automation
@@ -638,24 +543,23 @@ Recommended for automation
         +---- Manual-only
 ```
 
+Manual-only test cases must not be sent to the automation generator.
+
 ---
 
-# 12. Automation Candidate Selection — P2-S8.6 COMPLETE
+# 10. AUTOMATION CHECKPOINTS ALREADY COMPLETE
 
-The candidate selector determines which test cases are suitable for automation.
+## P2-S8.6 — Candidate Selection
 
-The result is:
+`AutomationCandidateSelector` / `AutomationCandidateService`
+
+Result:
 
 ```text
 AutomationCandidateResult
-```
-
-with:
-
-```text
-candidate_ids
-manual_ids
-total
+    +-- candidate_ids
+    +-- manual_ids
+    +-- total
 ```
 
 MCP tool:
@@ -664,19 +568,15 @@ MCP tool:
 select_automation_candidates
 ```
 
-Candidate selection remains independent of the existing QA suite workflow so that it can be reused by future agent workflows.
+## P2-S8.7 — Candidate → Automation Generation
 
----
-
-# 13. Candidate → Automation Generation — P2-S8.7 COMPLETE
-
-The orchestration service is:
+Service:
 
 ```text
 AutomationCandidateGenerationService
 ```
 
-Its responsibility is deliberately narrow:
+Flow:
 
 ```text
 TestCase[]
@@ -694,9 +594,7 @@ Generate automation ONLY for candidates
 AutomationCase[]
 ```
 
-Manual-only test cases are not sent to the automation generator.
-
-The zero-candidate case is explicitly handled:
+Zero-candidate behavior:
 
 ```text
 No automation candidates
@@ -714,24 +612,7 @@ MCP tool:
 generate_automation_for_candidates
 ```
 
-Automation capabilities now include:
-
-```text
-generate_automation
-    -> Generate automation for a known test case
-
-select_automation_candidates
-    -> Identify which test cases should be automated
-
-generate_automation_for_candidates
-    -> Select candidates and generate automation for them
-```
-
----
-
-# 14. Automation Case Validation — P2-S8.8 COMPLETE
-
-The automation pipeline includes a dedicated validation layer.
+## P2-S8.8 — Automation Case Validation
 
 Validator:
 
@@ -739,59 +620,30 @@ Validator:
 AutomationValidator
 ```
 
-Structured result:
+Result:
 
 ```text
 AutomationValidationResult
+    +-- automation_case_id
+    +-- test_case_id
+    +-- valid
+    +-- errors
+    +-- warnings
 ```
 
-with:
+Minimum integrity:
 
-```text
-automation_case_id
-test_case_id
-valid
-errors
-warnings
-```
+- At least one automation step.
+- Validation failures are structured errors.
+- Non-blocking concerns can be warnings.
+- Validation remains separate from generation.
 
-Fundamental integrity includes:
+## P2-S8.8+ — Automation Code Generation
 
-- An automation case must contain at least one step.
-- Validation failures are returned as structured errors.
-- Non-blocking concerns can be returned as warnings.
-- Validation is separated from automation generation.
-
-Pipeline:
-
-```text
-Test Case
-    |
-    v
-Candidate Selection
-    |
-    v
-Automation Generation
-    |
-    v
-Automation Case
-    |
-    v
-Automation Validation
-    |
-    v
-Validated Automation Case
-```
-
----
-
-# 15. Automation Code Generation
-
-Generated automation artifacts are represented by:
+Artifact:
 
 ```text
 GeneratedAutomationArtifact
-    |
     +-- id
     +-- automation_case_id
     +-- framework
@@ -809,86 +661,55 @@ Language: Python
 
 Generated automation must be validated before downstream execution.
 
-The framework boundary is deliberately explicit. Unsupported frameworks must not silently fall through to arbitrary execution.
-
 ---
 
-# 16. Automation Execution Contract
+# 11. CONTROLLED AUTOMATION EXECUTION — P2-S8.9 COMPLETE
 
-Execution results are represented by:
+The committed local execution pipeline is:
 
 ```text
+GeneratedAutomationArtifact
+        |
+        v
+AutomationExecutionConfig
+        |
+        v
+AutomationWorkspace
+        |
+        v
+AutomationExecutionRunner
+        |
+        v
+AutomationExecutionService
+        |
+        v
 AutomationExecutionResult
-    |
-    +-- execution_id
-    +-- automation_artifact_id
-    +-- automation_case_id
-    +-- status
-    +-- exit_code
-    +-- stdout
-    +-- stderr
-    +-- duration_seconds
-    +-- error
+        |
+        v
+MCP execute_automation_code
 ```
 
-The `automation_case_id` traceability is intentional and must be preserved.
-
-Current statuses:
-
-```text
-NOT_EXECUTED
-PASSED
-FAILED
-TIMEOUT
-ERROR
-```
-
-Status mapping is deterministic.
-
----
-
-# 17. Controlled Automation Execution — P2-S8.9 COMPLETE
-
-The current committed execution increment introduces three supporting components.
-
-## 17.1 Execution configuration
+## Execution configuration
 
 ```text
 AutomationExecutionConfig
-    |
     +-- timeout_seconds = 60
     +-- workspace_root = optional
 ```
 
 The configuration is immutable.
 
-## 17.2 Automation workspace
+## Automation workspace
 
-`AutomationWorkspace` creates an isolated temporary directory for an automation artifact.
-
-Conceptually:
-
-```text
-GeneratedAutomationArtifact
-        |
-        v
-AutomationWorkspace.create()
-        |
-        v
-temporary execution directory
-        |
-        +-- generated test file
-```
+`AutomationWorkspace` creates an isolated temporary directory for the generated artifact.
 
 The workspace is cleaned up after execution unless explicit retention is requested.
 
-This prevents generated artifacts from being written directly into the project working tree during normal execution.
+The project working tree must not be used as the normal generated-artifact execution directory.
 
-## 17.3 Controlled subprocess runner
+## Controlled subprocess runner
 
-`AutomationExecutionRunner` provides the subprocess boundary.
-
-It:
+`AutomationExecutionRunner`:
 
 - accepts an explicit command list
 - runs from a supplied working directory
@@ -902,13 +723,9 @@ It:
 
 The runner is injectable so tests do not need to execute real automation processes.
 
----
+## Execution service
 
-# 18. Current Execution Service Design
-
-The execution service validates the generated artifact before execution.
-
-Current validation rules:
+Current validation:
 
 ```text
 Empty code
@@ -927,31 +744,29 @@ Current supported framework:
 Playwright
 ```
 
-For the current Python/Playwright execution path, the service constructs:
+Current Python execution command:
 
 ```text
 python -m pytest <generated_file_name>
 ```
 
-The command is executed inside the temporary automation workspace.
-
-Raw runner results are mapped to domain-level results:
+Status mapping:
 
 ```text
-Runner exit_code == 0
+exit_code == 0
     -> PASSED
 
-Runner exit_code != 0
+exit_code != 0
     -> FAILED
 
-Runner timed_out
+timed_out
     -> TIMEOUT
 
-Runner execution error
+runner error
     -> ERROR
 ```
 
-The separation is intentional:
+Separation:
 
 ```text
 Runner
@@ -964,13 +779,13 @@ AutomationExecutionResult
     = stable domain contract
 ```
 
-Execution IDs are currently deterministic in the service foundation (`EX001`). A future persistence/execution-history layer should introduce durable unique execution IDs when execution history becomes a first-class capability.
+Execution IDs are currently deterministic in the service foundation (`EX001`). Durable unique execution IDs belong to the future execution-history/persistence layer.
 
 ---
 
-# 19. Execution Safety Direction
+# 12. EXECUTION SAFETY REQUIREMENTS
 
-The current subprocess runner is a controlled local execution boundary, not yet the final production-grade sandbox.
+The current subprocess runner is a controlled local execution boundary, **not** the final production-grade sandbox.
 
 Intended progression:
 
@@ -988,7 +803,7 @@ Container / isolated execution
 Cloud or CI execution
 ```
 
-Security requirements:
+Mandatory safety direction:
 
 - Do not introduce arbitrary shell execution.
 - Do not construct unrestricted commands from user input.
@@ -999,46 +814,11 @@ Security requirements:
 - Keep the runner injectable and testable.
 - Introduce containerization before exposing execution to untrusted production workloads.
 
-Containerization should be added after the local execution contract and orchestration behavior are stable.
+Do not add container/cloud complexity before the local execution contract and orchestration behavior are stable.
 
 ---
 
-# 20. MCP Automation Execution Tool
-
-The MCP boundary exposes:
-
-```text
-execute_automation_code(artifact)
-```
-
-The tool:
-
-1. Validates the incoming artifact through `GeneratedAutomationArtifact`.
-2. Delegates to `AutomationExecutionService`.
-3. Returns `AutomationExecutionResult.model_dump()`.
-4. Converts invalid execution-artifact input into a controlled MCP-facing error.
-
-Architecture:
-
-```text
-MCP Tool
-   |
-   v
-Execution Service
-   |
-   +--> Workspace
-   |
-   +--> Runner
-   |
-   v
-Execution Result
-```
-
-The MCP layer must not contain subprocess implementation details.
-
----
-
-# 21. Current MCP Automation Surface
+# 13. MCP AUTOMATION SURFACE
 
 Current automation-related MCP tools:
 
@@ -1049,120 +829,22 @@ generate_automation_for_candidates
 execute_automation_code
 ```
 
-The first three represent candidate selection/generation.
+`execute_automation_code(artifact)`:
 
-`execute_automation_code` represents the controlled execution boundary.
+1. Validates the incoming artifact through `GeneratedAutomationArtifact`.
+2. Delegates to `AutomationExecutionService`.
+3. Returns `AutomationExecutionResult.model_dump()`.
+4. Converts invalid execution-artifact input into a controlled MCP-facing error.
 
-Runtime verification remains a mandatory requirement whenever a major capability is closed.
-
----
-
-# 22. Execution Tests
-
-Execution-focused tests cover:
-
-```text
-AutomationExecutionResult
-AutomationExecutionService
-AutomationExecutionRunner
-AutomationWorkspace
-MCP execution tool
-```
-
-Current focused result:
-
-```text
-16 passed, 1 warning
-```
-
-Current execution-service result:
-
-```text
-7 passed
-```
-
-Full regression:
-
-```text
-190 passed, 7 warnings
-```
-
-No test was removed or weakened to achieve the current green baseline.
+The MCP layer must not contain subprocess implementation details.
 
 ---
 
-# 23. Current Automation Architecture
+# 14. TEST STRATEGY AND CURRENT BASELINE
 
-```text
-                         TestCase[]
-                             |
-                             v
-              +-----------------------------+
-              | AutomationCandidateSelector |
-              +-------------+---------------+
-                            |
-                            v
-                AutomationCandidateService
-                            |
-                            v
-                  AutomationCandidateResult
-                     /                 \
-            candidate_ids            manual_ids
-                  |
-                  v
-       AutomationCandidateGenerationService
-                  |
-                  v
-            AutomationService
-                  |
-                  v
-         AutomationCaseGenerator
-                  |
-                  v
-             AutomationCase[]
-                  |
-                  v
-          AutomationValidator
-                  |
-                  v
-       AutomationValidationResult
-                  |
-                  v
-       CodeGenerationService
-                  |
-                  v
-     GeneratedAutomationArtifact
-                  |
-                  v
-       AutomationExecutionService
-             /             \
-            v               v
-     AutomationWorkspace   Runner
-             \             /
-              \           /
-               v         v
-          AutomationExecutionResult
-```
+Test-first development remains mandatory.
 
-This separation is intentional.
-
-The candidate selector decides **what should be automated**.
-
-The automation generator decides **how it should be automated**.
-
-The validator decides whether the generated automation case satisfies the minimum structural quality required for downstream processing.
-
-The code-generation layer converts validated automation cases into executable framework-specific artifacts.
-
-The execution service provides QA execution semantics.
-
----
-
-# 24. Test Strategy
-
-The project uses test-first development.
-
-New capabilities are introduced by:
+Expected sequence:
 
 ```text
 Write failing test
@@ -1171,131 +853,195 @@ Write failing test
 Implement smallest production change
         |
         v
-Run focused test
+Focused test
         |
         v
-Run related tests
+Related tests
         |
         v
-Run full regression
+Full regression
         |
         v
-Verify runtime/MCP path
+Runtime/MCP verification
         |
         v
-Update README
+README update
         |
         v
-Review git diff
+git diff --check
         |
         v
-Commit code + tests + README
+Commit + push
 ```
 
-This discipline must continue throughout the remaining development.
-
----
-
-# 25. Current Test Baseline
-
-Latest committed checkpoint:
+Current verified baseline:
 
 ```text
+pytest -q
 190 passed
 7 warnings
 0 failures
 ```
 
-Focused execution tests:
+Focused execution suite:
 
 ```text
 16 passed
 1 warning
 ```
 
-Execution service tests:
+Execution service suite:
 
 ```text
 7 passed
 ```
 
-The full regression suite must remain green before a feature checkpoint is committed.
+No test was removed or weakened to obtain the current green baseline.
 
 ---
 
-# 26. Known Warnings / Technical Debt
-
-There are currently two categories of non-blocking warnings.
+# 15. KNOWN WARNINGS / TECHNICAL DEBT
 
 ## Pytest collection warnings
 
-Some tests import Pydantic models named:
+Pydantic models named:
 
 ```text
 TestCase
 TestCaseReview
 ```
 
-Pytest interprets these names as possible test classes and reports:
+can be interpreted by pytest as possible test classes, producing `PytestCollectionWarning`.
 
-```text
-PytestCollectionWarning
-```
+These are non-functional warnings.
 
-These do not represent functional failures.
-
-They can be cleaned up later through test-only import aliases. This technical-debt cleanup should remain separate from feature implementation.
+Future cleanup may use test-only import aliases. Keep this separate from feature work.
 
 ## Pydantic settings warning
 
-There is also an existing warning related to the `lifespan` forward reference:
+Existing:
 
 ```text
 IncompleteFieldDefinitionWarning
 ```
 
-It originates from:
+related to the `lifespan` forward reference in `pydantic_settings`.
 
-```text
-pydantic_settings
-```
+It does not currently cause test failures.
 
-and does not currently cause test failures.
-
-Treat this as separate technical debt rather than mixing it into the automation execution feature work.
+Keep this as separate technical debt unless it blocks development.
 
 ---
 
-# 27. Configuration
+# 16. ENVIRONMENT / .ENV DOCUMENTATION
 
-Configuration is maintained under:
+## Critical rule
+
+The following is the **documented `.env` template currently used by the development setup**.
+
+**These are placeholders, not real credentials.**
+
+Never commit a real `.env` file, API token, password, or secret to Git.
+
+The actual local `.env` remains developer-machine configuration.
+
+## Current `.env` template
+
+```dotenv
+JIRA_URL=https://your-company.atlassian.net
+JIRA_EMAIL=your-email
+JIRA_API_TOKEN=your-token
+GITHUB_URL=https://api.github.com
+GITHUB_TOKEN=your-github-token
+GITHUB_OWNER=your-github-username-or-org
+# ---------------------------------------------------------
+# Slack
+# ---------------------------------------------------------
+SLACK_URL=https://slack.com/api
+SLACK_TOKEN=
+SLACK_DEFAULT_CHANNEL=
+```
+
+## Variable purpose
+
+| Variable | Purpose | Secret? |
+|---|---|---|
+| `JIRA_URL` | Jira Cloud base URL | No |
+| `JIRA_EMAIL` | Jira API account email | No, but treat as configuration |
+| `JIRA_API_TOKEN` | Jira API authentication | **YES** |
+| `GITHUB_URL` | GitHub API base URL | No |
+| `GITHUB_TOKEN` | GitHub API authentication | **YES** |
+| `GITHUB_OWNER` | GitHub username/org used by configuration | No |
+| `SLACK_URL` | Slack API base URL | No |
+| `SLACK_TOKEN` | Slack API authentication | **YES** |
+| `SLACK_DEFAULT_CHANNEL` | Default Slack channel configuration | No |
+
+## Deployment/configuration rule
+
+When configuring a new environment:
+
+1. Copy the documented template into a local `.env`.
+2. Replace only the placeholder values required for that environment.
+3. Never paste real secrets into this README.
+4. Never commit the populated `.env`.
+5. Verify `.gitignore` protects `.env`.
+6. Keep configuration changes documented here when they materially affect deployment.
+7. If new environment variables are introduced, update this section in the same development checkpoint.
+
+---
+
+# 17. CONFIGURATION
+
+Primary configuration:
 
 ```text
 config/settings.yaml
 ```
 
-Environment-specific secrets should be supplied through environment variables.
+Environment-specific secrets are supplied through environment variables.
 
-Examples include:
+Known integration variables:
 
 ```text
+JIRA_URL
+JIRA_EMAIL
 JIRA_API_TOKEN
+
+GITHUB_URL
 GITHUB_TOKEN
+GITHUB_OWNER
+
+SLACK_URL
 SLACK_TOKEN
 SLACK_DEFAULT_CHANNEL
 ```
 
-Secrets must not be committed to Git.
+Secrets must remain outside source control.
 
 ---
 
-# 28. Development Commands
+# 18. DEVELOPMENT ENVIRONMENT
 
-Activate the virtual environment:
+Python requirement:
+
+```text
+Python >= 3.11
+```
+
+Current development environment used during the latest verification:
+
+```text
+Python 3.12 virtual environment
+.venv/
+```
+
+Activate:
 
 ```bash
 source .venv/bin/activate
 ```
+
+Install project dependencies according to the repository's `requirements.txt`.
 
 Run all tests:
 
@@ -1341,9 +1087,9 @@ git log -5 --oneline
 
 ---
 
-# 29. Git Checkpoint History
+# 19. GIT CHECKPOINT HISTORY
 
-Important development checkpoints include:
+Important checkpoints:
 
 ```text
 a288569 Initial commit with configured gitignore
@@ -1358,32 +1104,26 @@ a226e9e Add automation case validation
 715ad52 Complete P2-S8.8 automation code generation
 703cdb1 Complete automation execution foundation
 3bdf761 Implement controlled automation execution
+add5ba2 Update project continuity roadmap
 ```
 
-Completed automation checkpoints:
-
-```text
-P2-S8.6  Automation Candidate Selection          COMPLETE
-P2-S8.7  Candidate → Automation Generation       COMPLETE
-P2-S8.8  Automation Case Validation              COMPLETE
-P2-S8.8+ Automation Code Generation              COMPLETE
-P2-S8.9  Controlled Automation Execution         COMPLETE
-```
-
-Each completed checkpoint must be committed together with:
+Every completed checkpoint must contain:
 
 ```text
 Implementation
 Tests
 README
 Verification evidence
+Commit
+Push
+Clean working tree
 ```
 
 ---
 
-# 30. What Has Already Been Completed — DO NOT REBUILD
+# 20. WHAT HAS ALREADY BEEN COMPLETED — DO NOT REBUILD
 
-The following capabilities are already implemented and tested and must not be redesigned or recreated as if they were new work:
+These capabilities are already implemented/tested and must not be redesigned or recreated as if they were new:
 
 ```text
 MCP server foundation
@@ -1418,17 +1158,20 @@ Future work must build on these components.
 
 ---
 
-# 31. Next Development Checkpoint
+# 21. NEXT DEVELOPMENT CHECKPOINT
 
-## P2-S9 — Hardened Execution / Execution Evidence
+## P2-S9.1 — Execution Hardening
 
-**Status: NEXT**
+**STATUS: NEXT**
 
-The next work should not return to candidate selection, automation generation, validation, or the already-completed local execution boundary.
+Do not return to:
 
-The immediate direction is to make the current execution capability more production-ready and useful.
+- candidate selection
+- automation generation
+- automation validation
+- already-completed controlled local execution foundation
 
-Priority progression:
+Immediate direction:
 
 ```text
 P2-S8.9 Controlled local execution
@@ -1462,13 +1205,13 @@ P2-S9.4 Reporting / analysis
 P2-S10 Agent orchestration
 ```
 
-The exact sub-step should be defined and tested before implementation begins.
+The exact sub-step must be defined and tested before implementation.
 
 ---
 
-# 32. Future Execution Architecture
+# 22. FUTURE EXECUTION ARCHITECTURE
 
-The target architecture should eventually become:
+Target:
 
 ```text
 GeneratedAutomationArtifact
@@ -1495,7 +1238,7 @@ Persistent Execution History
 Reporting / AI Analysis
 ```
 
-Potential future isolation options:
+Potential isolation progression:
 
 ```text
 Local hardened process
@@ -1514,9 +1257,9 @@ Do not implement all layers at once.
 
 ---
 
-# 33. Eventual Agent-Driven QA Workflow
+# 23. EVENTUAL AGENT-DRIVEN QA WORKFLOW
 
-The eventual product experience should allow a user to provide a requirement and have the QA agent progressively execute the workflow:
+The eventual product experience:
 
 ```text
 Understanding requirement...
@@ -1549,17 +1292,13 @@ Analyzing results...
 Preparing QA report...
 ```
 
-The intention is not merely to expose MCP tools.
-
-MCP should become the capability layer underneath an agent-driven QA product.
+MCP is intended to become the capability layer underneath an agent-driven QA product.
 
 ---
 
-# 34. Eventual Product / UI Direction
+# 24. EVENTUAL PRODUCT / UI DIRECTION
 
 The eventual UI should make the agent's progress, generated artifacts, execution state, and results visible and understandable.
-
-Conceptually:
 
 ```text
 User
@@ -1587,9 +1326,9 @@ The UI and hosted product layer should be introduced only after the core QA-agen
 
 ---
 
-# 35. Long-Term Product Direction
+# 25. LONG-TERM PRODUCT DIRECTION
 
-The final product should evolve toward a full-fledged QA intelligence platform capable of:
+The final product should evolve toward:
 
 ```text
 Understand
@@ -1619,7 +1358,7 @@ Report
 Learn / Improve
 ```
 
-The platform should eventually support:
+Long-term capabilities:
 
 - Requirements intelligence
 - Test design
@@ -1642,19 +1381,19 @@ These are future goals, not permission to prematurely implement everything.
 
 ---
 
-# 36. Development Principles
+# 26. DEVELOPMENT PRINCIPLES
 
-The following principles must remain unchanged as the project grows:
+The following principles must remain unchanged:
 
 1. Build incrementally.
 2. Write tests before implementation where practical.
 3. Keep services small and composable.
 4. Keep MCP tools thin.
 5. Keep external integrations behind infrastructure abstractions.
-6. Avoid destabilizing existing workflows when adding new capabilities.
+6. Avoid destabilizing existing workflows.
 7. Preserve structured Pydantic contracts.
 8. Keep secrets outside source control.
-9. Run the full regression suite before every feature checkpoint.
+9. Run full regression before every feature checkpoint.
 10. Update this README whenever a meaningful feature checkpoint is committed.
 11. Commit code, tests and README together for each completed checkpoint.
 12. Prefer explicit contracts over implicit behavior.
@@ -1662,25 +1401,27 @@ The following principles must remain unchanged as the project grows:
 14. Keep execution safety ahead of execution convenience.
 15. Keep production concerns separated from prototype convenience.
 16. Do not duplicate completed capabilities.
-17. Do not silently change previously established contracts.
-18. Maintain traceability from requirement → test case → automation case → artifact → execution result.
+17. Do not silently change established contracts.
+18. Maintain requirement → test case → automation case → artifact → execution result traceability.
+19. Treat deployment/configuration documentation as part of the implementation.
+20. Treat this README as the continuity record, not optional documentation.
 
 ---
 
-# 37. Current Resume Point
+# 27. CURRENT RESUME POINT
 
-## Resume from:
+## Resume from
 
 **P2-S9.1 — Execution Hardening**
 
 Previous completed checkpoints:
 
 ```text
-P2-S8.6  Automation Candidate Selection          COMPLETE
-P2-S8.7  Candidate → Automation Generation       COMPLETE
-P2-S8.8  Automation Case Validation              COMPLETE
-P2-S8.8+ Automation Code Generation              COMPLETE
-P2-S8.9  Controlled Automation Execution         COMPLETE
+P2-S8.6   Automation Candidate Selection          COMPLETE
+P2-S8.7   Candidate → Automation Generation       COMPLETE
+P2-S8.8   Automation Case Validation              COMPLETE
+P2-S8.8+  Automation Code Generation              COMPLETE
+P2-S8.9   Controlled Automation Execution         COMPLETE
 ```
 
 Verified baseline:
@@ -1692,6 +1433,12 @@ Verified baseline:
 ```
 
 Latest commit:
+
+```text
+add5ba2 Update project continuity roadmap
+```
+
+Previous implementation checkpoint:
 
 ```text
 3bdf761 Implement controlled automation execution
@@ -1706,21 +1453,34 @@ generate_automation_for_candidates
 execute_automation_code
 ```
 
-## Critical continuity instruction
+---
+
+# 28. CRITICAL CONTINUITY INSTRUCTION FOR A NEW CHAT
 
 A future development session must:
 
 1. Read this README first.
-2. Inspect the current GitHub `main` branch.
+2. Inspect the current GitHub `main` branch:
+   `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.1**, not from an earlier automation milestone.
-6. Do not recreate candidate selection, automation generation, validation, or controlled execution.
-7. Add tests first wherever practical.
-8. Keep the architecture layered.
-9. Verify focused tests.
-10. Verify the full regression suite.
-11. Update this README at the end of every verified checkpoint.
-12. Commit and push code + tests + README together.
+5. Start from **P2-S9.1 — Execution Hardening**.
+6. Do not recreate candidate selection.
+7. Do not recreate automation generation.
+8. Do not recreate automation validation.
+9. Do not recreate controlled local execution.
+10. Do not silently replace established architecture/contracts.
+11. Add tests first wherever practical.
+12. Keep the architecture layered.
+13. Verify focused tests.
+14. Verify the full regression suite.
+15. Verify the MCP/runtime path for major capabilities.
+16. Update this README at the end of every verified checkpoint.
+17. Include deployment/configuration changes in this README.
+18. Never commit real secrets or a populated `.env`.
+19. Commit and push code + tests + README together.
+20. Verify the working tree is clean after the checkpoint.
+21. Never make the user repeat already-completed development work when the repository and README contain it.
+22. Never use a new chat as a reason to restart the project from an earlier phase.
 
-This README is the project's continuity record and must be treated as part of the implementation, not as optional documentation.
+**This README is part of the implementation and must be treated as the project's authoritative continuity record.**
