@@ -1,715 +1,932 @@
 # QA MCP
 
-QA MCP is a Model Context Protocol (MCP) server for structured software-quality workflows.
+QA MCP is a Model Context Protocol (MCP) server for structured
+software-quality workflows.
 
-The project is being developed incrementally using:
+The project is being developed incrementally toward a full-fledged
+AI-powered QA platform using:
 
-- layered architecture
-- test-first implementation
-- replaceable LLM providers
-- persistent SQLite storage
-- immutable QA versioning
-- project import/export
-- safe external connectors
-- mockable infrastructure clients
-- MCP tool registration only after runtime verification
+-   layered architecture
+-   test-first development
+-   Pydantic-based contracts
+-   persistent SQLite storage
+-   immutable QA versioning
+-   project import/export
+-   safe external connectors
+-   AI-assisted QA analysis
+-   automation candidate selection
+-   Playwright automation generation
+-   controlled automation execution
+-   eventual QA-agent orchestration
+-   eventual CI/CD and hosted product capabilities
 
-> **Current checkpoint: Phase 2 — Slack Connector COMPLETE**
->
-> **Current regression baseline: 143 passed**
->
-> **Known warning: 1 non-blocking third-party `pydantic_settings` warning related to `lifespan`.**
->
-> This README is the continuity checkpoint for future development. A fresh chat should read this document and inspect the repository before changing code.
+> **Continuity rule:** This README is the authoritative development
+> checkpoint for future QA MCP development sessions.
 
----
+------------------------------------------------------------------------
 
-# 1. Development Philosophy
+# 1. Current Development Checkpoint
 
-The project is deliberately being built in small, verifiable checkpoints.
+## Repository checkpoint
 
-The standard development sequence is:
+``` text
+Branch:        main
+Latest commit: 703cdb1 Complete automation execution foundation
+Remote:        origin/main
+Last committed milestone: Automation execution foundation
+```
 
-```text
-Focused test
-    ↓
-Implementation
-    ↓
+The latest committed checkpoint contains:
+
+-   automation execution result contract
+-   automation case traceability in execution results
+-   automation execution MCP boundary
+-   README checkpoint update
+
+The next execution work is currently being developed as a separate
+uncommitted increment.
+
+## Current local development state
+
+The current working tree contains the controlled execution pipeline
+work:
+
+``` text
+AutomationExecutionConfig
+        |
+        v
+AutomationWorkspace
+        |
+        v
+AutomationExecutionRunner
+        |
+        v
+AutomationExecutionService
+        |
+        v
+AutomationExecutionResult
+        |
+        v
+MCP execute_automation_code tool
+```
+
+Current local regression:
+
+``` text
+190 passed, 7 warnings
+```
+
+Focused execution tests:
+
+``` text
+16 passed, 1 warning
+```
+
+The execution-service focused suite currently passes:
+
+``` text
+7 passed
+```
+
+`git diff --check` is clean.
+
+The execution pipeline changes are **not yet committed at this
+checkpoint**.
+
+------------------------------------------------------------------------
+
+# 2. Product Vision
+
+The long-term goal is not merely to expose isolated MCP tools.
+
+QA MCP is intended to become an AI-driven QA platform where a user can
+provide a requirement and the platform can progressively:
+
+``` text
+Requirement
+    |
+    v
+Requirement Understanding
+    |
+    v
+Scenario Analysis
+    |
+    v
+Test Case Generation
+    |
+    v
+Test Case Review
+    |
+    v
+QA Suite / Version
+    |
+    v
+Automation Candidate Selection
+    |
+    v
+Automation Case
+    |
+    v
+Automation Validation
+    |
+    v
+Playwright Code Generation
+    |
+    v
+Generated Automation Artifact
+    |
+    v
+Controlled Execution
+    |
+    v
+Execution Results
+    |
+    v
+Reporting / Analysis
+    |
+    v
+QA Agent / Orchestration
+```
+
+Eventually this should support integrations such as:
+
+``` text
+Jira
+GitHub
+Slack
+CI/CD
+Test repositories
+Automation environments
+Cloud execution
+```
+
+The UI/hosted product layer should be introduced after the core QA
+capabilities are sufficiently stable.
+
+------------------------------------------------------------------------
+
+# 3. Development Rules --- MUST FOLLOW
+
+These rules apply to every future change.
+
+1.  **Implement one phase/sub-step at a time.**
+2.  **Test first wherever practical.**
+3.  Focused tests must pass before moving to the next implementation
+    increment.
+4.  The relevant feature test group must pass.
+5.  The full regression suite must pass before closing a milestone.
+6.  **Never weaken or delete tests merely to obtain green output.**
+7.  Inspect existing code before modifying it.
+8.  Preserve the layered architecture.
+9.  Core business logic must remain independent of MCP transport.
+10. Persistence must remain behind repository interfaces.
+11. External integrations must remain mockable.
+12. LLM providers must remain replaceable.
+13. AI output must be validated before downstream use.
+14. Do not commit secrets or real `.env` files.
+15. Do not delete persistent databases merely to make tests pass.
+16. Keep unrelated refactoring separate from feature work.
+17. A major capability is not complete until its MCP/runtime path is
+    verified.
+18. Update this README at every verified milestone.
+19. Commit only after the feature, tests, README, and checkpoint have
+    been reviewed.
+20. Do not recreate completed work from earlier milestones.
+
+The recurring development sequence is:
+
+``` text
+Understand current checkpoint
+        |
+        v
+Inspect repository
+        |
+        v
+Write/update focused tests
+        |
+        v
+Implement one increment
+        |
+        v
 Focused tests green
-    ↓
-Feature-group tests green
-    ↓
+        |
+        v
+Feature test group green
+        |
+        v
 Full regression green
-    ↓
+        |
+        v
 Runtime/MCP verification
-    ↓
-README checkpoint
-    ↓
-Git commit + push
+        |
+        v
+Update README
+        |
+        v
+Review git diff
+        |
+        v
+Commit + push
 ```
 
-## Non-negotiable development guidelines
-
-1. Implement one phase/sub-step at a time.
-2. Write focused tests before or alongside implementation.
-3. Never weaken a test simply to make the suite green.
-4. Preserve the layered architecture.
-5. External integrations must remain mockable.
-6. Never commit secrets or a real `.env`.
-7. Keep MCP transport concerns out of core business logic.
-8. Keep external API details inside infrastructure clients.
-9. Keep persistence behind repository abstractions.
-10. Keep LLM providers replaceable.
-11. Validate AI output before downstream use.
-12. Do not delete persistent databases merely to make tests pass.
-13. Do not perform unrelated refactoring during feature work.
-14. `pytest -q` is the authoritative regression check.
-15. A feature is not complete until its runtime/MCP registration is verified.
-16. Update this README at every major checkpoint.
-17. Commit and push only after tests, runtime verification, documentation, and security checks are complete.
-
----
-
-# 2. Current Development Status
-
-## Phase 1 — Foundation
-
-**Status: COMPLETE**
-
-Implemented:
-
-- MCP server foundation
-- configuration loading
-- LLM abstraction
-- requirement analysis
-- test-case generation
-- test-case review
-- QA-suite workflow
-
-## Phase 2 — QA Platform Foundation
-
-| Step | Capability | Status |
-|---|---|---|
-| P2-S1 | QA Project Context | COMPLETE |
-| P2-S2 | SQLite Persistence | COMPLETE |
-| P2-S3 | Requirement & Suite Versioning | COMPLETE |
-| P2-S4 | Project Import / Export | COMPLETE |
-| P2-S5 | Jira Connector | COMPLETE |
-| P2-S6 | GitHub Connector | COMPLETE |
-| P2-S7 | Slack Connector | COMPLETE |
-| P2-S8 | Automation Case Generator | NEXT / PLANNED |
-
----
-
-# 3. Completed Connector Checkpoints
-
-## Jira
-
-Completed:
-
-```text
-S5.1 Configuration
-S5.2 Client Abstraction
-S5.3 Service
-S5.4 Cloud Client
-S5.5 Read-only MCP Tools
-S5.6 Configuration Wiring
-S5.7 Controlled Integration Readiness
-```
-
-## GitHub
-
-Completed:
-
-```text
-S6.1 Configuration
-S6.2 Client Abstraction + Models
-S6.3 Mock Client
-S6.4 Service
-S6.5 Cloud/API Client
-S6.6 Factory
-S6.7 Runtime Wiring
-S6.8 Read-only MCP Tools + Disabled Safety
-S6.9 MCP Registration + Regression
-S6.10 README + Git Checkpoint
-```
-
-## Slack
-
-Completed:
-
-```text
-S7.1 Configuration
-S7.2 Client Abstraction + Models
-S7.3 Mock Client
-S7.4 Service
-S7.5 Cloud Client
-S7.6 Factory
-S7.7 MCP Tools + Registration
-S7.8 README + Git Checkpoint
-```
-
-**Do not recreate or redesign these completed connectors.**
-
----
+------------------------------------------------------------------------
 
 # 4. Architecture
 
-```text
-                         QA MCP Server
-                               │
-                               ▼
-                         MCP Tool Layer
-                               │
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-          ▼                    ▼                    ▼
-    QA Workflows        Project Context      External Services
-          │                    │                    │
-          │                    ▼          ┌─────────┼─────────┐
-          │              SQLite Repos      │         │         │
-          │                              Jira      GitHub    Slack
-          │                               │         │         │
-          │                         JiraService    │   SlackService
-          │                               │         │         │
-          │                         JiraClient      │   SlackClient
-          │                         /      \        │   /      \
-          │                       Mock    Cloud     │ Mock     Cloud
-          │                                      GitHub
-          │
-          ├── Requirement Analyzer
-          ├── Test Case Generator
-          ├── Test Case Reviewer
-          └── QA Suite Workflow
+The fundamental architecture is:
+
+``` text
+                         MCP CLIENT / AI ASSISTANT
+                                  |
+                                  v
+                            QA MCP Server
+                                  |
+                                  v
+                             MCP Tool Layer
+                                  |
+          +-----------------------+------------------------+
+          |                       |                        |
+          v                       v                        v
+     QA Workflows          Core Services             Connectors
+          |                       |                        |
+          |                       |               +--------+--------+
+          |                       |               |        |        |
+          v                       v               Jira    GitHub   Slack
+ Requirement Analyzer       Automation           |        |        |
+ Test Case Generator        Execution            v        v        v
+ Test Case Reviewer         Versioning          Service  Service  Service
+ QA Suite Workflow          Project Context       |        |        |
+ Candidate Selection                              v        v        v
+ Automation Generation                         Client   Client   Client
+ Automation Execution                           / \      / \      / \
+                                                Mock     Mock    Mock
+                                                Cloud    Cloud   Cloud
 ```
 
-The intended external-integration pattern is:
+Layer responsibilities:
 
-```text
-MCP Tool
-   ↓
-Core Service
-   ↓
-Client Interface
-   ├── Mock Client
-   └── Cloud Client
+``` text
+models/
+    Domain and data contracts
+
+core/
+    Business/application services
+    Factories
+    Orchestration boundaries
+
+infrastructure/
+    Persistence
+    External clients
+    Concrete implementations
+
+tools/
+    QA-oriented application workflows
+
+server.py
+    MCP transport and tool registration
 ```
 
-This separation is intentional.
+Core business logic must not become coupled to MCP transport.
 
-The service layer should not know HTTP endpoint details.
-
-The MCP layer should not know external API implementation details.
-
----
+------------------------------------------------------------------------
 
 # 5. Repository Structure
 
-```text
+Current important structure:
+
+``` text
 qa-mcp/
-│
-├── config/
-│   └── settings.yaml
-│
-├── data/
-│   └── qa_mcp.db
-│
-├── src/
-│   └── qa_mcp/
-│       ├── core/
-│       │   ├── config.py
-│       │   ├── llm.py
-│       │   ├── github/
-│       │   │   ├── __init__.py
-│       │   │   ├── factory.py
-│       │   │   └── service.py
-│       │   ├── jira/
-│       │   │   ├── __init__.py
-│       │   │   ├── factory.py
-│       │   │   └── service.py
-│       │   ├── slack/
-│       │   │   ├── __init__.py
-│       │   │   ├── factory.py
-│       │   │   └── service.py
-│       │   ├── import_export/
-│       │   ├── project/
-│       │   └── versioning/
-│       │
-│       ├── infrastructure/
-│       │   ├── github/
-│       │   │   ├── __init__.py
-│       │   │   ├── client.py
-│       │   │   ├── mock_client.py
-│       │   │   └── cloud_client.py
-│       │   ├── jira/
-│       │   │   ├── __init__.py
-│       │   │   ├── client.py
-│       │   │   ├── mock_client.py
-│       │   │   └── cloud_client.py
-│       │   ├── slack/
-│       │   │   ├── __init__.py
-│       │   │   ├── client.py
-│       │   │   ├── mock_client.py
-│       │   │   └── cloud_client.py
-│       │   ├── sqlite_project_repository.py
-│       │   ├── project_repository.py
-│       │   └── versioning/
-│       │
-│       ├── models/
-│       │   └── schemas.py
-│       ├── tools/
-│       └── server.py
-│
-├── tests/
-│   ├── test_jira_*.py
-│   ├── test_github_*.py
-│   └── test_slack_*.py
-│
-├── .env                 # local only, NEVER commit
-├── .gitignore
-├── README.md
-└── requirements.txt
+|
++-- config/
+|   +-- settings.yaml
+|
++-- src/qa_mcp/
+|   +-- core/
+|   |   +-- automation/
+|   |   |   +-- candidate_generation_service.py
+|   |   |   +-- candidate_selector.py
+|   |   |   +-- candidate_service.py
+|   |   |   +-- code_generation_service.py
+|   |   |   +-- execution_config.py
+|   |   |   +-- execution_runner.py
+|   |   |   +-- execution_service.py
+|   |   |   +-- workspace.py
+|   |   |   +-- service.py
+|   |   |   +-- validator.py
+|   |   |
+|   |   +-- github/
+|   |   +-- jira/
+|   |   +-- slack/
+|   |   +-- import_export/
+|   |   +-- project/
+|   |   +-- versioning/
+|   |   +-- config.py
+|   |   +-- llm.py
+|   |
+|   +-- infrastructure/
+|   |   +-- github/
+|   |   +-- jira/
+|   |   +-- slack/
+|   |   +-- versioning/
+|   |   +-- project repositories
+|   |
+|   +-- models/
+|   |   +-- schemas.py
+|   |
+|   +-- tools/
+|   |   +-- automation/
+|   |   +-- requirement/
+|   |   +-- testcase/
+|   |   +-- workflow/
+|   |
+|   +-- server.py
+|
++-- tests/
++-- data/
++-- README.md
++-- requirements.txt
 ```
 
----
+------------------------------------------------------------------------
 
-# 6. Environment Setup
+# 6. Phase 1 --- Foundation & QA Intelligence
 
-```bash
-git clone https://github.com/sanumenon/qa-mcp.git
-cd qa-mcp
+**Status: COMPLETE**
 
-python3 -m venv .venv
-source .venv/bin/activate
+Completed capabilities:
 
-pip install -r requirements.txt
+-   MCP server foundation
+-   configuration loading
+-   LLM abstraction
+-   mock LLM support
+-   requirement analysis
+-   test-case generation
+-   test-case review
+-   end-to-end QA suite workflow
+
+Core flow:
+
+``` text
+Requirement
+    |
+    v
+Requirement Analyzer
+    |
+    v
+RequirementAnalysis
+    |
+    v
+Test Case Generator
+    |
+    v
+TestCaseResponse
+    |
+    v
+Test Case Reviewer
+    |
+    v
+TestCaseReview
+    |
+    v
+QASuiteResult
 ```
 
-Run the full suite:
+Core MCP capabilities include:
 
-```bash
-pytest -q
+``` text
+health
+test_llm
+analyze_requirement
+generate_test_cases
+review_test_cases
+generate_qa_suite
 ```
 
-Current verified result:
+------------------------------------------------------------------------
 
-```text
-143 passed, 1 warning
-```
+# 7. Phase 2 --- QA Platform Foundation
 
----
+## Completed milestones
 
-# 7. `.env` — REQUIRED LOCAL CONFIGURATION
+  -----------------------------------------------------------------------
+  Milestone               Capability              Status
+  ----------------------- ----------------------- -----------------------
+  P2-S1                   QA Project Context      COMPLETE
 
-The application loads `.env` from the project root using `python-dotenv`.
+  P2-S2                   SQLite Persistence      COMPLETE
 
-The real `.env` file must **never be committed**.
+  P2-S3                   Requirement & Suite     COMPLETE
+                          Versioning
 
-Create it locally:
+  P2-S4                   Project Import / Export COMPLETE
 
-```bash
-touch .env
-```
+  P2-S5                   Jira Connector          COMPLETE
 
-## Complete `.env` template
+  P2-S6                   GitHub Connector        COMPLETE
 
-```dotenv
-# ---------------------------------------------------------
-# LLM
-# ---------------------------------------------------------
-LLM_PROVIDER=mock
+  P2-S8                   Automation Case /       COMPLETE through
+                          Generation Pipeline     current committed
+                                                  automation milestones
 
-# ---------------------------------------------------------
-# Jira
-# ---------------------------------------------------------
-JIRA_URL=https://your-company.atlassian.net
-JIRA_EMAIL=your-email
-JIRA_API_TOKEN=your-token
+  P2-S8.10                Execution foundation    COMPLETE as committed
+                                                  contract/boundary
 
-# ---------------------------------------------------------
-# GitHub
-# ---------------------------------------------------------
-GITHUB_URL=https://api.github.com
-GITHUB_TOKEN=your-github-token
-GITHUB_OWNER=your-github-username-or-org
+  P2-S8.10.x              Controlled local        IN PROGRESS
+                          execution pipeline
+  -----------------------------------------------------------------------
 
-# ---------------------------------------------------------
-# Slack
-# ---------------------------------------------------------
-SLACK_URL=https://slack.com/api
-SLACK_TOKEN=your-slack-token
-SLACK_DEFAULT_CHANNEL=your-channel
-```
+------------------------------------------------------------------------
 
-These are placeholders only.
+# 8. Project Context and Persistence
 
-Replace them with real values locally when using the actual external connectors.
+QA project context is represented by persistent project data.
 
-**Never commit the populated `.env`.**
+Conceptually:
 
-Verify:
-
-```bash
-git check-ignore .env
-```
-
-Environment variables override values in `config/settings.yaml`.
-
----
-
-# 8. Default Feature Configuration
-
-External connectors are intentionally disabled by default.
-
-Current default feature configuration:
-
-```yaml
-features:
-  requirement_analyzer: true
-  testcase_generator: true
-  testcase_reviewer: true
-  jira_connector: false
-  github_connector: false
-  slack_connector: false
-  automation_generator: false
-```
-
-A fresh clone therefore does not require live Jira, GitHub, or Slack credentials to run the normal test suite.
-
----
-
-# 9. Configuration Loading
-
-Current configuration flow:
-
-```text
-config/settings.yaml
-        │
-        ▼
-     load_config()
-        ▲
-        │
-       .env
-        │
-        ▼
-environment variables override YAML
-```
-
-`src/qa_mcp/core/config.py` handles:
-
-- YAML loading
-- `.env` loading
-- LLM provider override
-- Jira environment overrides
-- GitHub environment overrides
-- Slack environment overrides
-
-## Jira
-
-```text
-JIRA_URL
-JIRA_EMAIL
-JIRA_API_TOKEN
-```
-
-## GitHub
-
-```text
-GITHUB_URL
-GITHUB_TOKEN
-GITHUB_OWNER
-```
-
-## Slack
-
-```text
-SLACK_URL
-SLACK_TOKEN
-SLACK_DEFAULT_CHANNEL
-```
-
----
-
-# 10. Jira Connector
-
-## Architecture
-
-```text
-MCP
- │
- ▼
-JiraService
- │
- ▼
-JiraClient
- ├── MockJiraClient
- └── JiraCloudClient
-          │
-          ▼
-      Jira REST API
-```
-
-The Jira factory creates a service only when:
-
-```yaml
-jira_connector: true
-```
-
-and required credentials are present and non-whitespace.
-
-## Current Jira MCP tools
-
-```text
-get_jira_issue(issue_key)
-
-search_jira_issues(jql, max_results=50)
-```
-
-Current operations are read-only.
-
-No Jira write operations have been implemented yet.
-
----
-
-# 11. GitHub Connector
-
-## Architecture
-
-```text
-MCP
- │
- ▼
-GitHubService
- │
- ▼
-GitHubClient
- ├── MockGitHubClient
- └── GitHubCloudClient
-          │
-          ▼
-      GitHub REST API
-```
-
-Configuration:
-
-```yaml
-github:
-  url: "https://api.github.com"
-  token: ""
-  owner: ""
-```
-
-Feature flag:
-
-```yaml
-github_connector: false
-```
-
-## Current GitHub MCP tools
-
-```text
-get_github_repository(owner, repository)
-
-get_github_issue(owner, repository, issue_number)
-
-get_github_pull_request(owner, repository, pull_number)
-
-search_github_issues(query, max_results=50)
-```
-
-Current operations are read-only.
-
-No repository writes, issue creation, PR creation, comments, merges, or workflow mutation have been implemented.
-
----
-
-# 12. Slack Connector
-
-## Architecture
-
-```text
-MCP
- │
- ▼
-SlackService
- │
- ▼
-SlackClient
- ├── MockSlackClient
- └── SlackCloudClient
-          │
-          ▼
-      Slack Web API
-```
-
-Configuration:
-
-```yaml
-slack:
-  url: "https://slack.com/api"
-  token: ""
-  default_channel: ""
-```
-
-Feature flag:
-
-```yaml
-slack_connector: false
-```
-
-When disabled:
-
-```text
-slack_connector: false
-        ↓
-create_slack_service()
-        ↓
-None
-        ↓
-server remains usable
-```
-
-No Slack network request is required for normal startup or tests when disabled.
-
-## Slack client abstraction
-
-The abstract client exposes:
-
-```text
-get_channel(channel)
-
-get_messages(channel, limit=50)
-
-search_messages(query, max_results=50)
-
-get_thread(channel, thread_ts)
-```
-
-## Slack service
-
-`SlackService` is deliberately thin.
-
-It delegates to `SlackClient` and does not contain Slack HTTP/API details.
-
-## Slack Cloud Client
-
-The cloud client maps normalized operations to Slack Web API endpoints:
-
-```text
-get_channel()
-    ↓
-conversations.info
-
-get_messages()
-    ↓
-conversations.history
-
-search_messages()
-    ↓
-search.messages
-
-get_thread()
-    ↓
-conversations.replies
-```
-
-Authentication uses the configured Slack bearer token.
-
-Slack API errors are translated into application-level errors.
-
-## Current Slack MCP tools
-
-```text
-get_slack_channel(channel)
-
-get_slack_messages(channel, limit=50)
-
-search_slack_messages(query, max_results=50)
-
-get_slack_thread(channel, thread_ts)
-```
-
-Verified runtime registration:
-
-```text
-[
-  'get_slack_channel',
-  'get_slack_messages',
-  'search_slack_messages',
-  'get_slack_thread'
-]
-```
-
-Current Slack operations are read-only.
-
-Not implemented:
-
-```text
-send_message
-reply_to_thread
-create_channel
-modify_channel
-reactions
-file_upload
-Slack write workflows
-```
-
----
-
-# 13. Core QA Platform
-
-## Project Context
-
-```text
+``` text
 QAProject
-  │
-  ├── Application
-  ├── Environment
-  ├── Requirements
-  └── Test Suites
+    |
+    +-- project_id
+    +-- name
+    +-- description
+    +-- application
+    +-- environment
+    +-- metadata
+    +-- requirements
+    +-- test suites
 ```
 
-## Requirement Versioning
+Persistence architecture:
 
-Requirements are maintained as immutable versions:
+``` text
+ProjectContext
+      |
+      v
+ProjectRepository
+      |
+      v
+SQLiteProjectRepository
+      |
+      v
+SQLite
+```
 
-```text
+Database:
+
+``` text
+data/qa_mcp.db
+```
+
+Important rule:
+
+> Never delete the persistent database merely to make tests pass.
+
+Persistence-focused tests should use isolated database state.
+
+------------------------------------------------------------------------
+
+# 9. Requirement and Suite Versioning
+
+Requirements are immutable versions:
+
+``` text
 Requirement V1
-      ↓
 Requirement V2
-      ↓
 Requirement V3
 ```
 
-## Suite Versioning
+Suite versions retain their relationship to requirement versions:
 
-```text
+``` text
 Requirement Version
-        ↓
+        |
+        v
 QA Suite Version
-        ├── Test Cases
-        └── Review
+        |
+        +-- Test Cases
+        |
+        +-- Review
 ```
 
-## Import / Export
+Import/export validates structure and protects against duplicate project
+IDs.
 
-```text
-QA Project
-    ↓
-QAProjectExport
-    ↓
-JSON
-    ↓
-Import
+------------------------------------------------------------------------
+
+# 10. Jira Connector
+
+Jira is implemented behind an abstraction:
+
+``` text
+MCP
+ |
+ v
+JiraService
+ |
+ v
+JiraClient
+ +-- MockJiraClient
+ +-- JiraCloudClient
 ```
 
----
+Current real Jira operations are read-only:
 
-# 14. MCP Capabilities
+``` text
+get_jira_issue(issue_key)
+search_jira_issues(jql, max_results=50)
+```
 
-## Core
+No Jira write operations are currently part of the completed connector
+milestone.
 
-```text
+The connector remains disabled by default unless configured.
+
+------------------------------------------------------------------------
+
+# 11. GitHub Connector
+
+GitHub follows the same isolation pattern:
+
+``` text
+MCP
+ |
+ v
+GitHubService
+ |
+ v
+GitHubClient
+ +-- MockGitHubClient
+ +-- GitHubCloudClient
+          |
+          v
+      GitHub REST API
+```
+
+Current read-only MCP tools:
+
+``` text
+get_github_repository(owner, repository)
+get_github_issue(owner, repository, issue_number)
+get_github_pull_request(owner, repository, pull_number)
+search_github_issues(query, max_results=50)
+```
+
+Current cloud operations:
+
+``` text
+GET repository
+GET issue
+GET pull request
+GET /search/issues
+```
+
+GitHub remains disabled without valid configuration.
+
+No GitHub write operations are currently part of the completed connector
+milestone.
+
+------------------------------------------------------------------------
+
+# 12. Automation Pipeline
+
+The automation work has progressed beyond the original
+automation-case-generator milestone.
+
+Current conceptual pipeline:
+
+``` text
+Test Cases
+    |
+    v
+Automation Candidate Selection
+    |
+    v
+Automation Case
+    |
+    v
+Automation Validation
+    |
+    v
+Framework-specific Code Generation
+    |
+    v
+GeneratedAutomationArtifact
+    |
+    v
+Controlled Execution
+    |
+    v
+AutomationExecutionResult
+```
+
+The project deliberately does not blindly automate every generated test
+case.
+
+Candidate selection exists to distinguish:
+
+``` text
+Recommended for automation
+            |
+            +---- Automated
+            |
+            +---- Manual-only
+```
+
+------------------------------------------------------------------------
+
+# 13. Automation Code Generation
+
+The current generated automation artifact contains:
+
+``` text
+GeneratedAutomationArtifact
+    |
+    +-- id
+    +-- automation_case_id
+    +-- framework
+    +-- language
+    +-- file_name
+    +-- code
+```
+
+The current execution target is:
+
+``` text
+Framework: Playwright
+Language: Python
+```
+
+Generated automation must be validated before downstream execution.
+
+------------------------------------------------------------------------
+
+# 14. Automation Execution Contract
+
+The execution result is represented by:
+
+``` text
+AutomationExecutionResult
+    |
+    +-- execution_id
+    +-- automation_artifact_id
+    +-- automation_case_id
+    +-- status
+    +-- exit_code
+    +-- stdout
+    +-- stderr
+    +-- duration_seconds
+    +-- error
+```
+
+The `automation_case_id` traceability is intentional and must be
+preserved.
+
+Execution statuses currently include:
+
+``` text
+NOT_EXECUTED
+PASSED
+FAILED
+TIMEOUT
+ERROR
+```
+
+The status mapping should remain deterministic.
+
+------------------------------------------------------------------------
+
+# 15. Controlled Automation Execution Pipeline
+
+The current local execution increment introduces three supporting
+components.
+
+## Execution configuration
+
+``` text
+AutomationExecutionConfig
+    |
+    +-- timeout_seconds = 60
+    +-- workspace_root = optional
+```
+
+The configuration is immutable.
+
+## Automation workspace
+
+`AutomationWorkspace` creates an isolated temporary directory for an
+automation artifact.
+
+Conceptually:
+
+``` text
+GeneratedAutomationArtifact
+        |
+        v
+AutomationWorkspace.create()
+        |
+        v
+temporary execution directory
+        |
+        +-- generated test file
+```
+
+The workspace is cleaned up after execution unless explicit retention is
+requested.
+
+This prevents generated artifacts from being written directly into the
+project working tree during normal execution.
+
+## Controlled subprocess runner
+
+`AutomationExecutionRunner` provides the subprocess boundary.
+
+It:
+
+-   accepts an explicit command list
+-   runs from a supplied working directory
+-   captures stdout
+-   captures stderr
+-   captures exit code
+-   measures execution duration
+-   enforces a timeout
+-   reports timeout separately
+-   reports operating-system execution errors separately
+
+The runner is intentionally injectable so that tests do not need to
+execute real automation processes.
+
+------------------------------------------------------------------------
+
+# 16. Current Execution Service Design
+
+The execution service validates the generated artifact before execution.
+
+Current validation rules:
+
+``` text
+Empty code
+    -> ValueError
+
+Missing framework
+    -> ValueError
+
+Unsupported framework
+    -> ValueError
+```
+
+Current supported framework:
+
+``` text
+Playwright
+```
+
+For the current Python/Playwright execution path, the service constructs
+a command equivalent to:
+
+``` text
+python -m pytest <generated_file_name>
+```
+
+The command is executed inside the temporary automation workspace.
+
+The service maps raw runner results to the domain-level execution
+result:
+
+``` text
+Runner exit_code == 0
+    -> PASSED
+
+Runner exit_code != 0
+    -> FAILED
+
+Runner timed_out
+    -> TIMEOUT
+
+Runner execution error
+    -> ERROR
+```
+
+This separation is important:
+
+``` text
+Runner
+    = process mechanics
+
+ExecutionService
+    = QA execution semantics
+
+AutomationExecutionResult
+    = stable domain contract
+```
+
+------------------------------------------------------------------------
+
+# 17. Execution Safety Direction
+
+The current subprocess runner is a **controlled local execution
+boundary**, not yet the final production-grade sandbox.
+
+The intended progression is:
+
+``` text
+Current
+Local controlled subprocess
+        |
+        v
+Hardened execution boundary
+        |
+        v
+Container / isolated execution
+        |
+        v
+Cloud or CI execution
+```
+
+Do not introduce arbitrary shell execution or unbounded command
+construction.
+
+Generated automation should remain restricted to supported frameworks
+and controlled command construction.
+
+Containerization should be added after the local execution contract and
+orchestration behavior are stable.
+
+------------------------------------------------------------------------
+
+# 18. MCP Automation Execution Tool
+
+The MCP boundary currently exposes:
+
+``` text
+execute_automation_code(artifact)
+```
+
+The MCP tool:
+
+1.  validates the incoming artifact through
+    `GeneratedAutomationArtifact`
+2.  delegates to `AutomationExecutionService`
+3.  returns `AutomationExecutionResult.model_dump()`
+4.  converts invalid execution-artifact input into a controlled
+    MCP-facing error
+
+The intended architecture remains:
+
+``` text
+MCP Tool
+   |
+   v
+Execution Service
+   |
+   +--> Workspace
+   |
+   +--> Runner
+   |
+   v
+Execution Result
+```
+
+The MCP layer must not contain subprocess implementation details.
+
+------------------------------------------------------------------------
+
+# 19. Execution Tests
+
+Current execution-focused tests cover:
+
+``` text
+AutomationExecutionResult
+AutomationExecutionService
+AutomationExecutionRunner
+AutomationWorkspace
+MCP execution tool
+```
+
+Current focused result:
+
+``` text
+16 passed, 1 warning
+```
+
+Current service result:
+
+``` text
+7 passed
+```
+
+The full project regression remains:
+
+``` text
+190 passed, 7 warnings
+```
+
+------------------------------------------------------------------------
+
+# 20. Current MCP Capabilities
+
+The repository currently exposes capabilities covering:
+
+``` text
 health
 test_llm
 
@@ -731,594 +948,692 @@ list_suite_versions
 
 export_qa_project
 import_qa_project
-```
 
-## Jira
-
-```text
 get_jira_issue
 search_jira_issues
-```
 
-## GitHub
-
-```text
 get_github_repository
 get_github_issue
 get_github_pull_request
 search_github_issues
+
+automation candidate / generation capabilities
+execute_automation_code
 ```
 
-## Slack
+The exact registered tool list should always be verified from the
+running repository rather than assumed from this document.
 
-```text
-get_slack_channel
-get_slack_messages
-search_slack_messages
-get_slack_thread
-```
+------------------------------------------------------------------------
 
----
+# 21. Testing Strategy
 
-# 15. Testing Strategy
+Every meaningful feature should follow the layered testing model.
 
-Each external connector follows:
+For integrations:
 
-```text
+``` text
 Configuration
-      ↓
-Models + Client Interface
-      ↓
+      |
+      v
+Interface / Client Abstraction
+      |
+      v
 Mock Client
-      ↓
-Service
-      ↓
+      |
+      v
+Core Service
+      |
+      v
 Cloud Client
-      ↓
+      |
+      v
 Factory
-      ↓
+      |
+      v
 Runtime Wiring
-      ↓
-MCP Tools
-      ↓
+      |
+      v
+MCP Tool
+      |
+      v
 MCP Registration
-      ↓
+      |
+      v
 Full Regression
 ```
 
-## Jira tests
+For automation execution:
 
-```text
-tests/test_jira_config.py
-tests/test_jira_client.py
-tests/test_jira_service.py
-tests/test_jira_cloud_client.py
-tests/test_jira_factory.py
-tests/test_jira_tools.py
+``` text
+Result Contract
+      |
+      v
+Workspace
+      |
+      v
+Runner
+      |
+      v
+Execution Service
+      |
+      v
+MCP Tool
+      |
+      v
+Full Regression
 ```
 
-## GitHub tests
+Tests must remain deterministic and repeatable.
 
-```text
-tests/test_github_config.py
-tests/test_github_client.py
-tests/test_github_mock_client.py
-tests/test_github_service.py
-tests/test_github_cloud_client.py
-tests/test_github_factory.py
-tests/test_github_tools.py
+------------------------------------------------------------------------
+
+# 22. Current Regression Commands
+
+Activate the environment:
+
+``` bash
+source .venv/bin/activate
 ```
 
-## Slack tests
+Run all tests:
 
-```text
-tests/test_slack_config.py
-tests/test_slack_client.py
-tests/test_slack_mock_client.py
-tests/test_slack_service.py
-tests/test_slack_cloud_client.py
-tests/test_slack_factory.py
-tests/test_slack_tools.py
-```
-
-Run the full regression:
-
-```bash
+``` bash
 pytest -q
 ```
 
-Current verified result:
+Run execution tests:
 
-```text
-143 passed, 1 warning
+``` bash
+pytest -q \
+tests/test_automation_execution_result.py \
+tests/test_automation_execution_service.py \
+tests/test_automation_execution_runner.py \
+tests/test_automation_workspace.py \
+tests/test_automation_execution_tool.py
 ```
 
----
+Check formatting/whitespace problems:
 
-# 16. Runtime Verification
+``` bash
+git diff --check
+```
 
-Import verification:
+Check Git state:
 
-```bash
+``` bash
+git status
+```
+
+Check recent history:
+
+``` bash
+git log -5 --oneline
+```
+
+Run the server:
+
+``` bash
+python -m qa_mcp.server
+```
+
+Verify server import:
+
+``` bash
 python -c "from qa_mcp.server import mcp; print('MCP Server import OK')"
 ```
 
-Slack registration:
+Verify registered automation tools:
 
-```bash
-python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools() if 'slack' in t.name])"
+``` bash
+python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools() if 'automation' in t.name])"
 ```
 
-Expected:
+------------------------------------------------------------------------
 
-```text
-['get_slack_channel',
- 'get_slack_messages',
- 'search_slack_messages',
- 'get_slack_thread']
+# 23. Known Warnings
+
+There are currently 7 non-blocking pytest warnings.
+
+Two categories are present.
+
+## Pytest collection warnings
+
+Pytest reports that Pydantic models such as:
+
+``` text
+TestCase
+TestCaseReview
 ```
 
-GitHub registration:
+cannot be collected as pytest classes because they have constructors.
 
-```bash
-python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools() if 'github' in t.name])"
+These are collection warnings caused by naming/domain-model interaction
+and are not test failures.
+
+## Pydantic settings warning
+
+There is also:
+
+``` text
+IncompleteFieldDefinitionWarning
 ```
 
-Runtime verification is part of feature completion.
+concerning:
 
----
-
-# 17. Persistence
-
-Current SQLite database:
-
-```text
-data/qa_mcp.db
+``` text
+Field 'lifespan'
 ```
 
-Persistence is kept behind repository abstractions.
+from `pydantic_settings`.
 
-Do not delete persistent databases merely to make tests pass.
+Policy:
 
----
+-   known
+-   non-blocking
+-   does not currently fail tests
+-   should not be suppressed merely to make output clean
+-   should be handled as separate technical debt unless it becomes
+    relevant to the current feature
 
-# 18. Security
+Do not mix warning cleanup into unrelated automation work.
+
+------------------------------------------------------------------------
+
+# 24. Security Rules
 
 Never commit:
 
-```text
+``` text
 .env
-real API tokens
-real Slack tokens
+real Jira tokens
 real GitHub tokens
-real Jira API tokens
 passwords
 AWS credentials
 private keys
+organisation secrets
 ```
 
-Before committing:
+Before pushing:
 
-```bash
+``` bash
 git status
 git diff
+git diff --cached
 git check-ignore .env
 ```
 
-Never embed a personal access token in a Git remote URL.
+Never put credentials into:
 
-Use:
+-   source code
+-   README
+-   test fixtures
+-   Git remote URLs
+-   committed configuration
 
-```text
-https://github.com/sanumenon/qa-mcp.git
+The Git remote should remain credential-free.
+
+------------------------------------------------------------------------
+
+# 25. Configuration
+
+The application uses configuration plus environment variables.
+
+Typical connector values include:
+
+``` text
+JIRA_URL
+JIRA_EMAIL
+JIRA_API_TOKEN
+
+GITHUB_URL
+GITHUB_TOKEN
+GITHUB_OWNER
 ```
 
-If credentials are ever exposed in Git history or a remote URL, revoke/rotate them.
+External connectors are disabled by default where appropriate.
 
----
+A local `.env` may be created:
 
-# 19. Known Warning
-
-Current test output contains:
-
-```text
-IncompleteFieldDefinitionWarning:
-Field 'lifespan' has an incomplete definition
+``` bash
+touch .env
 ```
 
-from:
+The real file must remain ignored by Git.
 
-```text
-pydantic_settings
-```
+------------------------------------------------------------------------
 
-This warning is:
+# 26. Git Checkpoint Procedure
 
-- known
-- non-blocking
-- unrelated to Jira/GitHub/Slack
-- not causing test failures
-- not preventing MCP runtime import
+Do not commit immediately after tests merely because the suite is green.
 
-Do not perform unrelated changes merely to eliminate this warning.
+Before a milestone commit:
 
-Current authoritative result:
-
-```text
-143 passed, 1 warning
-```
-
----
-
-# 20. Git Checkpoint Procedure
-
-After a feature is complete:
-
-```bash
+``` bash
 pytest -q
+git diff --check
 git status
 git diff
-git check-ignore .env
 ```
 
-Review all changed and untracked files.
+Review:
 
-Then:
+-   source changes
+-   tests
+-   README
+-   secrets
+-   unrelated modifications
 
-```bash
+Then stage the complete logical milestone:
+
+``` bash
 git add .
-git status
+```
+
+Review the staged change:
+
+``` bash
+git diff --cached --stat
+git diff --cached
+```
+
+Then commit:
+
+``` bash
 git commit -m "Complete <checkpoint>"
+```
+
+Push:
+
+``` bash
 git push
 ```
 
 Verify:
 
-```bash
+``` bash
 git status
 git branch -vv
 git log --oneline --decorate -10
 ```
 
-Expected:
+Desired result:
 
-```text
+``` text
 Your branch is up to date with 'origin/main'.
 
 nothing to commit, working tree clean
 ```
 
----
+------------------------------------------------------------------------
 
-# 21. Current Slack Checkpoint
+# 27. Current Uncommitted Execution Checkpoint
 
-The Slack connector is complete through S7.8.
+The current development increment is:
 
-```text
-S7.1 Configuration                  ✅
-S7.2 Client + Models                ✅
-S7.3 Mock Client                    ✅
-S7.4 Service                        ✅
-S7.5 Cloud Client                   ✅
-S7.6 Factory                        ✅
-S7.7 MCP Tools + Registration      ✅
-S7.8 Documentation Checkpoint      ✅
+``` text
+P2-S8.10.x — Controlled Local Automation Execution
 ```
 
-Slack-specific implementation includes:
+Current state:
 
-```text
-Configuration
-Client
-Mock Client
-Service
-Cloud Client
-Factory
-Tools
-Runtime registration
+``` text
+Execution Result Contract             COMPLETE
+Execution Service Boundary            COMPLETE
+Execution Config                      COMPLETE
+Execution Workspace                   COMPLETE
+Controlled Subprocess Runner          COMPLETE
+Service → Runner integration          COMPLETE
+Status mapping                        COMPLETE
+Timeout handling                      COMPLETE
+Workspace cleanup                     COMPLETE
+MCP execution boundary                COMPLETE
+Focused tests                         GREEN
+Full regression                       GREEN
+README checkpoint                     THIS DOCUMENT
+Git commit                            PENDING
+Git push                              PENDING
 ```
 
-Current full regression:
+Current verified regression:
 
-```text
-143 passed, 1 warning
+``` text
+190 passed, 7 warnings
 ```
 
----
+Current committed baseline:
 
-# 22. Phase 2 Checkpoint
-
-The project now has three completed external read-only connectors:
-
-```text
-                    QA MCP
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-       Jira          GitHub         Slack
-        │              │              │
-     Service        Service        Service
-        │              │              │
-     Client         Client         Client
-      /  \           /  \           /  \
-   Mock Cloud     Mock Cloud     Mock Cloud
+``` text
+703cdb1 Complete automation execution foundation
 ```
 
-All three intentionally follow the same principles:
+The next commit should capture the controlled local execution pipeline
+once the staged diff has been reviewed.
 
-- configuration-driven
-- disabled by default
-- mockable
-- service abstraction
-- cloud/API isolation
-- factory construction
-- read-only MCP tools
-- focused tests
-- full regression
-- runtime registration verification
+------------------------------------------------------------------------
 
-This symmetry should be preserved for future integrations.
+# 28. Milestone History
 
----
+Important recent milestones:
 
-# 23. Roadmap
-
-| Phase | Capability | Status |
-|---|---|---|
-| Phase 1 | QA MCP Foundation | COMPLETE |
-| P2-S1 | Project Context | COMPLETE |
-| P2-S2 | SQLite Persistence | COMPLETE |
-| P2-S3 | Versioning | COMPLETE |
-| P2-S4 | Import / Export | COMPLETE |
-| P2-S5 | Jira | COMPLETE |
-| P2-S6 | GitHub | COMPLETE |
-| P2-S7 | Slack | COMPLETE |
-| P2-S8 | Automation Case Generator | NEXT |
-| Future | QA Agent / Orchestrator | PLANNED |
-| Future | CI/CD integration | PLANNED |
-| Future | Additional integrations | PLANNED |
-| Future | Internet/production deployment | PLANNED |
-
----
-
-# 24. Next Phase — Automation Case Generator
-
-**Do not start by modifying Jira, GitHub, or Slack.**
-
-The next capability should build on the existing QA platform.
-
-Expected high-level direction:
-
-```text
-Requirement
-     │
-     ▼
-Requirement Analyzer
-     │
-     ▼
-Test Case Generator
-     │
-     ▼
-Automation Case Generator
-     │
-     ├── automation framework
-     ├── language
-     ├── page/object information
-     ├── locators
-     ├── test data
-     └── generated automation structure
+``` text
+1d2360b  Add automation candidate pipeline
+a226e9e  Add automation case validation
+5ced4e3  Add automation code generation
+715ad52  Complete P2-S8.8 automation code generation
+703cdb1  Complete automation execution foundation
 ```
 
-The exact implementation must be determined from the current repository and existing design before code is changed.
+The automation development progression is:
 
-Follow the established test-first sequence.
-
-Do not assume requirements that have not yet been agreed.
-
----
-
-# 25. Future Integration Direction
-
-The completed connectors provide the foundation for a larger QA workflow.
-
-Potential future direction:
-
-```text
-Jira Requirement
-       │
-       ▼
-Requirement Analyzer
-       │
-       ▼
-Test Case Generator
-       │
-       ▼
-Automation Generator
-       │
-       ▼
-GitHub
-       │
-       ▼
-Slack Notification
-       │
-       ▼
-QA Agent / Orchestrator
+``` text
+Candidate Pipeline
+       |
+       v
+Automation Case Validation
+       |
+       v
+Automation Code Generation
+       |
+       v
+Execution Result Contract
+       |
+       v
+Execution Foundation
+       |
+       v
+Controlled Local Execution
+       |
+       v
+Hardened / Container Execution
+       |
+       v
+Execution Reporting
 ```
 
-This is a future architectural direction, not current functionality.
+------------------------------------------------------------------------
 
-Do not implement the complete orchestration until each capability and its interfaces are deliberately designed and tested.
+# 29. Remaining Major Development Work
 
----
+The exact schedule should be driven by verified implementation rather
+than arbitrary dates.
 
-# 26. Deliberately Not Implemented
+Major remaining product areas include:
 
-## Jira
+## Automation execution
 
-```text
-create issue
-update issue
-comments
-transitions
-test-case publishing
-end-to-end Jira → QA workflow
+``` text
+Controlled local execution          CURRENT
+Execution hardening                 NEXT
+Container isolation                 NEXT
+Browser/runtime provisioning        NEXT
+Execution artifact retention        NEXT
+Result persistence                  NEXT
+Screenshots / traces / videos       NEXT
+Execution reporting                 NEXT
 ```
 
-## GitHub
+## QA intelligence
 
-```text
-create issue
-update issue
-comments
-create pull request
-merge pull request
-repository writes
-workflow mutation
+``` text
+Agent / orchestrator
+Cross-capability reasoning
+Coverage analysis
+Risk-based prioritization
+Regression selection
+Failure analysis
 ```
 
-## Slack
+## Integrations
 
-```text
-send messages
-reply to threads
-create channels
-modify channels
-reactions
-file uploads
-write workflows
+``` text
+Jira write workflow
+Jira → QA workflow
+GitHub write workflow
+PR-based automation workflow
+CI/CD integration
+Slack notifications
 ```
 
-## QA Platform
+## Product layer
 
-```text
-automation generation
-QA agent/orchestrator
-CI/CD execution
-production deployment
-internet deployment
+``` text
+Web UI
+Project dashboard
+Requirement workspace
+QA suite management
+Automation workspace
+Execution history
+Reports
+User/project configuration
+Authentication
+Hosted deployment
 ```
 
-These are deliberately deferred.
+The order should remain deliberate. Do not start broad UI work by
+bypassing unstable core services.
 
----
+------------------------------------------------------------------------
 
-# 27. Fresh-Chat Continuity Instructions
+# 30. Intended Full Product Architecture
 
-When continuing this project in a new ChatGPT conversation:
+The eventual product should look conceptually like:
 
-## Step 1 — Read this README
+``` text
+                         USER
+                          |
+                          v
+                    QA MCP UI / API
+                          |
+                          v
+                    QA Agent Layer
+                          |
+          +---------------+----------------+
+          |               |                |
+          v               v                v
+   QA Intelligence   Automation       Integrations
+          |               |                |
+          |               |          +-----+-----+
+          |               |          |     |     |
+          v               v          Jira GitHub Slack
+    Requirement      Candidate
+    Analysis         Selection
+          |               |
+          v               v
+    Test Cases       Automation Cases
+          |               |
+          v               v
+       Review         Validation
+          |               |
+          +-------+-------+
+                  |
+                  v
+          Generated Automation
+                  |
+                  v
+          Execution Orchestrator
+                  |
+          +-------+--------+
+          |                |
+          v                v
+       Local            Container
+       Runner            Runner
+          |                |
+          +-------+--------+
+                  |
+                  v
+          Execution Results
+                  |
+                  v
+           QA Reporting
+                  |
+                  v
+           Persistent Context
+```
 
-This document is the primary continuity checkpoint.
+This is the target direction, not a claim that all components are
+already implemented.
 
-## Step 2 — Inspect the actual repository
+------------------------------------------------------------------------
 
-Run:
+# 31. Fresh-Chat Continuity Instructions
 
-```bash
+When continuing QA MCP in a new chat:
+
+``` bash
+cd qa-mcp
+source .venv/bin/activate
+git pull
 git status
-git log --oneline --decorate -10
-```
-
-## Step 3 — Run the regression
-
-```bash
+git log -5 --oneline
 pytest -q
 ```
 
-Do not assume the README is newer than the actual code.
+At the current checkpoint, expect the committed repository to be at or
+beyond:
 
-## Step 4 — Verify runtime registration when relevant
-
-For example:
-
-```bash
-python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools() if 'slack' in t.name])"
+``` text
+703cdb1 Complete automation execution foundation
 ```
 
-## Step 5 — Do not recreate completed work
+If the controlled execution commit has already been made, use the latest
+Git checkpoint instead.
 
-Completed:
+Then:
 
-```text
-Foundation
-Project Context
-SQLite Persistence
-Versioning
-Import / Export
-Jira
-GitHub
-Slack
+1.  Read this README.
+2.  Inspect the current repository.
+3.  Confirm Git status.
+4.  Run `pytest -q`.
+5.  Confirm the current regression baseline.
+6.  Inspect the latest execution implementation.
+7.  Do not recreate completed work.
+8.  Continue from the next documented development increment.
+9.  Follow the test-first and layered-architecture rules.
+10. Update this README again before the next milestone commit.
+
+------------------------------------------------------------------------
+
+# 32. Fresh-Chat Handover Statement
+
+Use the following as the continuity statement when starting a new
+development session:
+
+``` text
+Resume QA MCP development from the latest GitHub/README checkpoint.
+
+The project is a layered AI-powered QA MCP platform being developed
+incrementally and test-first.
+
+Phase 1 is complete.
+
+Phase 2 completed foundations:
+- QA Project Context
+- SQLite Persistence
+- Requirement and Suite Versioning
+- Project Import / Export
+- Jira read-only connector
+- GitHub read-only connector
+
+Automation pipeline completed through:
+- candidate selection
+- automation case validation
+- automation code generation
+- execution result contract
+- execution foundation
+
+The current automation execution increment establishes:
+- AutomationExecutionConfig
+- AutomationWorkspace
+- AutomationExecutionRunner
+- ExecutionService integration
+- deterministic execution status mapping
+- timeout handling
+- workspace cleanup
+- MCP execution boundary
+
+Current verified local regression:
+190 passed, 7 warnings.
+
+The known warnings are non-blocking pytest/Pydantic warnings and should
+remain separate technical debt unless they become relevant.
+
+Development rules:
+- work one increment at a time
+- test first
+- never weaken tests
+- preserve layered architecture
+- keep external dependencies mockable
+- keep core logic independent of MCP transport
+- validate AI output
+- never commit secrets
+- run focused tests
+- run full regression
+- verify runtime/MCP path
+- update README
+- review staged diff
+- commit and push
+- never recreate completed work
+
+Latest committed checkpoint:
+703cdb1 Complete automation execution foundation
+
+Next technical direction:
+finish and harden the controlled local Playwright execution path,
+then introduce stronger isolation/container execution, execution
+artifacts/results, reporting, and eventually QA-agent orchestration.
+
+Do not jump directly to the UI or production deployment layer while
+the core execution/orchestration contracts are still being stabilized.
 ```
 
-## Step 6 — Continue from the next checkpoint
+------------------------------------------------------------------------
 
-Current next capability:
+# 33. Final Continuity Rule
 
-```text
-P2-S8 — Automation Case Generator
+This README is the **development checkpoint**, not a substitute for the
+repository.
+
+The authoritative implementation sources are:
+
+``` text
+Source code
+Tests
+Configuration
+Git history
 ```
 
-unless the actual repository state shows that this has already changed.
+The README records:
 
-## Step 7 — Preserve the development sequence
-
-```text
-test
-→ implement
-→ focused regression
-→ full regression
-→ runtime verification
-→ README checkpoint
-→ Git commit
-→ Git push
+``` text
+What is complete
+What is in progress
+What has been verified
+What must not be recreated
+What should happen next
+How development must be performed
 ```
 
-## Step 8 — Avoid unrelated refactoring
+Every verified milestone must leave the repository in a reproducible
+state:
 
-Do not clean up unrelated code while implementing a focused phase.
-
----
-
-# 28. Final Verified Checkpoint
-
-```text
-===========================================================
-                 QA MCP CHECKPOINT
-===========================================================
-
-Phase 1 Foundation                    COMPLETE
-Project Context                       COMPLETE
-SQLite Persistence                    COMPLETE
-Versioning                            COMPLETE
-Import / Export                       COMPLETE
-Jira Connector                       COMPLETE
-GitHub Connector                     COMPLETE
-Slack Connector                      COMPLETE
-
-Current full regression:
-                         143 PASSED
-
-Known warning:
-                         1 non-blocking
-                         pydantic_settings warning
-
-External connectors:
-                         Jira    READ-ONLY
-                         GitHub  READ-ONLY
-                         Slack   READ-ONLY
-
-Secrets:
-                         .env remains local/ignored
-
-Current next capability:
-                         P2-S8
-                         Automation Case Generator
-
-Continuity:
-                         This README is the
-                         primary project checkpoint.
-
-===========================================================
+``` text
+Focused tests GREEN
+        +
+Full regression GREEN
+        +
+Runtime/MCP verification
+        +
+README updated
+        +
+Git checkpoint
+        +
+Remote synchronized
 ```
 
-This README is intended to be sufficient for a fresh development session to understand what has been built, the architectural decisions already made, what has deliberately been deferred, the current test baseline, the environment configuration, and exactly where development should resume.
+**Current verified baseline: 190 passed, 7 warnings.**
+
+**Current committed baseline: `703cdb1` --- Complete automation
+execution foundation.**
+
+**Current development focus: controlled local automation execution.**

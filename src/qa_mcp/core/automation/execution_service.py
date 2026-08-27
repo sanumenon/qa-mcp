@@ -1,3 +1,12 @@
+from qa_mcp.core.automation.execution_config import (
+    AutomationExecutionConfig,
+)
+from qa_mcp.core.automation.execution_runner import (
+    AutomationExecutionRunner,
+)
+from qa_mcp.core.automation.workspace import (
+    AutomationWorkspace,
+)
 from qa_mcp.models.schemas import (
     AutomationExecutionResult,
     GeneratedAutomationArtifact,
@@ -6,6 +15,23 @@ from qa_mcp.models.schemas import (
 
 class AutomationExecutionService:
     """Execute generated automation artifacts."""
+
+    def __init__(
+        self,
+        config: AutomationExecutionConfig | None = None,
+        runner: AutomationExecutionRunner | None = None,
+    ):
+        self.config = (
+            config
+            if config is not None
+            else AutomationExecutionConfig()
+        )
+
+        self.runner = (
+            runner
+            if runner is not None
+            else AutomationExecutionRunner()
+        )
 
     def execute(
         self,
@@ -29,22 +55,52 @@ class AutomationExecutionService:
                 f"{artifact.framework}"
             )
 
-        # P2-S8.10 foundation:
-        # execution is intentionally represented as a
-        # controlled service boundary first.
-        #
-        # Real subprocess/container execution will be
-        # introduced after the contract and orchestration
-        # layer are validated.
-
-        return AutomationExecutionResult(
-            execution_id="EX001",
-            automation_artifact_id=artifact.id,
-            automation_case_id=artifact.automation_case_id,
-            status="NOT_EXECUTED",
-            exit_code=None,
-            stdout="",
-            stderr="",
-            duration_seconds=0.0,
-            error=None,
+        workspace = AutomationWorkspace(
+            root=self.config.workspace_root
         )
+
+        workspace_path = workspace.create(
+            artifact
+        )
+
+        try:
+            command = [
+                "python",
+                "-m",
+                "pytest",
+                artifact.file_name,
+            ]
+
+            process_result = self.runner.run(
+                command=command,
+                cwd=str(workspace_path),
+                timeout_seconds=(
+                    self.config.timeout_seconds
+                ),
+            )
+
+            if process_result.timed_out:
+                status = "TIMEOUT"
+            elif process_result.error is not None:
+                status = "ERROR"
+            elif process_result.exit_code == 0:
+                status = "PASSED"
+            else:
+                status = "FAILED"
+
+            return AutomationExecutionResult(
+                execution_id="EX001",
+                automation_artifact_id=artifact.id,
+                automation_case_id=artifact.automation_case_id,
+                status=status,
+                exit_code=process_result.exit_code,
+                stdout=process_result.stdout,
+                stderr=process_result.stderr,
+                duration_seconds=(
+                    process_result.duration_seconds
+                ),
+                error=process_result.error,
+            )
+
+        finally:
+            workspace.cleanup()
