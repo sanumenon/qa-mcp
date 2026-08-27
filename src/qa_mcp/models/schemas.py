@@ -246,3 +246,11 @@ class AutomationCandidateResult(BaseModel):
     )
 
     total: int = 0
+
+
+class AutomationValidationResult(BaseModel):
+    automation_case_id: str
+    test_case_id: str
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
