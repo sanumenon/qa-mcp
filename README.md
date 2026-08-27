@@ -24,12 +24,12 @@ The long-term goal is to evolve QA MCP from a collection of QA utilities into an
 
 Current development checkpoint:
 
-**P2-S8.8 — Automation Code Generation COMPLETE**
+**P2-S8.8 — Automation Validation + Code Generation COMPLETE**
 
 Latest verified regression:
 
 ```text
-174 passed
+180 passed
 7 warnings
 0 failures
 ```
@@ -44,6 +44,21 @@ generate_automation_code
 ```
 
 The working tree should be committed only after updating this README together with the corresponding code and tests.
+
+Checkpoint discipline:
+
+```text
+P2-S8.8 COMPLETE
+    ↓
+Commit code + tests + README
+    ↓
+Push to GitHub
+    ↓
+P2-S8.9 Automation Execution
+```
+
+The repository must remain at a clean, reproducible checkpoint before the next implementation begins.
+
 
 ---
 
@@ -641,7 +656,7 @@ generate_automation_code MCP tool
 At the current P2-S8.8 checkpoint:
 
 ```text
-174 passed
+180 passed
 7 warnings
 0 failures
 ```
@@ -901,21 +916,20 @@ The following principles should remain unchanged as the project grows:
 
 # 21. Current Resume Point
 
-**Resume from: P2-S8.9**
+**Resume from: P2-S8.9 — Automation Execution**
 
 Previous completed checkpoints:
 
 ```text
 P2-S8.6  Automation Candidate Selection       COMPLETE
 P2-S8.7  Candidate → Automation Generation    COMPLETE
-P2-S8.8  Automation Validation                COMPLETE
-P2-S8.8  Automation Code Generation           COMPLETE
+P2-S8.8  Automation Validation + Code Generation COMPLETE
 ```
 
 Verified baseline:
 
 ```text
-174 passed
+180 passed
 7 warnings
 0 failures
 ```
