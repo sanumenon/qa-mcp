@@ -2,7 +2,6 @@ from unittest.mock import Mock
 
 from qa_mcp.models.schemas import (
     AutomationExecutionResult,
-    GeneratedAutomationArtifact,
 )
 from qa_mcp import server
 
@@ -15,6 +14,7 @@ def test_execute_automation_code_tool():
         AutomationExecutionResult(
             execution_id="EX001",
             automation_artifact_id="GA001",
+            automation_case_id="AC001",
             status="NOT_EXECUTED",
             exit_code=None,
             stdout="",
@@ -49,6 +49,7 @@ def test_execute_automation_code_tool():
 
         assert result["execution_id"] == "EX001"
         assert result["automation_artifact_id"] == "GA001"
+        assert result["automation_case_id"] == "AC001"
         assert result["status"] == "NOT_EXECUTED"
 
         mock_service.execute.assert_called_once()

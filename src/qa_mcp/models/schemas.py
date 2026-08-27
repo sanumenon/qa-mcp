@@ -264,21 +264,11 @@ class GeneratedAutomationArtifact(BaseModel):
     code: str
 
 class AutomationExecutionResult(BaseModel):
-    """Structured result of executing a generated automation artifact."""
-
-    execution_id: str
-    automation_artifact_id: str
-    status: str
-    exit_code: int | None = None
-    stdout: str = ""
-    stderr: str = ""
-    duration_seconds: float = 0.0
-
-class AutomationExecutionResult(BaseModel):
     """Result of executing a generated automation artifact."""
 
     execution_id: str
     automation_artifact_id: str
+    automation_case_id: str
     status: str
     exit_code: int | None = None
     stdout: str = ""

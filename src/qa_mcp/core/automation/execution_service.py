@@ -40,6 +40,7 @@ class AutomationExecutionService:
         return AutomationExecutionResult(
             execution_id="EX001",
             automation_artifact_id=artifact.id,
+            automation_case_id=artifact.automation_case_id,
             status="NOT_EXECUTED",
             exit_code=None,
             stdout="",
