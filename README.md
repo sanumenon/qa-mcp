@@ -14,7 +14,7 @@ The project is being developed incrementally using:
 - MCP tool boundaries
 - LLM-assisted QA analysis and automation generation
 
-The long-term goal is to evolve QA MCP from a collection of QA utilities into an intelligent QA agent capable of understanding requirements, generating and reviewing test cases, identifying automation candidates, generating automation, and eventually providing an interactive UI for the complete workflow.
+The long-term goal is to evolve QA MCP from a collection of QA utilities into an intelligent QA agent capable of understanding requirements, generating and reviewing test cases, identifying automation candidates, generating automation code, validating generated artifacts, executing automation, and eventually providing an interactive UI for the complete workflow.
 
 ---
 
@@ -24,12 +24,12 @@ The long-term goal is to evolve QA MCP from a collection of QA utilities into an
 
 Current development checkpoint:
 
-**P2-S8.8 — Automation Case Validation COMPLETE**
+**P2-S8.8 — Automation Code Generation COMPLETE**
 
 Latest verified regression:
 
 ```text
-167 passed
+174 passed
 7 warnings
 0 failures
 ```
@@ -40,6 +40,7 @@ Current automation MCP tools:
 generate_automation
 select_automation_candidates
 generate_automation_for_candidates
+generate_automation_code
 ```
 
 The working tree should be committed only after updating this README together with the corresponding code and tests.
@@ -65,7 +66,9 @@ Automation Candidate Selection
     ↓
 Automation Generation
     ↓
-Automation Review / Validation
+Automation Validation
+    ↓
+Automation Code Generation
     ↓
 Execution / Reporting
     ↓
@@ -100,7 +103,7 @@ Infrastructure
         └── Slack
 ```
 
-Automation currently follows:
+The automation pipeline now follows:
 
 ```text
 TestCase[]
@@ -128,11 +131,17 @@ AutomationValidator
     │
     ▼
 AutomationValidationResult
+    │
+    ▼
+AutomationCodeGenerationService
+    │
+    ▼
+GeneratedAutomationArtifact
 ```
 
-The existing QA suite workflow remains separate from the new automation-candidate orchestration.
+The existing QA suite workflow remains separate from the automation-candidate orchestration.
 
-This is intentional so that new automation capabilities can evolve without destabilizing the existing QA workflow.
+This is intentional so that automation capabilities can evolve without destabilizing the existing QA workflow.
 
 ---
 
@@ -201,8 +210,6 @@ Jira Client
 Jira Cloud Client / Mock Client
 ```
 
-The connector is designed to support safe configuration and testable external interactions.
-
 Git checkpoint:
 
 ```text
@@ -243,8 +250,6 @@ get_slack_messages
 search_slack_messages
 get_slack_thread
 ```
-
-Slack was deliberately implemented behind an abstraction so cloud and mock implementations can be used independently.
 
 Git checkpoint:
 
@@ -289,20 +294,13 @@ Git checkpoint:
 169c1a1 Complete automation case generator
 ```
 
-Regression at that checkpoint:
-
-```text
-151 passed
-1 warning
-```
-
 ---
 
 # 6. Automation Candidate Selection
 
 ## P2-S8.6 — COMPLETE
 
-The system can now determine which test cases are suitable for automation.
+The system can determine which test cases are suitable for automation.
 
 The candidate selector separates test cases into:
 
@@ -331,15 +329,11 @@ select_automation_candidates
 
 The candidate-selection implementation is intentionally independent of the existing QA suite workflow.
 
-This allows candidate selection to become a reusable capability for future agent workflows.
-
 ---
 
 # 7. Candidate → Automation Generation
 
 ## P2-S8.7 — COMPLETE
-
-The next layer connects candidate selection to automation generation.
 
 The orchestration service is:
 
@@ -363,7 +357,7 @@ AutomationCase[]
 
 Manual-only test cases are not sent to the automation generator.
 
-The implementation also explicitly handles the zero-candidate case:
+The zero-candidate case is explicitly handled:
 
 ```text
 No automation candidates
@@ -379,7 +373,7 @@ Current MCP tool:
 generate_automation_for_candidates
 ```
 
-This provides three distinct automation capabilities:
+The three capabilities established by P2-S8.6/P2-S8.7 are:
 
 ```text
 generate_automation
@@ -394,21 +388,13 @@ generate_automation_for_candidates
 
 ---
 
-# 8. Automation Case Validation
+# 8. Automation Validation
 
-## P2-S8.8 — COMPLETE
+## P2-S8.8 — VALIDATION LAYER COMPLETE
 
-The automation pipeline now includes a dedicated validation layer for generated automation cases.
+Generated `AutomationCase` objects can now be validated before code generation.
 
-The validator is:
-
-```text
-AutomationValidator
-```
-
-Its responsibility is deliberately narrow: validate an individual `AutomationCase` before it is considered ready for downstream use.
-
-The structured validation result is:
+The validation result is:
 
 ```text
 AutomationValidationResult
@@ -422,97 +408,170 @@ with:
 - `errors`
 - `warnings`
 
-The validator currently enforces fundamental automation-case integrity, including:
-
-- An automation case must contain at least one step.
-- Validation failures are returned as structured errors.
-- Non-blocking concerns can be returned as warnings.
-- Validation is separated from automation generation.
-
-The resulting pipeline is:
+The validator currently enforces the following minimum requirements:
 
 ```text
-Test Case
-    ↓
-Candidate Selection
-    ↓
-Automation Generation
-    ↓
-Automation Case
-    ↓
-Automation Validation
-    ↓
-Validated Automation Case
+Automation case must contain at least one step
+Automation case must contain at least one assertion
+Automation case must specify a framework
 ```
 
-This separation allows validation rules to evolve independently from automation generation and provides a clean foundation for future framework-specific validation.
-
-### P2-S8.8 Test Coverage
-
-Dedicated tests cover:
+Validation is intentionally kept as a separate service:
 
 ```text
-AutomationValidationResult
+AutomationCase
+      ↓
 AutomationValidator
-Valid automation cases
-Invalid automation cases
-Missing automation steps
-Validation error reporting
+      ↓
+AutomationValidationResult
 ```
 
-The full regression suite remains green at this checkpoint.
+This keeps validation independent from generation and code generation.
 
 ---
 
-# 9. Current Automation Architecture
+# 9. Automation Code Generation
+
+## P2-S8.8 — COMPLETE
+
+The next layer converts a validated automation case into a structured executable automation artifact.
+
+The service is:
 
 ```text
-                     TestCase[]
-                         │
-                         ▼
-          ┌─────────────────────────────┐
-          │ AutomationCandidateSelector │
-          └──────────────┬──────────────┘
-                         │
-                         ▼
-          AutomationCandidateService
-                         │
-                         ▼
-             AutomationCandidateResult
-                    /                         candidate_ids          manual_ids
-                │
-                ▼
-AutomationCandidateGenerationService
-                │
-                ▼
-       AutomationService
-                │
-                ▼
-    AutomationCaseGenerator
-                │
-                ▼
-          AutomationCase[]
-                │
-                ▼
-      AutomationValidator
-                │
-                ▼
-    AutomationValidationResult
+AutomationCodeGenerationService
 ```
 
-This separation is intentional.
+The current implementation generates:
 
-The candidate selector decides **what should be automated**.
+```text
+Python
++
+Playwright
+```
 
-The automation generator decides **how it should be automated**.
+The generated artifact is represented by:
 
-The orchestration service connects the two.
+```text
+GeneratedAutomationArtifact
+```
 
-The validator decides whether the generated automation case satisfies the minimum structural quality required for downstream processing.
+with:
+
+- `id`
+- `automation_case_id`
+- `framework`
+- `language`
+- `file_name`
+- `code`
+
+The current code-generation flow is:
+
+```text
+AutomationCase
+      ↓
+Validation checks
+      ↓
+AutomationCodeGenerationService
+      ↓
+Python / Playwright code
+      ↓
+GeneratedAutomationArtifact
+```
+
+The generated code currently provides a structured Playwright test function and preserves the source automation steps and assertions as code comments.
+
+The service rejects:
+
+- automation cases without steps
+- automation cases without assertions
+- automation cases without a framework
+- unsupported automation frameworks
+
+The current supported framework is:
+
+```text
+Playwright
+```
+
+The generated artifact uses:
+
+```text
+Language: Python
+Framework: Playwright
+```
+
+Example generated artifact metadata:
+
+```text
+id: GA001
+automation_case_id: AC001
+framework: Playwright
+language: Python
+file_name: test_successful_login.py
+```
+
+This layer deliberately does not yet attempt to provide a complete production-grade locator strategy. That will be addressed in a later checkpoint after the structured generation pipeline is stable.
 
 ---
 
-# 10. Current MCP Automation Surface
+# 10. Current Automation Architecture
+
+The complete current automation flow is:
+
+```text
+                         TestCase[]
+                             │
+                             ▼
+              ┌─────────────────────────────┐
+              │ AutomationCandidateSelector │
+              └──────────────┬──────────────┘
+                             │
+                             ▼
+                AutomationCandidateService
+                             │
+                             ▼
+                   AutomationCandidateResult
+                        /             \
+                       /               \
+              candidate_ids         manual_ids
+                   │
+                   ▼
+       AutomationCandidateGenerationService
+                   │
+                   ▼
+            AutomationService
+                   │
+                   ▼
+        AutomationCaseGenerator
+                   │
+                   ▼
+             AutomationCase
+                   │
+                   ▼
+          AutomationValidator
+                   │
+                   ▼
+       AutomationValidationResult
+                   │
+                   ▼
+    AutomationCodeGenerationService
+                   │
+                   ▼
+      GeneratedAutomationArtifact
+```
+
+The separation remains intentional:
+
+- Candidate selection decides **what should be automated**.
+- Automation generation decides **how it should be represented as an automation case**.
+- Validation decides **whether the automation case is structurally acceptable**.
+- Code generation decides **how to produce an executable automation artifact**.
+- MCP tools remain thin orchestration boundaries.
+
+---
+
+# 11. Current MCP Automation Surface
 
 The current automation-related MCP surface is:
 
@@ -520,6 +579,7 @@ The current automation-related MCP surface is:
 generate_automation
 select_automation_candidates
 generate_automation_for_candidates
+generate_automation_code
 ```
 
 Verified using:
@@ -534,15 +594,14 @@ Expected:
 [
     'generate_automation',
     'select_automation_candidates',
-    'generate_automation_for_candidates'
+    'generate_automation_for_candidates',
+    'generate_automation_code'
 ]
 ```
 
-The validator is currently a core service rather than a separately exposed MCP tool.
-
 ---
 
-# 11. Test Strategy
+# 12. Test Strategy
 
 The project uses test-first development.
 
@@ -566,29 +625,34 @@ Commit code + tests + README
 
 This approach is being maintained throughout Phase 2.
 
+P2-S8.8 added focused coverage for:
+
+```text
+GeneratedAutomationArtifact
+AutomationCodeGenerationService
+Empty / invalid automation cases
+generate_automation_code MCP tool
+```
+
 ---
 
-# 12. Current Test Baseline
+# 13. Current Test Baseline
 
 At the current P2-S8.8 checkpoint:
 
 ```text
-167 passed
+174 passed
 7 warnings
 0 failures
 ```
 
-Focused automation pipeline tests:
-
-```text
-15 passed
-```
+The automation code-generation focused tests are green.
 
 The full regression suite must remain green before a phase checkpoint is committed.
 
 ---
 
-# 13. Known Warnings
+# 14. Known Warnings
 
 There are currently two categories of non-blocking warnings.
 
@@ -633,7 +697,7 @@ This should be treated as separate technical debt rather than mixed into the aut
 
 ---
 
-# 14. Configuration
+# 15. Configuration
 
 Configuration is maintained under:
 
@@ -656,7 +720,7 @@ Secrets must not be committed to Git.
 
 ---
 
-# 15. Development Commands
+# 16. Development Commands
 
 Activate the virtual environment:
 
@@ -676,7 +740,7 @@ Run a specific test:
 pytest -q tests/<test_file>.py
 ```
 
-Check MCP tools:
+Check all MCP tools:
 
 ```bash
 python -c "from qa_mcp.server import mcp; print([t.name for t in mcp._tool_manager.list_tools()])"
@@ -694,9 +758,16 @@ Check Git status:
 git status
 ```
 
+Inspect staged changes before committing:
+
+```bash
+git diff --cached --stat
+git diff --cached
+```
+
 ---
 
-# 16. Git Checkpoint History
+# 17. Git Checkpoint History
 
 Important development checkpoints:
 
@@ -713,16 +784,22 @@ a288569 Initial commit with configured gitignore
 Completed automation checkpoints:
 
 ```text
-P2-S8.6 Automation Candidate Selection
-P2-S8.7 Candidate → Automation Generation
-P2-S8.8 Automation Case Validation
+P2-S8.6  Automation Candidate Selection
+P2-S8.7  Candidate → Automation Generation
+P2-S8.8  Automation Validation + Code Generation
 ```
 
-Each completed checkpoint is committed together with its implementation, tests and updated README.
+Each completed checkpoint must include:
+
+```text
+Production code
+Tests
+README update
+```
 
 ---
 
-# 17. Next Phase
+# 18. Next Phase
 
 The next development step should build on the now-established automation pipeline.
 
@@ -738,54 +815,39 @@ Candidate Selection
 Automation Generation
     ↓
 Automation Validation
+    ↓
+Automation Code Generation
+    ↓
+Generated Automation Artifact
 ```
 
-The next layer should focus on making validated automation more useful and agent-ready.
+The next layer should make the generated automation more useful and agent-ready.
 
-Potential progression:
+Planned progression:
 
 ```text
-AutomationCase[]
+GeneratedAutomationArtifact
         ↓
-Automation validation
+Artifact Review
         ↓
-Framework-specific code generation
+Framework-specific improvements
         ↓
-Generated automation artifacts
-        ↓
-Automation review
+Locator / selector strategy
         ↓
 Execution integration
         ↓
-Results / reporting
+Execution results
+        ↓
+Evidence / reporting
+        ↓
+Agent-driven QA workflow
 ```
 
-In parallel, the project can begin moving toward the eventual interactive experience:
-
-```text
-User
-  ↓
-QA MCP UI
-  ↓
-Agent / MCP orchestration
-  ↓
-QA capabilities
-  ├── Requirement analysis
-  ├── Test generation
-  ├── Test review
-  ├── Candidate selection
-  ├── Automation generation
-  ├── Automation validation
-  ├── Jira
-  ├── GitHub
-  └── Slack
-```
-
-The UI and hosting layer should be introduced after the core agent capabilities are sufficiently stable.
+The project should continue incrementally rather than combining execution, reporting, UI, and code-generation sophistication into a single checkpoint.
 
 ---
 
-# 18. Product Direction
+# 19. Product Direction
 
 The eventual product should provide an experience where a user can submit a requirement and see the QA agent work through the process:
 
@@ -804,16 +866,20 @@ Generating automation...
         ↓
 Validating automation...
         ↓
+Generating automation code...
+        ↓
+Executing automation...
+        ↓
 Preparing QA results...
 ```
 
 The intention is not merely to expose MCP tools, but to use them as the capability layer underneath an eventual agent-driven QA product.
 
-The future UI should make the agent's progress, reasoning state, generated artifacts and results visible and understandable to the user.
+The future UI should make the agent's progress, generated artifacts and results visible and understandable to the user.
 
 ---
 
-# 19. Development Principles
+# 20. Development Principles
 
 The following principles should remain unchanged as the project grows:
 
@@ -828,10 +894,12 @@ The following principles should remain unchanged as the project grows:
 9. Run the full regression suite before every feature checkpoint.
 10. Update this README whenever a meaningful feature checkpoint is committed.
 11. Commit code, tests and README together for each completed checkpoint.
+12. Do not redesign completed layers unless a new requirement requires it.
+13. Preserve the checkpoint history so development can always resume from a known state.
 
 ---
 
-# 20. Current Resume Point
+# 21. Current Resume Point
 
 **Resume from: P2-S8.9**
 
@@ -840,22 +908,41 @@ Previous completed checkpoints:
 ```text
 P2-S8.6  Automation Candidate Selection       COMPLETE
 P2-S8.7  Candidate → Automation Generation    COMPLETE
-P2-S8.8  Automation Case Validation           COMPLETE
+P2-S8.8  Automation Validation                COMPLETE
+P2-S8.8  Automation Code Generation           COMPLETE
 ```
 
 Verified baseline:
 
 ```text
-167 passed
+174 passed
 7 warnings
+0 failures
 ```
 
-Automation MCP tools:
+Current automation MCP tools:
 
 ```text
 generate_automation
 select_automation_candidates
 generate_automation_for_candidates
+generate_automation_code
 ```
 
-The next implementation should continue from P2-S8.9 rather than redesigning the completed candidate-selection, candidate-generation, or validation layers.
+The next implementation should continue from **P2-S8.9** rather than redesigning the completed candidate-selection, automation-generation, validation, or code-generation layers.
+
+The established pipeline is now:
+
+```text
+TestCase
+   ↓
+Candidate Selection
+   ↓
+AutomationCase
+   ↓
+Validation
+   ↓
+GeneratedAutomationArtifact
+```
+
+This pipeline is the baseline for the next development checkpoint.

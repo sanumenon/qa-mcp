@@ -45,6 +45,10 @@ from qa_mcp.tools.automation.generator import (
     AutomationCaseGenerator,
 )
 
+from qa_mcp.core.automation.code_generation_service import (
+    AutomationCodeGenerationService,
+)
+
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
 )
@@ -55,6 +59,7 @@ from qa_mcp.models.schemas import (
     TestCase,
     TestCaseGenerationRequest,
     TestCaseResponse,
+    AutomationCase,
 )
 
 from qa_mcp.core.project.context import ProjectContext
@@ -147,6 +152,10 @@ automation_candidate_generation_service = (
         candidate_service=automation_candidate_service,
         automation_service=automation_service,
     )
+)
+
+automation_code_generation_service = (
+    AutomationCodeGenerationService()
 )
 
 project_repository = SQLiteProjectRepository()
@@ -887,5 +896,30 @@ def generate_automation_for_candidates(
             f"Invalid test cases: {exc}"
         ) from exc
 
+@mcp.tool()
+def generate_automation_code(
+    automation_case: dict,
+) -> dict:
+    """Generate executable automation code from an automation case."""
+
+    try:
+        qa_automation_case = AutomationCase(
+            **automation_case
+        )
+
+        result = (
+            automation_code_generation_service.generate(
+                qa_automation_case
+            )
+        )
+
+        return result.model_dump()
+
+    except Exception as exc:
+        raise ValueError(
+            f"Invalid automation case: {exc}"
+        ) from exc
+
+    
 if __name__ == "__main__":
     mcp.run()

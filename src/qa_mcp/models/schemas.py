@@ -254,3 +254,11 @@ class AutomationValidationResult(BaseModel):
     valid: bool
     errors: list[str]
     warnings: list[str]
+
+class GeneratedAutomationArtifact(BaseModel):
+    id: str
+    automation_case_id: str
+    framework: str
+    language: str
+    file_name: str
+    code: str
