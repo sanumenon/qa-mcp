@@ -269,3 +269,87 @@ def test_build_command_rejects_unsafe_artifact_filename():
                 file_name="../outside.py",
             )
         )
+
+def test_execution_config_rejects_zero_timeout():
+    with pytest.raises(
+        ValueError,
+        match="positive integer",
+    ):
+        AutomationExecutionConfig(
+            timeout_seconds=0
+        )
+
+
+def test_execution_config_rejects_negative_timeout():
+    with pytest.raises(
+        ValueError,
+        match="positive integer",
+    ):
+        AutomationExecutionConfig(
+            timeout_seconds=-1
+        )
+
+
+def test_execution_config_rejects_non_integer_timeout():
+    with pytest.raises(
+        ValueError,
+        match="positive integer",
+    ):
+        AutomationExecutionConfig(
+            timeout_seconds="60"
+        )
+
+
+def test_execution_config_rejects_boolean_timeout():
+    with pytest.raises(
+        ValueError,
+        match="positive integer",
+    ):
+        AutomationExecutionConfig(
+            timeout_seconds=True
+        )
+
+
+def test_execution_config_accepts_positive_timeout():
+    config = AutomationExecutionConfig(
+        timeout_seconds=30
+    )
+
+    assert config.timeout_seconds == 30
+
+
+def test_execution_service_honors_keep_workspace(tmp_path):
+    runner = FakeRunner(
+        ExecutionProcessResult(
+            exit_code=0,
+            stdout="1 passed",
+            stderr="",
+            duration_seconds=1.0,
+        )
+    )
+
+    service = AutomationExecutionService(
+        config=AutomationExecutionConfig(
+            timeout_seconds=30,
+            workspace_root=str(tmp_path),
+            keep_workspace=True,
+        ),
+        runner=runner,
+    )
+
+    result = service.execute(
+        build_artifact()
+    )
+
+    assert result.status == "PASSED"
+
+    workspace_path = tmp_path / next(
+        path.name
+        for path in tmp_path.iterdir()
+        if path.is_dir()
+    )
+
+    assert workspace_path.exists()
+    assert (
+        workspace_path / "test_successful_login.py"
+    ).exists()

@@ -89,7 +89,8 @@ class AutomationExecutionService:
             )
 
         workspace = AutomationWorkspace(
-            root=self.config.workspace_root
+            root=self.config.workspace_root,
+            keep_workspace=self.config.keep_workspace,
         )
 
         workspace_path = workspace.create(
