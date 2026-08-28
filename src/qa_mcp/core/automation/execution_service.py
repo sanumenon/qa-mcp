@@ -1,3 +1,5 @@
+import sys
+
 from qa_mcp.core.automation.execution_config import (
     AutomationExecutionConfig,
 )
@@ -58,7 +60,7 @@ class AutomationExecutionService:
             )
 
         return [
-            "python",
+            sys.executable,
             "-m",
             "pytest",
             artifact.file_name,

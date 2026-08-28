@@ -1,5 +1,5 @@
 import pytest
-
+import sys
 from qa_mcp.core.automation.execution_config import (
     AutomationExecutionConfig,
 )
@@ -88,7 +88,7 @@ def test_execution_runs_generated_artifact(tmp_path):
     assert result.error is None
 
     assert runner.command == [
-        "python",
+        sys.executable,
         "-m",
         "pytest",
         "test_successful_login.py",
@@ -235,7 +235,7 @@ def test_build_command_returns_controlled_pytest_invocation():
     )
 
     assert command == [
-        "python",
+        sys.executable,
         "-m",
         "pytest",
         "test_login.py",
