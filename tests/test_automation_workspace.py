@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from qa_mcp.core.automation.workspace import (
     AutomationWorkspace,
 )
@@ -92,3 +94,93 @@ def test_workspace_can_be_retained():
                 child.unlink()
 
         path.rmdir()
+
+
+@pytest.mark.parametrize(
+    "file_name",
+    [
+        "../outside.py",
+        "../../outside.py",
+        "tests/test_login.py",
+        "/tmp/outside.py",
+        r"..\outside.py",
+        r"..\..\outside.py",
+        r"C:\temp\outside.py",
+        r"C:outside.py",
+    ],
+)
+def test_workspace_rejects_unsafe_file_names(file_name):
+
+    workspace = AutomationWorkspace()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsafe automation artifact file name",
+    ):
+        workspace.create(
+            build_artifact(file_name=file_name)
+        )
+
+    assert workspace.path is None
+
+
+@pytest.mark.parametrize(
+    "file_name",
+    [
+        "",
+        "   ",
+        ".",
+        "..",
+    ],
+)
+def test_workspace_rejects_invalid_file_names(file_name):
+
+    workspace = AutomationWorkspace()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsafe automation artifact file name",
+    ):
+        workspace.create(
+            build_artifact(file_name=file_name)
+        )
+
+    assert workspace.path is None
+
+
+def test_workspace_writes_only_inside_created_workspace():
+
+    workspace = AutomationWorkspace()
+
+    path = workspace.create(
+        build_artifact(file_name="test_login.py")
+    )
+
+    try:
+        artifact_path = path / "test_login.py"
+
+        assert artifact_path.exists()
+        assert artifact_path.parent == path
+        assert artifact_path.resolve().parent == path.resolve()
+    finally:
+        workspace.cleanup()
+
+
+def test_workspace_rejects_path_that_escapes_workspace(tmp_path):
+
+    workspace = AutomationWorkspace(
+        root=str(tmp_path)
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unsafe automation artifact file name",
+    ):
+        workspace.create(
+            build_artifact(
+                file_name="../outside.py"
+            )
+        )
+
+    assert not (tmp_path / "outside.py").exists()
+    assert workspace.path is None
