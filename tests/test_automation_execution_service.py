@@ -10,9 +10,13 @@ from qa_mcp.core.automation.execution_service import (
     AutomationExecutionService,
 )
 from qa_mcp.models.schemas import (
+    AutomationCase,
     GeneratedAutomationArtifact,
 )
 
+from qa_mcp.core.automation.code_generation_service import (
+    AutomationCodeGenerationService,
+)
 
 class FakeRunner:
     def __init__(
@@ -353,3 +357,79 @@ def test_execution_service_honors_keep_workspace(tmp_path):
     assert (
         workspace_path / "test_successful_login.py"
     ).exists()
+
+def test_generated_automation_artifact_can_be_executed(
+    tmp_path,
+):
+    automation_case = AutomationCase(
+        id="AC001",
+        test_case_id="TC001",
+        title="Successful login",
+        automation_type="UI",
+        framework="Playwright",
+        priority="High",
+        confidence="High",
+        preconditions=[],
+        test_data=[],
+        steps=[
+            "goto: http://localhost:8000/login",
+            "fill: #username = testuser",
+            "click: #login",
+        ],
+        assertions=[
+            "visible: #dashboard",
+        ],
+        limitations=[],
+    )
+
+    generator = AutomationCodeGenerationService()
+
+    artifact = generator.generate(
+        automation_case
+    )
+
+    runner = FakeRunner(
+        ExecutionProcessResult(
+            exit_code=0,
+            stdout="1 passed",
+            stderr="",
+            duration_seconds=1.25,
+        )
+    )
+
+    service = AutomationExecutionService(
+        config=AutomationExecutionConfig(
+            timeout_seconds=30,
+            workspace_root=str(tmp_path),
+        ),
+        runner=runner,
+    )
+
+    result = service.execute(artifact)
+
+    assert artifact.automation_case_id == "AC001"
+    assert artifact.framework == "Playwright"
+    assert artifact.file_name == "test_successful_login.py"
+
+    assert "page.goto('http://localhost:8000/login')" in artifact.code
+    assert (
+        "page.locator('#username').fill('testuser')"
+        in artifact.code
+    )
+    assert "page.locator('#login').click()" in artifact.code
+    assert (
+        "expect(page.locator('#dashboard')).to_be_visible()"
+        in artifact.code
+    )
+
+    assert result.status == "PASSED"
+    assert result.automation_artifact_id == artifact.id
+    assert result.automation_case_id == "AC001"
+    assert result.exit_code == 0
+
+    assert runner.command == [
+        sys.executable,
+        "-m",
+        "pytest",
+        "test_successful_login.py",
+    ]

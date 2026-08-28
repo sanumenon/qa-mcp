@@ -3,7 +3,6 @@ from qa_mcp.core.automation.code_generation_service import (
 )
 from qa_mcp.models.schemas import AutomationCase
 
-
 def test_code_generation_service_generates_playwright_python_artifact():
 
     automation_case = AutomationCase(
@@ -17,10 +16,13 @@ def test_code_generation_service_generates_playwright_python_artifact():
         preconditions=[],
         test_data=[],
         steps=[
-            "Open login page",
+            "goto: http://localhost:8000/login",
+            "fill: #username = testuser",
+            "fill: #password = secret",
+            "click: #login",
         ],
         assertions=[
-            "Dashboard is displayed",
+            "visible: #dashboard",
         ],
         limitations=[],
     )
@@ -34,5 +36,28 @@ def test_code_generation_service_generates_playwright_python_artifact():
     assert result.framework == "Playwright"
     assert result.language == "Python"
     assert result.file_name == "test_successful_login.py"
-    assert "def test_successful_login" in result.code
-    assert "page" in result.code
+
+    assert (
+        "page.goto('http://localhost:8000/login')"
+        in result.code
+    )
+
+    assert (
+        "page.locator('#username').fill('testuser')"
+        in result.code
+    )
+
+    assert (
+        "page.locator('#password').fill('secret')"
+        in result.code
+    )
+
+    assert (
+        "page.locator('#login').click()"
+        in result.code
+    )
+
+    assert (
+        "expect(page.locator('#dashboard')).to_be_visible()"
+        in result.code
+    )

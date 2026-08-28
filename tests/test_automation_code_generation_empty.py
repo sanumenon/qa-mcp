@@ -120,3 +120,62 @@ def test_code_generation_with_unsupported_framework_fails():
         match="Unsupported automation framework",
     ):
         service.generate(automation_case)
+
+def test_code_generation_rejects_unsupported_step():
+
+    automation_case = AutomationCase(
+        id="AC006",
+        test_case_id="TC006",
+        title="Unsupported step",
+        automation_type="UI",
+        framework="Playwright",
+        priority="High",
+        confidence="High",
+        preconditions=[],
+        test_data=[],
+        steps=[
+            "Open login page",
+        ],
+        assertions=[
+            "visible: #dashboard",
+        ],
+        limitations=[],
+    )
+
+    service = AutomationCodeGenerationService()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported automation step",
+    ):
+        service.generate(automation_case)
+
+
+def test_code_generation_rejects_unsupported_assertion():
+
+    automation_case = AutomationCase(
+        id="AC007",
+        test_case_id="TC007",
+        title="Unsupported assertion",
+        automation_type="UI",
+        framework="Playwright",
+        priority="High",
+        confidence="High",
+        preconditions=[],
+        test_data=[],
+        steps=[
+            "goto: http://localhost:8000/login",
+        ],
+        assertions=[
+            "Dashboard is displayed",
+        ],
+        limitations=[],
+    )
+
+    service = AutomationCodeGenerationService()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported automation assertion",
+    ):
+        service.generate(automation_case)
