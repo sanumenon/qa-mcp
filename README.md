@@ -30,15 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       b6190d9 Harden automation workspace file handling
-Previous commit:     731d483 Update project continuity documentation
-Previous commit:     add5ba2 Update project continuity roadmap
-Previous implementation checkpoint: 3bdf761 Implement controlled automation execution
+Latest commit:       176ab59 Implement executable Playwright code generation
+Previous commit:     2d26fec Harden automation execution configuration
+Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.1.b.1 — Controlled Automation Command Boundary
-Next implementation: P2-S9.1.b.2 — Further command/execution policy hardening
-Checkpoint commit:   Pending user commit
+Current checkpoint:  P2-S9.2 — Executable Playwright Code Generation
+Next implementation: P2-S9.3 — Real Playwright Execution Validation
+Checkpoint commit:   176ab59
 ```
 
 ## Latest verified baseline
@@ -1586,3 +1585,101 @@ A future development session must:
 24. Never use a new chat as a reason to restart the project from an earlier phase.
 
 **This README is part of the implementation and must be treated as the project's authoritative continuity record.**
+
+
+---
+
+## P2-S9.2 — Executable Playwright Code Generation
+
+Status: COMPLETE
+
+Implementation commit:
+
+```text
+176ab59 Implement executable Playwright code generation
+```
+
+Implemented in:
+
+```text
+src/qa_mcp/core/automation/code_generation_service.py
+```
+
+Generated Playwright/Python artifacts now translate the controlled automation DSL into executable Playwright code.
+
+Supported automation steps:
+
+```text
+goto: <url>
+fill: <selector> = <value>
+click: <selector>
+press: <selector> = <key>
+```
+
+Supported assertions:
+
+```text
+visible: <selector>
+text: <selector> = <expected text>
+url: <expected url>
+```
+
+The generator now:
+
+- Produces executable Playwright/Python code instead of comments.
+- Generates `Page` and `expect` based Playwright code.
+- Rejects unsupported automation steps.
+- Rejects unsupported automation assertions.
+- Validates malformed step/assertion expressions.
+- Preserves the existing `GeneratedAutomationArtifact` contract.
+- Keeps the existing `execute_automation_code` MCP boundary unchanged.
+- Supports generated-artifact → execution-service integration.
+
+Verification:
+
+```text
+pytest -q tests/test_automation_code_generation_service.py tests/test_automation_code_generation_empty.py tests/test_automation_code_generation_result.py
+
+8 passed
+0 failures
+
+pytest -q tests/test_automation_execution_service.py
+
+17 passed
+0 failures
+
+pytest -q
+
+216 passed
+7 warnings
+0 failures
+
+git diff --check
+clean
+```
+
+The 7 pytest/Pydantic warnings are existing non-blocking technical debt and are not part of P2-S9.2.
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+```
+
+### Next implementation checkpoint
+
+```text
+P2-S9.3 — Real Playwright Execution Validation
+```
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, or controlled execution functionality.
