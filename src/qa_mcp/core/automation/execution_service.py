@@ -33,6 +33,37 @@ class AutomationExecutionService:
             else AutomationExecutionRunner()
         )
 
+    def _build_command(
+        self,
+        artifact: GeneratedAutomationArtifact,
+    ) -> list[str]:
+        """Build the controlled command used to execute an automation artifact."""
+
+        if artifact.framework.lower() != "playwright":
+            raise ValueError(
+                "Unsupported automation framework: "
+                f"{artifact.framework}"
+            )
+
+        if (
+            not artifact.file_name
+            or artifact.file_name.strip() != artifact.file_name
+            or artifact.file_name in {".", ".."}
+            or "/" in artifact.file_name
+            or "\\" in artifact.file_name
+        ):
+            raise ValueError(
+                "Unsafe automation artifact filename: "
+                f"{artifact.file_name}"
+            )
+
+        return [
+            "python",
+            "-m",
+            "pytest",
+            artifact.file_name,
+        ]
+
     def execute(
         self,
         artifact: GeneratedAutomationArtifact,
@@ -64,12 +95,7 @@ class AutomationExecutionService:
         )
 
         try:
-            command = [
-                "python",
-                "-m",
-                "pytest",
-                artifact.file_name,
-            ]
+            command = self._build_command(artifact)
 
             process_result = self.runner.run(
                 command=command,

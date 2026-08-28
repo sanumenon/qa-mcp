@@ -226,3 +226,46 @@ def test_unsupported_framework_fails_execution():
                 framework="Cypress"
             )
         )
+
+def test_build_command_returns_controlled_pytest_invocation():
+    service = AutomationExecutionService()
+
+    command = service._build_command(
+        build_artifact(file_name="test_login.py")
+    )
+
+    assert command == [
+        "python",
+        "-m",
+        "pytest",
+        "test_login.py",
+    ]
+
+
+def test_build_command_rejects_unsupported_framework():
+    service = AutomationExecutionService()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported automation framework",
+    ):
+        service._build_command(
+            build_artifact(
+                framework="Cypress",
+                file_name="test_login.py",
+            )
+        )
+
+
+def test_build_command_rejects_unsafe_artifact_filename():
+    service = AutomationExecutionService()
+
+    with pytest.raises(
+        ValueError,
+        match="Unsafe automation artifact filename",
+    ):
+        service._build_command(
+            build_artifact(
+                file_name="../outside.py",
+            )
+        )

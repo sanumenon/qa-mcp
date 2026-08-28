@@ -30,14 +30,15 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       731d483 Update project continuity documentation
-Previous commit:    add5ba2 Update project continuity roadmap
+Latest commit:       b6190d9 Harden automation workspace file handling
+Previous commit:     731d483 Update project continuity documentation
+Previous commit:     add5ba2 Update project continuity roadmap
 Previous implementation checkpoint: 3bdf761 Implement controlled automation execution
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.1.a — Safe Workspace/File Handling
-Next implementation: P2-S9.1.b — Stronger Command Validation
-Checkpoint commit:  Pending user commit
+Current checkpoint:  P2-S9.1.b.1 — Controlled Automation Command Boundary
+Next implementation: P2-S9.1.b.2 — Further command/execution policy hardening
+Checkpoint commit:   Pending user commit
 ```
 
 ## Latest verified baseline
@@ -1176,18 +1177,18 @@ Future work must build on these components.
 
 ## P2-S9.1 — Execution Hardening
 
-**STATUS: IN PROGRESS — P2-S9.1.a COMPLETE**
+**STATUS: IN PROGRESS — P2-S9.1.b.1 COMPLETE**
 
 Completed sub-step:
 
 ```text
-P2-S9.1.a — Safe Workspace/File Handling
+P2-S9.1.b.1 — Controlled Automation Command Boundary
 ```
 
 Next sub-step:
 
 ```text
-P2-S9.1.b — Stronger Command Validation
+P2-S9.1.b.2 — Further Command/Execution Policy Hardening
 ```
 
 Do not return to:
@@ -1231,7 +1232,7 @@ P2-S9.4 Reporting / analysis
 P2-S10 Agent orchestration
 ```
 
-P2-S9.1.a is now implemented and verified. The next sub-step must be defined and tested before implementation.
+P2-S9.1.a and P2-S9.1.b.1 are implemented and verified. The next sub-step must be defined and tested before implementation.
 
 ---
 
@@ -1267,7 +1268,36 @@ The 7 warnings remain the existing non-blocking pytest/Pydantic technical debt d
 
 No existing Pydantic execution contracts were changed.
 
-**Next implementation: P2-S9.1.b — Stronger Command Validation**
+**Next implementation: P2-S9.1.b.2 — Further command/execution policy hardening**
+
+---
+
+# 21B. COMPLETED CHECKPOINT — P2-S9.1.b.1
+
+## Execution Hardening — Controlled Automation Command Boundary
+
+**STATUS: COMPLETE**
+
+Implemented:
+
+- Explicit controlled command construction in `AutomationExecutionService`.
+- Playwright automation is restricted to `python -m pytest <artifact_file_name>`.
+- Unsupported automation frameworks are rejected before command construction.
+- Unsafe artifact filenames are rejected before command construction.
+- `AutomationExecutionRunner` remains a generic subprocess execution wrapper.
+- Existing Pydantic execution contracts and the MCP execution boundary remain unchanged.
+
+Tests:
+
+```text
+Focused execution service suite: 10 passed
+Full regression: 207 passed, 0 failures, 7 warnings
+git diff --check: clean
+```
+
+The 7 warnings remain the existing non-blocking pytest/Pydantic technical debt documented in Section 15.
+
+**Next implementation: P2-S9.1.b.2 — Further command/execution policy hardening**
 
 ---
 
@@ -1474,9 +1504,9 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.1.b — Stronger Command Validation**
+**P2-S9.1.b.2 — Further Command/Execution Policy Hardening**
 
-P2-S9.1.a — Safe Workspace/File Handling is complete and must not be recreated.
+P2-S9.1.a — Safe Workspace/File Handling and P2-S9.1.b.1 — Controlled Automation Command Boundary are complete and must not be recreated.
 
 Previous completed checkpoints:
 
@@ -1488,21 +1518,21 @@ P2-S8.8+  Automation Code Generation              COMPLETE
 P2-S8.9   Controlled Automation Execution         COMPLETE
 ```
 
-Verified baseline after P2-S9.1.a:
+Verified baseline after P2-S9.1.b.1:
 
 ```text
-204 passed
+207 passed
 7 warnings
 0 failures
 ```
 
-Latest repository commit before this checkpoint:
+Latest repository implementation commit:
 
 ```text
-731d483 Update project continuity documentation
+b6190d9 Harden automation workspace file handling
 ```
 
-Checkpoint commit:
+Current checkpoint commit:
 
 ```text
 Pending user commit
@@ -1534,24 +1564,25 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.1.b — Stronger Command Validation**.
+5. Start from **P2-S9.1.b.2 — Further Command/Execution Policy Hardening**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
-7. Do not recreate candidate selection.
-8. Do not recreate automation generation.
-9. Do not recreate automation validation.
-10. Do not recreate controlled local execution.
-11. Do not silently replace established architecture/contracts.
-12. Add tests first wherever practical.
-13. Keep the architecture layered.
-14. Verify focused tests.
-15. Verify the full regression suite.
-16. Verify the MCP/runtime path for major capabilities.
-17. Update this README at the end of every verified checkpoint.
-18. Include deployment/configuration changes in this README.
-19. Never commit real secrets or a populated `.env`.
-20. Commit and push code + tests + README together.
-21. Verify the working tree is clean after the checkpoint.
-22. Never make the user repeat already-completed development work when the repository and README contain it.
-23. Never use a new chat as a reason to restart the project from an earlier phase.
+7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
+8. Do not recreate candidate selection.
+9. Do not recreate automation generation.
+10. Do not recreate automation validation.
+11. Do not recreate controlled local execution.
+12. Do not silently replace established architecture/contracts.
+13. Add tests first wherever practical.
+14. Keep the architecture layered.
+15. Verify focused tests.
+16. Verify the full regression suite.
+17. Verify the MCP/runtime path for major capabilities.
+18. Update this README at the end of every verified checkpoint.
+19. Include deployment/configuration changes in this README.
+20. Never commit real secrets or a populated `.env`.
+21. Commit and push code + tests + README together.
+22. Verify the working tree is clean after the checkpoint.
+23. Never make the user repeat already-completed development work when the repository and README contain it.
+24. Never use a new chat as a reason to restart the project from an earlier phase.
 
 **This README is part of the implementation and must be treated as the project's authoritative continuity record.**
