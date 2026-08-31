@@ -30,26 +30,26 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       64eb882 Add real Playwright execution validation
-Previous commit:     5dcd199 Update project continuity for P2-S9.2
+Latest commit:       7b8a67b Add automation execution history
+Previous commit:     bd4b54a Update project continuity for P2-S9.3
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.3 — Real Playwright Execution Validation
-Next implementation: TBD — select next functional capability after P2-S9.3 review
-Checkpoint commit:   64eb882
+Current checkpoint:  P2-S9.3 — Execution History and Persistence
+Next implementation: P2-S9.4 — Reporting / Analysis
+Checkpoint commit:   7b8a67b
 ```
 
 ## Latest verified baseline
 
 ```text
 pytest -q
-204 passed
+227 passed
 7 warnings
 0 failures
 
-P2-S9.1.a focused execution suite:
-28 passed
+P2-S9.3 execution/history focused suite:
+26 passed
 0 failures
 
 git diff --check
@@ -1683,3 +1683,67 @@ P2-S9.3 — Real Playwright Execution Validation
 ```
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, or controlled execution functionality.
+
+---
+
+---
+
+## P2-S9.3 — Execution History and Persistence
+
+Status: COMPLETE
+
+Implementation commit:
+
+```text
+7b8a67b Add automation execution history
+```
+
+Verification:
+
+```text
+Focused execution/history suite: 26 passed
+Full regression suite: 227 passed
+Warnings: 7 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Implementation delivered
+
+- Unique execution IDs are generated for every automation execution.
+- Automation execution results are persisted in SQLite.
+- Execution history can be retrieved by execution ID.
+- Execution history can be listed with optional automation-case filtering and result limits.
+- `execute_automation_code` now persists execution results.
+- Added MCP tool: `get_automation_execution`.
+- Added MCP tool: `list_automation_executions`.
+- Added repository, application-service, execution-service, and MCP-tool test coverage.
+- Existing execution behavior and contracts remain intact.
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Reporting / Analysis
+```
+
+### Next implementation checkpoint
+
+```text
+P2-S9.4 — Reporting / Analysis
+```
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, or execution-history functionality.
