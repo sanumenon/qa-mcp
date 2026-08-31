@@ -6,3 +6,7 @@ python-dotenv
 boto3
 pytest
 requests
+
+# Browser automation execution
+playwright
+pytest-playwright
