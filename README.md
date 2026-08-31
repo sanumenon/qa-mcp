@@ -30,26 +30,26 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       55ddd09 Add automation execution reporting
+Latest commit:       77a8d9b Add automation execution failure analysis
 Previous commit:     bd4b54a Update project continuity for P2-S9.3
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.4 — Reporting / Analysis
-Next implementation: P2-S9.5 — Next functional capability
-Checkpoint commit:   55ddd09
+Current checkpoint:  P2-S9.5 — Failure Analysis
+Next implementation: P2-S9.6 — Next functional capability
+Checkpoint commit:   77a8d9b
 ```
 
 ## Latest verified baseline
 
 ```text
 pytest -q
-234 passed
+242 passed
 7 warnings
 0 failures
 
-P2-S9.4 reporting focused suite:
-12 passed
+P2-S9.5 failure-analysis focused suite:
+15 passed
 0 failures
 
 git diff --check
@@ -1806,3 +1806,61 @@ P2-S9.5 — Next functional capability
 ```
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, or reporting functionality.
+
+---
+
+## P2-S9.5 — Failure Analysis
+
+Status: COMPLETE
+
+Implementation commit: 77a8d9b Add automation execution failure analysis
+
+Verification:
+
+```text
+Focused P2-S9.5 tests: 15 passed
+Full regression suite: 242 passed
+Warnings: 7 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Implementation delivered
+
+- Added structured automation execution failure analysis.
+- Added failure-analysis models and application-service support.
+- Added persisted failure-analysis retrieval from execution history.
+- Added analysis of failed and errored executions.
+- Added execution identifiers, automation artifact identifiers, and automation case traceability.
+- Added MCP failure-analysis capability.
+- Added repository, service, and MCP-tool test coverage.
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+```
+
+### Next implementation checkpoint
+
+```text
+P2-S9.6 — Next functional capability
+```
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, or failure-analysis functionality.
