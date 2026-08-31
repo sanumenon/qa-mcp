@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       pending — P2-S9.6 Web Dashboard
+Latest commit:       79e3c3f Add web dashboard
 Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.6 — Web Dashboard
 Next implementation: P2-S9.7 — Next functional capability
-Checkpoint commit:   pending
+Checkpoint commit:   79e3c3f
 ```
 
 ## Latest verified baseline
@@ -1871,7 +1871,7 @@ Do not redesign or rebuild completed automation generation, validation, artifact
 
 Status: COMPLETE
 
-Implementation commit: pending
+Implementation commit: 79e3c3f Add web dashboard
 
 Verification:
 
