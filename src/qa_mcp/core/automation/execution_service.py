@@ -1,4 +1,5 @@
 import sys
+from uuid import uuid4
 
 from qa_mcp.core.automation.execution_config import (
     AutomationExecutionConfig,
@@ -118,7 +119,7 @@ class AutomationExecutionService:
                 status = "FAILED"
 
             return AutomationExecutionResult(
-                execution_id="EX001",
+                execution_id=f"EX-{uuid4().hex[:12].upper()}",
                 automation_artifact_id=artifact.id,
                 automation_case_id=artifact.automation_case_id,
                 status=status,

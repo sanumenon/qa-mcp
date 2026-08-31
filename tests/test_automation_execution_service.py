@@ -81,7 +81,9 @@ def test_execution_runs_generated_artifact(tmp_path):
         build_artifact()
     )
 
-    assert result.execution_id == "EX001"
+    assert result.execution_id.startswith("EX-")
+    assert len(result.execution_id) == 15
+
     assert result.automation_artifact_id == "GA001"
     assert result.automation_case_id == "AC001"
     assert result.status == "PASSED"

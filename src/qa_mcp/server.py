@@ -52,6 +52,9 @@ from qa_mcp.core.automation.code_generation_service import (
 from qa_mcp.core.automation.execution_service import (
     AutomationExecutionService,
 )
+from qa_mcp.core.automation.execution_history_service import (
+    AutomationExecutionHistoryService,
+)
 
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
@@ -165,6 +168,10 @@ automation_code_generation_service = (
 
 automation_execution_service = (
     AutomationExecutionService()
+)
+
+automation_execution_history_service = (
+    AutomationExecutionHistoryService()
 )
 
 project_repository = SQLiteProjectRepository()
@@ -944,12 +951,56 @@ def execute_automation_code(
             generated_artifact
         )
 
+        automation_execution_history_service.save(
+            result
+        )
+
         return result.model_dump()
 
     except Exception as exc:
         raise ValueError(
             f"Invalid automation artifact: {exc}"
         ) from exc
+
+
+@mcp.tool()
+def get_automation_execution(
+    execution_id: str,
+) -> dict:
+    """Retrieve a persisted automation execution result."""
+
+    result = (
+        automation_execution_history_service.get(
+            execution_id
+        )
+    )
+
+    if result is None:
+        raise ValueError(
+            f"Automation execution not found: {execution_id}"
+        )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+def list_automation_executions(
+    automation_case_id: str | None = None,
+    limit: int = 50,
+) -> list[dict]:
+    """List persisted automation execution results."""
+
+    results = (
+        automation_execution_history_service.list(
+            automation_case_id=automation_case_id,
+            limit=limit,
+        )
+    )
+
+    return [
+        result.model_dump()
+        for result in results
+    ]
     
 if __name__ == "__main__":
     mcp.run()
