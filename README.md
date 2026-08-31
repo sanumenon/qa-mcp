@@ -30,26 +30,26 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       77a8d9b Add automation execution failure analysis
-Previous commit:     bd4b54a Update project continuity for P2-S9.3
+Latest commit:       pending — P2-S9.6 Web Dashboard
+Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.5 — Failure Analysis
-Next implementation: P2-S9.6 — Next functional capability
-Checkpoint commit:   77a8d9b
+Current checkpoint:  P2-S9.6 — Web Dashboard
+Next implementation: P2-S9.7 — Next functional capability
+Checkpoint commit:   pending
 ```
 
 ## Latest verified baseline
 
 ```text
 pytest -q
-242 passed
-7 warnings
+247 passed
+8 warnings
 0 failures
 
-P2-S9.5 failure-analysis focused suite:
-15 passed
+P2-S9.6 Web Dashboard focused suite:
+5 passed
 0 failures
 
 git diff --check
@@ -1864,3 +1864,90 @@ P2-S9.6 — Next functional capability
 ```
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, or failure-analysis functionality.
+
+---
+
+## P2-S9.6 — Web Dashboard
+
+Status: COMPLETE
+
+Implementation commit: pending
+
+Verification:
+
+```text
+Focused Web Dashboard tests: 5 passed
+Full regression suite: 247 passed
+Warnings: 8 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Implementation delivered
+
+- Added FastAPI-based web application.
+- Added browser-accessible QA automation dashboard.
+- Added execution reporting view.
+- Added execution history view.
+- Added failure-analysis view.
+- Added REST endpoints for execution reporting, execution history, and failure analysis.
+- Added dedicated web entrypoint through `run_web.py`.
+- Added web dashboard automated test coverage.
+- Added FastAPI to `requirements.txt`.
+
+### Start the Web Dashboard
+
+From the project root with the virtual environment activated:
+
+```bash
+cd ~/pythonPrograms/qa-mcp
+source .venv/bin/activate
+python run_web.py
+```
+
+The dashboard is then available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+### Web API endpoints
+
+```text
+GET /
+GET /api/executions/report
+GET /api/executions?limit=20
+GET /api/executions/failures?limit=20
+```
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+        ↓
+Web Dashboard
+```
+
+### Next implementation checkpoint
+
+```text
+P2-S9.7 — Next functional capability
+```
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, or web-dashboard functionality.
