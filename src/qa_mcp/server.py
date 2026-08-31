@@ -56,6 +56,10 @@ from qa_mcp.core.automation.execution_history_service import (
     AutomationExecutionHistoryService,
 )
 
+from qa_mcp.core.automation.execution_reporting_service import (
+    AutomationExecutionReportingService,
+)
+
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
 )
@@ -172,6 +176,12 @@ automation_execution_service = (
 
 automation_execution_history_service = (
     AutomationExecutionHistoryService()
+)
+
+automation_execution_reporting_service = (
+    AutomationExecutionReportingService(
+        automation_execution_history_service
+    )
 )
 
 project_repository = SQLiteProjectRepository()
@@ -981,6 +991,22 @@ def get_automation_execution(
         )
 
     return result.model_dump()
+
+
+
+@mcp.tool()
+def get_automation_execution_report(
+    automation_case_id: str | None = None,
+) -> dict:
+    """Return an aggregated report of automation executions."""
+
+    report = (
+        automation_execution_reporting_service.report(
+            automation_case_id=automation_case_id,
+        )
+    )
+
+    return report.model_dump()
 
 
 @mcp.tool()

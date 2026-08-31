@@ -142,6 +142,111 @@ class SQLiteAutomationExecutionRepository:
             for row in rows
         ]
 
+    def report(
+        self,
+        automation_case_id: str | None = None,
+    ):
+        from qa_mcp.models.execution_reporting import (
+            AutomationExecutionReport,
+        )
+
+        with self._connect() as connection:
+            where_clause = ""
+            params = ()
+
+            if automation_case_id is not None:
+                where_clause = (
+                    " WHERE automation_case_id = ?"
+                )
+                params = (automation_case_id,)
+
+            summary = connection.execute(
+                f'''
+                SELECT
+                    COUNT(*) AS total_executions,
+                    SUM(
+                        CASE
+                            WHEN status = 'PASSED' THEN 1
+                            ELSE 0
+                        END
+                    ) AS passed,
+                    SUM(
+                        CASE
+                            WHEN status = 'FAILED' THEN 1
+                            ELSE 0
+                        END
+                    ) AS failed,
+                    SUM(
+                        CASE
+                            WHEN status = 'NOT_EXECUTED' THEN 1
+                            ELSE 0
+                        END
+                    ) AS not_executed,
+                    SUM(
+                        CASE
+                            WHEN status = 'ERROR' THEN 1
+                            ELSE 0
+                        END
+                    ) AS error,
+                    COALESCE(
+                        SUM(duration_seconds),
+                        0.0
+                    ) AS total_duration_seconds,
+                    COALESCE(
+                        AVG(duration_seconds),
+                        0.0
+                    ) AS average_duration_seconds
+                FROM automation_execution_history
+                {where_clause}
+                ''',
+                params,
+            ).fetchone()
+
+            latest = connection.execute(
+                f'''
+                SELECT execution_id, status
+                FROM automation_execution_history
+                {where_clause}
+                ORDER BY rowid DESC
+                LIMIT 1
+                ''',
+                params,
+            ).fetchone()
+
+        total = summary["total_executions"] or 0
+        passed = summary["passed"] or 0
+
+        pass_rate = (
+            (passed / total) * 100.0
+            if total > 0
+            else 0.0
+        )
+
+        return AutomationExecutionReport(
+            total_executions=total,
+            passed=passed,
+            failed=summary["failed"] or 0,
+            not_executed=summary["not_executed"] or 0,
+            error=summary["error"] or 0,
+            pass_rate_percent=pass_rate,
+            total_duration_seconds=(
+                summary["total_duration_seconds"] or 0.0
+            ),
+            average_duration_seconds=(
+                summary["average_duration_seconds"] or 0.0
+            ),
+            latest_execution_id=(
+                latest["execution_id"]
+                if latest is not None
+                else None
+            ),
+            latest_status=(
+                latest["status"]
+                if latest is not None
+                else None
+            ),
+        )
+
     @staticmethod
     def _to_model(row) -> AutomationExecutionResult:
         return AutomationExecutionResult(

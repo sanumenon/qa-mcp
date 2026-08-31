@@ -262,3 +262,107 @@ def test_list_automation_executions_tool():
         server.automation_execution_history_service = (
             original_history_service
         )
+
+
+
+def test_get_automation_execution_report_tool():
+    reporting_service = Mock()
+
+    from qa_mcp.models.execution_reporting import (
+        AutomationExecutionReport,
+    )
+
+    reporting_service.report.return_value = (
+        AutomationExecutionReport(
+            total_executions=4,
+            passed=2,
+            failed=1,
+            not_executed=1,
+            error=0,
+            pass_rate_percent=50.0,
+            total_duration_seconds=10.0,
+            average_duration_seconds=2.5,
+            latest_execution_id="EX004",
+            latest_status="NOT_EXECUTED",
+        )
+    )
+
+    original_service = (
+        server.automation_execution_reporting_service
+    )
+
+    server.automation_execution_reporting_service = (
+        reporting_service
+    )
+
+    try:
+        result = server.get_automation_execution_report(
+            automation_case_id="AC001"
+        )
+
+        assert result["total_executions"] == 4
+        assert result["passed"] == 2
+        assert result["failed"] == 1
+        assert result["not_executed"] == 1
+        assert result["error"] == 0
+        assert result["pass_rate_percent"] == 50.0
+        assert result["total_duration_seconds"] == 10.0
+        assert result["average_duration_seconds"] == 2.5
+        assert result["latest_execution_id"] == "EX004"
+        assert result["latest_status"] == "NOT_EXECUTED"
+
+        reporting_service.report.assert_called_once_with(
+            automation_case_id="AC001"
+        )
+
+    finally:
+        server.automation_execution_reporting_service = (
+            original_service
+        )
+
+
+def test_get_automation_execution_report_tool_without_filter():
+    reporting_service = Mock()
+
+    from qa_mcp.models.execution_reporting import (
+        AutomationExecutionReport,
+    )
+
+    reporting_service.report.return_value = (
+        AutomationExecutionReport(
+            total_executions=0,
+            passed=0,
+            failed=0,
+            not_executed=0,
+            error=0,
+            pass_rate_percent=0.0,
+            total_duration_seconds=0.0,
+            average_duration_seconds=0.0,
+            latest_execution_id=None,
+            latest_status=None,
+        )
+    )
+
+    original_service = (
+        server.automation_execution_reporting_service
+    )
+
+    server.automation_execution_reporting_service = (
+        reporting_service
+    )
+
+    try:
+        result = server.get_automation_execution_report()
+
+        assert result["total_executions"] == 0
+        assert result["pass_rate_percent"] == 0.0
+        assert result["latest_execution_id"] is None
+
+        reporting_service.report.assert_called_once_with(
+            automation_case_id=None
+        )
+
+    finally:
+        server.automation_execution_reporting_service = (
+            original_service
+        )

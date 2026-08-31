@@ -42,3 +42,11 @@ class AutomationExecutionHistoryService:
             automation_case_id=automation_case_id,
             limit=limit,
         )
+
+    def report(
+        self,
+        automation_case_id: str | None = None,
+    ):
+        return self.repository.report(
+            automation_case_id=automation_case_id,
+        )
