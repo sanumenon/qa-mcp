@@ -59,6 +59,9 @@ from qa_mcp.core.automation.execution_history_service import (
 from qa_mcp.core.automation.execution_reporting_service import (
     AutomationExecutionReportingService,
 )
+from qa_mcp.core.automation.execution_failure_analysis_service import (
+    AutomationExecutionFailureAnalysisService,
+)
 
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
@@ -182,6 +185,9 @@ automation_execution_reporting_service = (
     AutomationExecutionReportingService(
         automation_execution_history_service
     )
+)
+automation_execution_failure_analysis_service = (
+    AutomationExecutionFailureAnalysisService()
 )
 
 project_repository = SQLiteProjectRepository()
@@ -1030,3 +1036,21 @@ def list_automation_executions(
     
 if __name__ == "__main__":
     mcp.run()
+
+# ---------------------------------------------------------
+# Automation Execution Failure Analysis
+# ---------------------------------------------------------
+
+@mcp.tool()
+def analyze_automation_failures(
+    automation_case_id: str | None = None,
+    limit: int = 50,
+) -> dict:
+    """Analyze persisted automation execution failures."""
+
+    result = automation_execution_failure_analysis_service.analyze(
+        automation_case_id=automation_case_id,
+        limit=limit,
+    )
+
+    return result.model_dump()

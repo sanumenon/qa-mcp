@@ -247,6 +247,171 @@ class SQLiteAutomationExecutionRepository:
             ),
         )
 
+    def analyze_failures(
+        self,
+        automation_case_id: str | None = None,
+        limit: int = 50,
+    ):
+        from qa_mcp.models.execution_failure_analysis import (
+            AutomationExecutionFailure,
+            AutomationExecutionFailureAnalysis,
+        )
+
+        if limit < 1:
+            raise ValueError("limit must be greater than zero")
+
+        with self._connect() as connection:
+            where_clause = ""
+            params: tuple = ()
+
+            if automation_case_id is not None:
+                where_clause = (
+                    " WHERE automation_case_id = ?"
+                )
+                params = (automation_case_id,)
+
+            total_row = connection.execute(
+                f"""
+                SELECT COUNT(*) AS total
+                FROM automation_execution_history
+                {where_clause}
+                """,
+                params,
+            ).fetchone()
+
+            failure_where = (
+                " WHERE status IN ('FAILED', 'ERROR')"
+            )
+
+            if automation_case_id is not None:
+                failure_where += (
+                    " AND automation_case_id = ?"
+                )
+
+            failure_params = (
+                (automation_case_id,)
+                if automation_case_id is not None
+                else ()
+            )
+
+            counts = connection.execute(
+                f"""
+                SELECT
+                    SUM(
+                        CASE
+                            WHEN status = 'FAILED' THEN 1
+                            ELSE 0
+                        END
+                    ) AS failed_executions,
+                    SUM(
+                        CASE
+                            WHEN status = 'ERROR' THEN 1
+                            ELSE 0
+                        END
+                    ) AS error_executions
+                FROM automation_execution_history
+                {failure_where}
+                """,
+                failure_params,
+            ).fetchone()
+
+            rows = connection.execute(
+                f"""
+                SELECT
+                    execution_id,
+                    automation_artifact_id,
+                    automation_case_id,
+                    status,
+                    exit_code,
+                    stdout,
+                    stderr,
+                    duration_seconds,
+                    error
+                FROM automation_execution_history
+                {failure_where}
+                ORDER BY rowid DESC
+                LIMIT ?
+                """,
+                (*failure_params, limit),
+            ).fetchall()
+
+            affected_rows = connection.execute(
+                f"""
+                SELECT DISTINCT automation_case_id
+                FROM automation_execution_history
+                {failure_where}
+                ORDER BY automation_case_id
+                """,
+                failure_params,
+            ).fetchall()
+
+        total_executions = total_row["total"] or 0
+        failed_executions = counts["failed_executions"] or 0
+        error_executions = counts["error_executions"] or 0
+        total_failures = (
+            failed_executions + error_executions
+        )
+
+        failure_rate = (
+            (total_failures / total_executions) * 100.0
+            if total_executions > 0
+            else 0.0
+        )
+
+        failures = []
+
+        for row in rows:
+            message = (
+                row["error"]
+                or row["stderr"]
+                or row["stdout"]
+                or "Automation execution failed"
+            )
+
+            failures.append(
+                AutomationExecutionFailure(
+                    execution_id=row["execution_id"],
+                    automation_artifact_id=(
+                        row["automation_artifact_id"]
+                    ),
+                    automation_case_id=(
+                        row["automation_case_id"]
+                    ),
+                    status=row["status"],
+                    exit_code=row["exit_code"],
+                    message=message,
+                    stderr=row["stderr"],
+                    duration_seconds=(
+                        row["duration_seconds"]
+                    ),
+                )
+            )
+
+        latest_failure = failures[0] if failures else None
+
+        return AutomationExecutionFailureAnalysis(
+            total_executions=total_executions,
+            failed_executions=failed_executions,
+            error_executions=error_executions,
+            total_failures=total_failures,
+            failure_rate_percent=failure_rate,
+            affected_automation_cases=[
+                row["automation_case_id"]
+                for row in affected_rows
+            ],
+            latest_failure_execution_id=(
+                latest_failure.execution_id
+                if latest_failure
+                else None
+            ),
+            latest_failure_status=(
+                latest_failure.status
+                if latest_failure
+                else None
+            ),
+            failures=failures,
+        )
+
     @staticmethod
     def _to_model(row) -> AutomationExecutionResult:
         return AutomationExecutionResult(

@@ -366,3 +366,112 @@ def test_get_automation_execution_report_tool_without_filter():
         server.automation_execution_reporting_service = (
             original_service
         )
+
+
+def test_analyze_automation_failures_tool():
+    from unittest.mock import Mock
+
+    from qa_mcp.models.execution_failure_analysis import (
+        AutomationExecutionFailureAnalysis,
+    )
+
+    analysis_service = Mock()
+
+    analysis_service.analyze.return_value = (
+        AutomationExecutionFailureAnalysis(
+            total_executions=5,
+            failed_executions=2,
+            error_executions=1,
+            total_failures=3,
+            failure_rate_percent=60.0,
+            affected_automation_cases=[
+                "AC001",
+                "AC002",
+            ],
+            latest_failure_execution_id="EX005",
+            latest_failure_status="FAILED",
+            failures=[],
+        )
+    )
+
+    original_service = (
+        server.automation_execution_failure_analysis_service
+    )
+
+    server.automation_execution_failure_analysis_service = (
+        analysis_service
+    )
+
+    try:
+        result = server.analyze_automation_failures(
+            automation_case_id="AC001",
+            limit=10,
+        )
+
+        assert result["total_executions"] == 5
+        assert result["failed_executions"] == 2
+        assert result["error_executions"] == 1
+        assert result["total_failures"] == 3
+        assert result["failure_rate_percent"] == 60.0
+        assert result["affected_automation_cases"] == [
+            "AC001",
+            "AC002",
+        ]
+        assert result["latest_failure_execution_id"] == "EX005"
+        assert result["latest_failure_status"] == "FAILED"
+
+        analysis_service.analyze.assert_called_once_with(
+            automation_case_id="AC001",
+            limit=10,
+        )
+
+    finally:
+        server.automation_execution_failure_analysis_service = (
+            original_service
+        )
+
+
+def test_analyze_automation_failures_tool_without_filter():
+    from unittest.mock import Mock
+
+    from qa_mcp.models.execution_failure_analysis import (
+        AutomationExecutionFailureAnalysis,
+    )
+
+    analysis_service = Mock()
+
+    analysis_service.analyze.return_value = (
+        AutomationExecutionFailureAnalysis(
+            total_executions=0,
+            failed_executions=0,
+            error_executions=0,
+            total_failures=0,
+            failure_rate_percent=0.0,
+            affected_automation_cases=[],
+            failures=[],
+        )
+    )
+
+    original_service = (
+        server.automation_execution_failure_analysis_service
+    )
+
+    server.automation_execution_failure_analysis_service = (
+        analysis_service
+    )
+
+    try:
+        result = server.analyze_automation_failures()
+
+        assert result["total_failures"] == 0
+        assert result["failure_rate_percent"] == 0.0
+
+        analysis_service.analyze.assert_called_once_with(
+            automation_case_id=None,
+            limit=50,
+        )
+
+    finally:
+        server.automation_execution_failure_analysis_service = (
+            original_service
+        )
