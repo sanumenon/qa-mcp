@@ -10,3 +10,6 @@ requests
 # Browser automation execution
 playwright
 pytest-playwright
+
+# Web UI / API
+fastapi>=0.115,<1.0
