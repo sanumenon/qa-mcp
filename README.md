@@ -35,8 +35,8 @@ Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.6 — Web Dashboard
-Next implementation: P2-S9.7 — Next functional capability
+Current checkpoint:  P2-S9.7 — AI QA Workspace
+Next implementation: P2-S9.8 — Next functional capability
 Checkpoint commit:   79e3c3f
 ```
 
@@ -1951,3 +1951,129 @@ P2-S9.7 — Next functional capability
 ```
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, or web-dashboard functionality.
+
+---
+
+## P2-S9.7 — AI QA Workspace
+
+Status: COMPLETE
+
+Implementation scope:
+
+- Added a browser-based AI QA Workspace to the existing web dashboard.
+- Added persistent QA project creation and retrieval.
+- Added project-aware requirement analysis.
+- Added project-aware QA test-suite generation.
+- Added AI-generated test-case review.
+- Added requirement version persistence.
+- Added QA-suite version persistence.
+- Added workspace REST APIs.
+- Added deterministic MockLLM support for workspace development and tests.
+- Added automated coverage for project, workspace service, and MockLLM behavior.
+- Preserved all existing execution, reporting, failure-analysis, and dashboard functionality.
+
+### AI QA Workspace flow
+
+```text
+QA Project
+    ↓
+Requirement
+    ↓
+Requirement Analysis
+    ↓
+Test Case Generation
+    ↓
+AI Test Case Review
+    ↓
+Requirement Version
+    ↓
+QA Suite Version
+    ↓
+Persisted QA Workspace Result
+```
+
+### Workspace API endpoints
+
+```text
+POST /api/projects
+GET  /api/projects/{project_id}
+POST /api/projects/{project_id}/qa-suite
+```
+
+### Workspace behavior
+
+A QA project must exist before a QA suite can be generated for that project.
+
+Existing projects can be retrieved using:
+
+```text
+GET /api/projects/{project_id}
+```
+
+A requirement can then be submitted using:
+
+```text
+POST /api/projects/{project_id}/qa-suite
+```
+
+The generated response contains:
+
+```text
+project
+requirement_version
+suite_version
+requirement
+analysis
+test_cases
+review
+```
+
+Requirement versions and QA-suite versions are persisted independently so that generated QA work remains traceable to the project and requirement history.
+
+### Verification
+
+```text
+Focused S9.7 workspace tests: 19 passed
+Full regression suite: 261 passed
+Warnings: 8 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+        ↓
+Web Dashboard
+        ↓
+AI QA Workspace
+        ↓
+Project-aware Requirement Analysis
+        ↓
+Versioned QA Suite
+```
+
+### Next implementation checkpoint
+
+```text
+P2-S9.8 — Next functional capability
+```
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, or AI QA Workspace functionality.

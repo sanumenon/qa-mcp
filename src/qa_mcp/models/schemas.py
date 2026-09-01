@@ -275,3 +275,18 @@ class AutomationExecutionResult(BaseModel):
     stderr: str = ""
     duration_seconds: float = 0.0
     error: str | None = None
+
+class QASuiteWorkspaceRequest(BaseModel):
+    """Request to generate a QA suite for a project."""
+
+    requirement: str = Field(min_length=1)
+
+class QAProjectCreateRequest(BaseModel):
+    """Request to create a QA project from the web workspace."""
+
+    project_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    application: str = Field(min_length=1)
+    environment: str = Field(min_length=1)
+    description: str = ""
+    metadata: dict[str, str] = {}
