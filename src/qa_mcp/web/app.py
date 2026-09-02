@@ -6,6 +6,21 @@ from fastapi.responses import HTMLResponse
 from qa_mcp.core.automation.execution_failure_analysis_service import (
     AutomationExecutionFailureAnalysisService,
 )
+from qa_mcp.core.automation.candidate_selector import (
+    AutomationCandidateSelector,
+)
+from qa_mcp.core.automation.candidate_service import (
+    AutomationCandidateService,
+)
+from qa_mcp.core.automation.candidate_generation_service import (
+    AutomationCandidateGenerationService,
+)
+from qa_mcp.core.automation.service import (
+    AutomationService,
+)
+from qa_mcp.tools.automation.generator import (
+    AutomationCaseGenerator,
+)
 from qa_mcp.core.automation.execution_history_service import (
     AutomationExecutionHistoryService,
 )
@@ -91,6 +106,31 @@ workspace_qa_suite_workflow = QASuiteWorkflow(
     workspace_llm
 )
 
+workspace_automation_case_generator = AutomationCaseGenerator(
+    workspace_llm
+)
+
+workspace_automation_service = AutomationService(
+    workspace_automation_case_generator
+)
+
+workspace_automation_candidate_service = (
+    AutomationCandidateService(
+        AutomationCandidateSelector()
+    )
+)
+
+workspace_automation_candidate_generation_service = (
+    AutomationCandidateGenerationService(
+        candidate_service=(
+            workspace_automation_candidate_service
+        ),
+        automation_service=(
+            workspace_automation_service
+        ),
+    )
+)
+
 qa_workspace_service = QAWorkspaceService(
     project_context=workspace_project_context,
     qa_suite_workflow=workspace_qa_suite_workflow,
@@ -99,6 +139,12 @@ qa_workspace_service = QAWorkspaceService(
     ),
     suite_versioning_service=(
         workspace_suite_versioning_service
+    ),
+    automation_candidate_service=(
+        workspace_automation_candidate_service
+    ),
+    automation_candidate_generation_service=(
+        workspace_automation_candidate_generation_service
     ),
 )
 

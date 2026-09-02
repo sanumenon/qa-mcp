@@ -248,6 +248,22 @@ def test_generate_qa_suite_runs_complete_workflow():
     ]
 
 
+def test_workspace_service_has_automation_generation_service():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+    ) = build_service()
+
+    assert (
+        service.automation_candidate_generation_service
+        is automation_candidate_generation_service
+    )
+
+
 def test_generate_qa_suite_raises_for_unknown_project():
     (
         service,
