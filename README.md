@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       5334c07 Wire AI QA Workspace to automation generation
+Latest commit:       16d471f Connect AI QA Workspace to artifact generation
 Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.10 — AI QA Workspace Automation Wiring
-Next implementation: P2-S9.11 — Next functional capability
-Checkpoint commit:   5334c07
+Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
+Next implementation: P2-S9.12 — Next functional capability
+Checkpoint commit:   16d471f
 ```
 
 ## Latest verified baseline
@@ -2380,10 +2380,134 @@ Automation Candidate Generation
 Automation Case Generation
 ```
 
+### P2-S9.11 — AI QA Workspace Artifact Generation
+
+Status: COMPLETE
+
+Implementation scope:
+
+- Connected the AI QA Workspace to the existing automation code-generation service.
+- Added production construction of `AutomationCodeGenerationService`.
+- Connected the service to `QAWorkspaceService` through dependency injection.
+- Added automation artifact generation for generated automation cases.
+- Added `automation_artifacts` to the QA-suite workspace response.
+- Added focused regression coverage for artifact generation and dependency injection.
+- Preserved all existing QA Workspace, candidate selection, automation generation, execution, reporting, failure-analysis, and dashboard functionality.
+
+### Automation artifact flow
+
+```text
+QA Project
+    ↓
+Requirement
+    ↓
+Requirement Analysis
+    ↓
+Test Case Generation
+    ↓
+AI Test Case Review
+    ↓
+Automation Candidate Selection
+    ↓
+Automation Candidate Generation
+    ↓
+Automation Case Generation
+    ↓
+Automation Code Generation
+    ↓
+Automation Artifact
+    ↓
+QA Workspace Response
+```
+
+### Workspace response
+
+The generated QA-suite response now includes:
+
+```text
+automation_candidates
+automation_cases
+automation_artifacts
+requirement_version
+suite_version
+```
+
+### Production wiring
+
+```text
+Workspace LLM
+      ↓
+AutomationCaseGenerator
+      ↓
+AutomationService
+      ↓
+AutomationCandidateGenerationService
+      ↓
+AutomationCase
+      ↓
+AutomationCodeGenerationService
+      ↓
+AutomationArtifact
+      ↓
+QAWorkspaceService
+      ↓
+AI QA Workspace API
+```
+
+### Verification
+
+```text
+Focused dashboard/workspace tests: 13 passed
+Full regression suite: 262 passed
+Warnings: 8 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+        ↓
+Web Dashboard
+        ↓
+AI QA Workspace
+        ↓
+Project-aware Requirement Analysis
+        ↓
+Versioned QA Suite
+        ↓
+Automation Candidate Selection
+        ↓
+Automation Candidate Generation
+        ↓
+Automation Case Generation
+        ↓
+Automation Code Generation
+        ↓
+Automation Artifact
+```
+
 ### Next implementation checkpoint
 
 ```text
-P2-S9.11 — Next functional capability
+P2-S9.12 — Next functional capability
 ```
 
-Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, or production automation-generation wiring.
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
