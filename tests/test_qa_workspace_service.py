@@ -105,10 +105,20 @@ def build_service():
     workflow = Mock()
     requirement_versioning = Mock()
     suite_versioning = Mock()
+    automation_candidate_generation_service = Mock()
 
     project_context.get_project.return_value = (
         build_project()
     )
+
+    automation_candidate_generation_service.generate.return_value = [
+        Mock(
+            model_dump=lambda: {
+                "test_case_id": "TC-001",
+                "automation_type": "playwright",
+            }
+        )
+    ]
 
     workflow.run.return_value = (
         build_result()
@@ -146,6 +156,9 @@ def build_service():
         suite_versioning_service=(
             suite_versioning
         ),
+        automation_candidate_generation_service=(
+            automation_candidate_generation_service
+        ),
     )
 
     return (
@@ -154,6 +167,7 @@ def build_service():
         workflow,
         requirement_versioning,
         suite_versioning,
+        automation_candidate_generation_service,
     )
 
 
@@ -164,6 +178,7 @@ def test_generate_qa_suite_runs_complete_workflow():
         workflow,
         requirement_versioning,
         suite_versioning,
+        automation_candidate_generation_service,
     ) = build_service()
 
     result = service.generate_qa_suite(
@@ -221,6 +236,17 @@ def test_generate_qa_suite_runs_complete_workflow():
         "total": 1,
     }
 
+    automation_candidate_generation_service.generate.assert_called_once_with(
+        build_result().test_cases.test_cases
+    )
+
+    assert result["automation_cases"] == [
+        {
+            "test_case_id": "TC-001",
+            "automation_type": "playwright",
+        }
+    ]
+
 
 def test_generate_qa_suite_raises_for_unknown_project():
     (
@@ -229,6 +255,7 @@ def test_generate_qa_suite_raises_for_unknown_project():
         workflow,
         requirement_versioning,
         suite_versioning,
+        automation_candidate_generation_service,
     ) = build_service()
 
     project_context.get_project.side_effect = (

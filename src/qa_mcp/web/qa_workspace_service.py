@@ -4,6 +4,9 @@ from qa_mcp.core.project.context import ProjectContext
 from qa_mcp.core.automation.candidate_service import (
     AutomationCandidateService,
 )
+from qa_mcp.core.automation.candidate_generation_service import (
+    AutomationCandidateGenerationService,
+)
 from qa_mcp.core.automation.candidate_selector import (
     AutomationCandidateSelector,
 )
@@ -37,6 +40,9 @@ class QAWorkspaceService:
         automation_candidate_service: (
             AutomationCandidateService | None
         ) = None,
+        automation_candidate_generation_service: (
+            AutomationCandidateGenerationService | None
+        ) = None,
     ):
         self.project_context = project_context
         self.qa_suite_workflow = qa_suite_workflow
@@ -51,6 +57,9 @@ class QAWorkspaceService:
             or AutomationCandidateService(
                 AutomationCandidateSelector()
             )
+        )
+        self.automation_candidate_generation_service = (
+            automation_candidate_generation_service
         )
 
     def create_project(
@@ -138,11 +147,24 @@ class QAWorkspaceService:
             )
         )
 
+        automation_cases = []
+        if self.automation_candidate_generation_service:
+            automation_cases = (
+                self.automation_candidate_generation_service
+                .generate(
+                    result.test_cases.test_cases
+                )
+            )
+
         return {
             "project": project.model_dump(),
             "automation_candidates": (
                 automation_candidates.model_dump()
             ),
+            "automation_cases": [
+                automation_case.model_dump()
+                for automation_case in automation_cases
+            ],
             "requirement_version": (
                 requirement_version.model_dump()
             ),
