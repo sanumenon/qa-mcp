@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       88b3787 Implement AI QA Workspace
+Latest commit:       9cc35c1 Extend AI QA Workspace with automation candidates
 Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.7 — AI QA Workspace
-Next implementation: P2-S9.8 — Next functional capability
-Checkpoint commit:   88b3787
+Current checkpoint:  P2-S9.8 — Automation Candidate Selection
+Next implementation: P2-S9.9 — Next functional capability
+Checkpoint commit:   9cc35c1
 ```
 
 ## Latest verified baseline
@@ -2070,10 +2070,106 @@ Project-aware Requirement Analysis
 Versioned QA Suite
 ```
 
+### P2-S9.8 — Automation Candidate Selection
+
+Status: COMPLETE
+
+Implementation scope:
+
+- Connected the AI QA Workspace to the existing Automation Candidate Service.
+- Added automation candidate selection to QA-suite generation.
+- Added automation candidate results to the generated QA-suite response.
+- Preserved manual-test identification through the existing candidate-selection workflow.
+- Added focused regression coverage for automation candidate selection.
+- Preserved all existing QA Workspace, execution, reporting, failure-analysis, and dashboard functionality.
+
+### Automation Candidate flow
+
+```text
+QA Project
+    ↓
+Requirement
+    ↓
+Requirement Analysis
+    ↓
+Test Case Generation
+    ↓
+AI Test Case Review
+    ↓
+Automation Candidate Selection
+    ↓
+Requirement Version
+    ↓
+QA Suite Version
+    ↓
+Persisted QA Workspace Result
+```
+
+### QA-suite response
+
+The generated QA-suite response now includes:
+
+```text
+automation_candidates
+    candidate_ids
+    manual_ids
+    total
+```
+
+Candidate selection is performed through the existing:
+
+```text
+AutomationCandidateService
+        ↓
+AutomationCandidateSelector
+```
+
+### Verification
+
+```text
+Focused S9.8 workspace-service tests: 2 passed
+Full regression suite: 261 passed
+Warnings: 8 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+        ↓
+Web Dashboard
+        ↓
+AI QA Workspace
+        ↓
+Project-aware Requirement Analysis
+        ↓
+Versioned QA Suite
+        ↓
+Automation Candidate Selection
+```
+
 ### Next implementation checkpoint
 
 ```text
-P2-S9.8 — Next functional capability
+P2-S9.9 — Next functional capability
 ```
 
-Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, or AI QA Workspace functionality.
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, or automation candidate selection functionality.
