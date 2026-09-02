@@ -215,6 +215,11 @@ def test_generate_qa_suite_runs_complete_workflow():
     )
 
     assert result["review"]["coverage_score"] == 90
+    assert result["automation_candidates"] == {
+        "candidate_ids": ["TC-001"],
+        "manual_ids": [],
+        "total": 1,
+    }
 
 
 def test_generate_qa_suite_raises_for_unknown_project():

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
 from qa_mcp.core.project.context import ProjectContext
+from qa_mcp.core.automation.candidate_service import (
+    AutomationCandidateService,
+)
+from qa_mcp.core.automation.candidate_selector import (
+    AutomationCandidateSelector,
+)
 from qa_mcp.core.versioning.service import (
     QARequirementVersioningService,
     QASuiteVersioningService,
@@ -28,6 +34,9 @@ class QAWorkspaceService:
         suite_versioning_service: (
             QASuiteVersioningService
         ),
+        automation_candidate_service: (
+            AutomationCandidateService | None
+        ) = None,
     ):
         self.project_context = project_context
         self.qa_suite_workflow = qa_suite_workflow
@@ -36,6 +45,12 @@ class QAWorkspaceService:
         )
         self.suite_versioning_service = (
             suite_versioning_service
+        )
+        self.automation_candidate_service = (
+            automation_candidate_service
+            or AutomationCandidateService(
+                AutomationCandidateSelector()
+            )
         )
 
     def create_project(
@@ -116,8 +131,18 @@ class QAWorkspaceService:
             )
         )
 
+        automation_candidates = (
+            self.automation_candidate_service
+            .select_candidates(
+                result.test_cases.test_cases
+            )
+        )
+
         return {
             "project": project.model_dump(),
+            "automation_candidates": (
+                automation_candidates.model_dump()
+            ),
             "requirement_version": (
                 requirement_version.model_dump()
             ),
