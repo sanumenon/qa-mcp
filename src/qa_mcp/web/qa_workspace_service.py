@@ -7,6 +7,9 @@ from qa_mcp.core.automation.candidate_service import (
 from qa_mcp.core.automation.candidate_generation_service import (
     AutomationCandidateGenerationService,
 )
+from qa_mcp.core.automation.code_generation_service import (
+    AutomationCodeGenerationService,
+)
 from qa_mcp.core.automation.candidate_selector import (
     AutomationCandidateSelector,
 )
@@ -43,6 +46,9 @@ class QAWorkspaceService:
         automation_candidate_generation_service: (
             AutomationCandidateGenerationService | None
         ) = None,
+        automation_code_generation_service: (
+            AutomationCodeGenerationService | None
+        ) = None,
     ):
         self.project_context = project_context
         self.qa_suite_workflow = qa_suite_workflow
@@ -60,6 +66,10 @@ class QAWorkspaceService:
         )
         self.automation_candidate_generation_service = (
             automation_candidate_generation_service
+        )
+        self.automation_code_generation_service = (
+            automation_code_generation_service
+            or AutomationCodeGenerationService()
         )
 
     def create_project(
@@ -156,6 +166,13 @@ class QAWorkspaceService:
                 )
             )
 
+        automation_artifacts = [
+            self.automation_code_generation_service.generate(
+                automation_case
+            )
+            for automation_case in automation_cases
+        ]
+
         return {
             "project": project.model_dump(),
             "automation_candidates": (
@@ -164,6 +181,10 @@ class QAWorkspaceService:
             "automation_cases": [
                 automation_case.model_dump()
                 for automation_case in automation_cases
+            ],
+            "automation_artifacts": [
+                artifact.model_dump()
+                for artifact in automation_artifacts
             ],
             "requirement_version": (
                 requirement_version.model_dump()

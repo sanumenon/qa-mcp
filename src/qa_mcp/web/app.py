@@ -15,6 +15,9 @@ from qa_mcp.core.automation.candidate_service import (
 from qa_mcp.core.automation.candidate_generation_service import (
     AutomationCandidateGenerationService,
 )
+from qa_mcp.core.automation.code_generation_service import (
+    AutomationCodeGenerationService,
+)
 from qa_mcp.core.automation.service import (
     AutomationService,
 )
@@ -131,6 +134,10 @@ workspace_automation_candidate_generation_service = (
     )
 )
 
+workspace_automation_code_generation_service = (
+    AutomationCodeGenerationService()
+)
+
 qa_workspace_service = QAWorkspaceService(
     project_context=workspace_project_context,
     qa_suite_workflow=workspace_qa_suite_workflow,
@@ -145,6 +152,9 @@ qa_workspace_service = QAWorkspaceService(
     ),
     automation_candidate_generation_service=(
         workspace_automation_candidate_generation_service
+    ),
+    automation_code_generation_service=(
+        workspace_automation_code_generation_service
     ),
 )
 

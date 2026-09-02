@@ -106,19 +106,37 @@ def build_service():
     requirement_versioning = Mock()
     suite_versioning = Mock()
     automation_candidate_generation_service = Mock()
+    automation_code_generation_service = Mock()
 
     project_context.get_project.return_value = (
         build_project()
     )
 
+    automation_case = Mock(
+        model_dump=lambda: {
+            "test_case_id": "TC-001",
+            "automation_type": "playwright",
+        }
+    )
+
     automation_candidate_generation_service.generate.return_value = [
-        Mock(
-            model_dump=lambda: {
-                "test_case_id": "TC-001",
-                "automation_type": "playwright",
-            }
-        )
+        automation_case
     ]
+
+    automation_artifact = Mock(
+        model_dump=lambda: {
+            "id": "GA001",
+            "automation_case_id": "TC-001",
+            "framework": "Playwright",
+            "language": "Python",
+            "file_name": "test_reset_password.py",
+            "code": "from playwright.sync_api import Page, expect",
+        }
+    )
+
+    automation_code_generation_service.generate.return_value = (
+        automation_artifact
+    )
 
     workflow.run.return_value = (
         build_result()
@@ -159,6 +177,9 @@ def build_service():
         automation_candidate_generation_service=(
             automation_candidate_generation_service
         ),
+        automation_code_generation_service=(
+            automation_code_generation_service
+        ),
     )
 
     return (
@@ -168,6 +189,7 @@ def build_service():
         requirement_versioning,
         suite_versioning,
         automation_candidate_generation_service,
+        automation_code_generation_service,
     )
 
 
@@ -179,6 +201,7 @@ def test_generate_qa_suite_runs_complete_workflow():
         requirement_versioning,
         suite_versioning,
         automation_candidate_generation_service,
+        automation_code_generation_service,
     ) = build_service()
 
     result = service.generate_qa_suite(
@@ -247,6 +270,21 @@ def test_generate_qa_suite_runs_complete_workflow():
         }
     ]
 
+    automation_code_generation_service.generate.assert_called_once_with(
+        automation_candidate_generation_service.generate.return_value[0]
+    )
+
+    assert result["automation_artifacts"] == [
+        {
+            "id": "GA001",
+            "automation_case_id": "TC-001",
+            "framework": "Playwright",
+            "language": "Python",
+            "file_name": "test_reset_password.py",
+            "code": "from playwright.sync_api import Page, expect",
+        }
+    ]
+
 
 def test_workspace_service_has_automation_generation_service():
     (
@@ -256,11 +294,17 @@ def test_workspace_service_has_automation_generation_service():
         requirement_versioning,
         suite_versioning,
         automation_candidate_generation_service,
+        automation_code_generation_service,
     ) = build_service()
 
     assert (
         service.automation_candidate_generation_service
         is automation_candidate_generation_service
+    )
+
+    assert (
+        service.automation_code_generation_service
+        is automation_code_generation_service
     )
 
 
@@ -272,6 +316,7 @@ def test_generate_qa_suite_raises_for_unknown_project():
         requirement_versioning,
         suite_versioning,
         automation_candidate_generation_service,
+        automation_code_generation_service,
     ) = build_service()
 
     project_context.get_project.side_effect = (
