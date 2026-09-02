@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       9cc35c1 Extend AI QA Workspace with automation candidates
+Latest commit:       1e9face Connect AI QA Workspace to automation generation
 Previous commit:     e082191 Update continuity for P2-S9.5
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.8 — Automation Candidate Selection
-Next implementation: P2-S9.9 — Next functional capability
-Checkpoint commit:   9cc35c1
+Current checkpoint:  P2-S9.9 — AI QA Workspace Automation Generation
+Next implementation: P2-S9.10 — Next functional capability
+Checkpoint commit:   1e9face
 ```
 
 ## Latest verified baseline
@@ -2166,10 +2166,115 @@ Versioned QA Suite
 Automation Candidate Selection
 ```
 
+### P2-S9.9 — AI QA Workspace Automation Generation
+
+Status: COMPLETE
+
+Implementation scope:
+
+- Connected the AI QA Workspace to the existing automation candidate generation service.
+- Added dependency injection for automation candidate generation.
+- Added automation case generation during QA-suite creation.
+- Added generated automation cases to the QA-suite response.
+- Preserved the existing automation candidate selection flow.
+- Added focused regression coverage for automation generation.
+- Preserved all existing QA Workspace, candidate selection, execution, reporting, failure-analysis, and dashboard functionality.
+
+### AI QA Workspace automation flow
+
+```text
+QA Project
+    ↓
+Requirement
+    ↓
+Requirement Analysis
+    ↓
+Test Case Generation
+    ↓
+AI Test Case Review
+    ↓
+Automation Candidate Selection
+    ↓
+Automation Case Generation
+    ↓
+Requirement Version
+    ↓
+QA Suite Version
+    ↓
+Persisted QA Workspace Result
+```
+
+### QA-suite automation response
+
+The generated QA-suite response now includes:
+
+```text
+automation_candidates
+    candidate_ids
+    manual_ids
+    total
+
+automation_cases
+    test_case_id
+    automation_type
+```
+
+Automation generation is performed through the existing service boundary:
+
+```text
+AutomationCandidateGenerationService
+        ↓
+Generated Automation Cases
+```
+
+### Verification
+
+```text
+Focused S9.9 workspace-service tests: 2 passed
+Full regression suite: 261 passed
+Warnings: 8 existing non-blocking warnings
+Failures: 0
+git diff --check: clean
+```
+
+### Current implementation state
+
+```text
+Requirement/Test Case
+        ↓
+Automation Candidate
+        ↓
+Automation Case
+        ↓
+Generated Playwright/Python Artifact
+        ↓
+Controlled Automation Execution
+        ↓
+Execution Result
+        ↓
+Persistent Execution History
+        ↓
+Execution Reporting / Analysis
+        ↓
+Failure Analysis
+        ↓
+Web Dashboard
+        ↓
+AI QA Workspace
+        ↓
+Project-aware Requirement Analysis
+        ↓
+Versioned QA Suite
+        ↓
+Automation Candidate Selection
+        ↓
+Automation Case Generation
+```
+
 ### Next implementation checkpoint
 
 ```text
-P2-S9.9 — Next functional capability
+P2-S9.10 — Next functional capability
 ```
 
-Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, or automation candidate selection functionality.
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, or automation case generation functionality.
