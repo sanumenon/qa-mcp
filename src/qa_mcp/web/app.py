@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 from qa_mcp.core.automation.execution_failure_analysis_service import (
@@ -164,6 +165,15 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.mount(
+    "/static",
+    StaticFiles(
+        directory="src/qa_mcp/web/static"
+    ),
+    name="static",
+)
+
+
 
 @app.get("/api/health")
 def health():
@@ -304,164 +314,12 @@ def dashboard():
     content="width=device-width, initial-scale=1"
 >
 <title>QA MCP Dashboard</title>
+<link
+    rel="stylesheet"
+    href="/static/css/dashboard.css"
+>
 
-<style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: #f5f7fb;
-    color: #1f2937;
-}
 
-h1 {
-    margin-top: 0;
-}
-
-h2 {
-    margin-top: 0;
-}
-
-h3 {
-    margin-top: 24px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(160px, 1fr)
-        );
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-.card {
-    background: white;
-    border-radius: 10px;
-    padding: 18px;
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.value {
-    font-size: 28px;
-    font-weight: bold;
-    margin-top: 8px;
-}
-
-section {
-    background: white;
-    border-radius: 10px;
-    padding: 18px;
-    margin-bottom: 24px;
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.workspace-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(280px, 1fr)
-        );
-    gap: 16px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.field-full {
-    grid-column: 1 / -1;
-}
-
-input,
-textarea,
-select {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font: inherit;
-}
-
-textarea {
-    resize: vertical;
-}
-
-button {
-    padding: 11px 16px;
-    border: 0;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.primary-button {
-    background: #2563eb;
-    color: white;
-}
-
-.secondary-button {
-    background: #e5e7eb;
-    color: #1f2937;
-}
-
-.error {
-    color: #b91c1c;
-    font-weight: bold;
-    margin-top: 12px;
-}
-
-.success {
-    color: #166534;
-    font-weight: bold;
-    margin-top: 12px;
-}
-
-.hidden {
-    display: none;
-}
-
-.result-block {
-    margin-top: 20px;
-}
-
-.result-block ul {
-    padding-left: 22px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th,
-td {
-    text-align: left;
-    padding: 10px;
-    border-bottom:
-        1px solid #e5e7eb;
-    vertical-align: top;
-}
-
-.status-PASSED,
-.status-FAILED,
-.status-ERROR {
-    font-weight: bold;
-}
-
-pre {
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-</style>
 </head>
 
 <body>
