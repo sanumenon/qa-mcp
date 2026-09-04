@@ -30,21 +30,21 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       d142e89 Complete P2-S9.11 QA project selection
+Latest commit:       64eb5f6 Implement Bedrock Converse API integration
 Previous commit:     e449daa Update continuity for P2-S9.11
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.11 — AI QA Workspace Project Selection and Artifact Generation
 Next implementation: P2-S9.12 — Next functional capability
-Checkpoint commit:   d142e89
+Checkpoint commit:   64eb5f6
 ```
 
 ## Latest verified baseline
 
 ```text
 pytest -q
-269 passed
+276 passed
 8 warnings
 0 failures
 
@@ -64,6 +64,19 @@ working tree clean
 ```
 
 The warnings are known non-blocking technical debt and are documented below.
+
+
+P2-S9.x Bedrock integration completion:
+- Added Bedrock Converse API support to `BedrockLLM`.
+- Preserved the existing replaceable `LLMProvider` abstraction.
+- Added Converse-based response handling for supported Bedrock models.
+- Verified organization-provided Bedrock bearer-key authentication through the application path.
+- Verified `us-east-1` with `us.anthropic.claude-sonnet-4-5-20250929-v1:0`.
+- Verified real `BedrockLLM.generate()` execution successfully.
+- Expanded LLM regression coverage.
+- Full regression suite: 276 passed, 8 known warnings, 0 failures.
+- `.env` remains untracked and secrets are not committed.
+- `moonshotai.kimi-k2.5` was tested separately but is not the validated application baseline; do not make it the default until its organization-approved application path is confirmed.
 
 The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
 
