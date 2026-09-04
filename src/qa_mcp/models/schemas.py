@@ -276,6 +276,25 @@ class AutomationExecutionResult(BaseModel):
     duration_seconds: float = 0.0
     error: str | None = None
 
+class QAWorkspaceExecutionTrace(BaseModel):
+    """Complete QA lineage associated with a workspace execution."""
+
+    project: QAProject
+    requirement_version: QARequirementVersion
+    suite_version: QASuiteVersion
+    test_case: TestCase
+    automation_case: AutomationCase
+    artifact: GeneratedAutomationArtifact
+
+
+class QAWorkspaceExecutionDetail(BaseModel):
+    """Detailed execution investigation result for the QA workspace."""
+
+    project: QAProject
+    execution: AutomationExecutionResult
+    trace: QAWorkspaceExecutionTrace
+    failure_analysis: object | None = None
+
 class QASuiteWorkspaceRequest(BaseModel):
     """Request to generate a QA suite for a project."""
 

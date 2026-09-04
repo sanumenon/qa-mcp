@@ -31,7 +31,7 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
 Latest commit:       16d471f Connect AI QA Workspace to artifact generation
-Previous commit:     e082191 Update continuity for P2-S9.5
+Previous commit:     e449daa Update continuity for P2-S9.11
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
@@ -44,12 +44,16 @@ Checkpoint commit:   16d471f
 
 ```text
 pytest -q
-247 passed
+269 passed
 8 warnings
 0 failures
 
-P2-S9.6 Web Dashboard focused suite:
-5 passed
+P2-S9.11 Web Dashboard focused suite:
+12 passed
+0 failures
+
+P2-S9.11 Browser regression test:
+1 passed, 11 deselected
 0 failures
 
 git diff --check
@@ -60,6 +64,8 @@ working tree clean
 ```
 
 The warnings are known non-blocking technical debt and are documented below.
+
+The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
 
 ## Latest completed automation checkpoint
 
@@ -2391,7 +2397,10 @@ Implementation scope:
 - Connected the service to `QAWorkspaceService` through dependency injection.
 - Added automation artifact generation for generated automation cases.
 - Added `automation_artifacts` to the QA-suite workspace response.
-- Added focused regression coverage for artifact generation and dependency injection.
+- Added persistent SQLite repository support for QA Workspace automation artifacts.
+- Added focused regression coverage for artifact persistence, artifact generation, and dependency injection.
+- Added browser-level Playwright regression coverage for the AI QA Workspace dashboard.
+- Verified the rendered dashboard preserves the AI QA Workspace and existing Automation Execution Overview.
 - Preserved all existing QA Workspace, candidate selection, automation generation, execution, reporting, failure-analysis, and dashboard functionality.
 
 ### Automation artifact flow
@@ -2416,6 +2425,8 @@ Automation Case Generation
 Automation Code Generation
     ↓
 Automation Artifact
+    ↓
+Persistent Artifact Repository
     ↓
 QA Workspace Response
 ```
@@ -2454,55 +2465,46 @@ QAWorkspaceService
 AI QA Workspace API
 ```
 
+### Dashboard regression protection
+
+The AI QA Workspace is protected by both structural and browser-level regression tests.
+
+The dashboard regression coverage verifies:
+
+```text
+AI QA Workspace
+      ↓
+Create QA Project controls
+      ↓
+Generate QA Suite controls
+      ↓
+Project / requirement inputs
+      ↓
+JavaScript action wiring
+      ↓
+Workspace API wiring
+      ↓
+Rendered dashboard
+      ↓
+Existing Automation Execution Overview preserved
+```
+
+The browser regression test uses Playwright with Chromium against a live Uvicorn instance and verifies the rendered dashboard and the important workspace controls.
+
+The browser regression test is now part of the permanent dashboard regression suite and must remain green during future UI changes.
+
 ### Verification
 
 ```text
-Focused dashboard/workspace tests: 13 passed
-Full regression suite: 262 passed
-Warnings: 8 existing non-blocking warnings
-Failures: 0
-git diff --check: clean
+Focused dashboard/workspace tests: 12 passed
+Browser regression test:           1 passed, 11 deselected
+Full regression suite:             269 passed
+Warnings:                           8 known non-blocking warnings
+Failures:                           0
+git diff --check:                   clean
 ```
 
-### Current implementation state
-
-```text
-Requirement/Test Case
-        ↓
-Automation Candidate
-        ↓
-Automation Case
-        ↓
-Generated Playwright/Python Artifact
-        ↓
-Controlled Automation Execution
-        ↓
-Execution Result
-        ↓
-Persistent Execution History
-        ↓
-Execution Reporting / Analysis
-        ↓
-Failure Analysis
-        ↓
-Web Dashboard
-        ↓
-AI QA Workspace
-        ↓
-Project-aware Requirement Analysis
-        ↓
-Versioned QA Suite
-        ↓
-Automation Candidate Selection
-        ↓
-Automation Candidate Generation
-        ↓
-Automation Case Generation
-        ↓
-Automation Code Generation
-        ↓
-Automation Artifact
-```
+**P2-S9.11 is complete. Do not recreate or redesign this capability.**
 
 ### Next implementation checkpoint
 

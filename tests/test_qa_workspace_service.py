@@ -1,4 +1,3 @@
-
 from unittest.mock import Mock
 
 import pytest
@@ -107,6 +106,7 @@ def build_service():
     suite_versioning = Mock()
     automation_candidate_generation_service = Mock()
     automation_code_generation_service = Mock()
+    workspace_artifact_repository = Mock()
 
     project_context.get_project.return_value = (
         build_project()
@@ -119,6 +119,9 @@ def build_service():
         }
     )
 
+    automation_case.id = "AC-001"
+    automation_case.test_case_id = "TC-001"
+
     automation_candidate_generation_service.generate.return_value = [
         automation_case
     ]
@@ -130,17 +133,29 @@ def build_service():
             "framework": "Playwright",
             "language": "Python",
             "file_name": "test_reset_password.py",
-            "code": "from playwright.sync_api import Page, expect",
+            "code": (
+                "from playwright.sync_api "
+                "import Page, expect"
+            ),
         }
+    )
+
+    automation_artifact.id = "GA001"
+    automation_artifact.automation_case_id = "TC-001"
+    automation_artifact.framework = "Playwright"
+    automation_artifact.language = "Python"
+    automation_artifact.file_name = (
+        "test_reset_password.py"
+    )
+    automation_artifact.code = (
+        "from playwright.sync_api import Page, expect"
     )
 
     automation_code_generation_service.generate.return_value = (
         automation_artifact
     )
 
-    workflow.run.return_value = (
-        build_result()
-    )
+    workflow.run.return_value = build_result()
 
     requirement_versioning_result = Mock()
     requirement_versioning_result.version_id = (
@@ -159,11 +174,13 @@ def build_service():
         "version": 1,
     }
 
-    requirement_versioning.create_requirement_version \
-        .return_value = requirement_versioning_result
+    requirement_versioning.create_requirement_version.return_value = (
+        requirement_versioning_result
+    )
 
-    suite_versioning.create_suite_version \
-        .return_value = suite_versioning_result
+    suite_versioning.create_suite_version.return_value = (
+        suite_versioning_result
+    )
 
     service = QAWorkspaceService(
         project_context=project_context,
@@ -180,6 +197,9 @@ def build_service():
         automation_code_generation_service=(
             automation_code_generation_service
         ),
+        workspace_artifact_repository=(
+            workspace_artifact_repository
+        ),
     )
 
     return (
@@ -190,6 +210,7 @@ def build_service():
         suite_versioning,
         automation_candidate_generation_service,
         automation_code_generation_service,
+        workspace_artifact_repository,
     )
 
 
@@ -202,6 +223,7 @@ def test_generate_qa_suite_runs_complete_workflow():
         suite_versioning,
         automation_candidate_generation_service,
         automation_code_generation_service,
+        workspace_artifact_repository,
     ) = build_service()
 
     result = service.generate_qa_suite(
@@ -215,18 +237,16 @@ def test_generate_qa_suite_runs_complete_workflow():
 
     workflow.run.assert_called_once()
 
-    requirement_versioning \
-        .create_requirement_version.assert_called_once_with(
-            project_id="qa-project",
-            requirement=(
-                "User can reset password."
-            ),
-            application="Customer Portal",
-            environment="test",
-        )
+    requirement_versioning.create_requirement_version.assert_called_once_with(
+        project_id="qa-project",
+        requirement=(
+            "User can reset password."
+        ),
+        application="Customer Portal",
+        environment="test",
+    )
 
-    suite_versioning \
-        .create_suite_version.assert_called_once()
+    suite_versioning.create_suite_version.assert_called_once()
 
     assert (
         result["project"]["project_id"]
@@ -253,6 +273,7 @@ def test_generate_qa_suite_runs_complete_workflow():
     )
 
     assert result["review"]["coverage_score"] == 90
+
     assert result["automation_candidates"] == {
         "candidate_ids": ["TC-001"],
         "manual_ids": [],
@@ -281,9 +302,56 @@ def test_generate_qa_suite_runs_complete_workflow():
             "framework": "Playwright",
             "language": "Python",
             "file_name": "test_reset_password.py",
-            "code": "from playwright.sync_api import Page, expect",
+            "code": (
+                "from playwright.sync_api "
+                "import Page, expect"
+            ),
         }
     ]
+
+    workspace_artifact_repository.save.assert_called_once()
+
+    save_call = (
+        workspace_artifact_repository
+        .save.call_args.kwargs
+    )
+
+    assert save_call["project_id"] == (
+        "qa-project"
+    )
+
+    assert save_call["test_case_id"] == (
+        "TC-001"
+    )
+
+    assert save_call["artifact"].id == "GA001"
+
+    assert (
+        save_call["artifact"].automation_case_id
+        == "TC-001"
+    )
+
+    assert (
+        save_call["artifact"].framework
+        == "Playwright"
+    )
+
+    assert (
+        save_call["artifact"].language
+        == "Python"
+    )
+
+    assert (
+        save_call["artifact"].file_name
+        == "test_reset_password.py"
+    )
+
+    assert save_call["artifact"].code == (
+        "from playwright.sync_api "
+        "import Page, expect"
+    )
+
+    assert save_call["created_at"]
 
 
 def test_workspace_service_has_automation_generation_service():
@@ -295,6 +363,7 @@ def test_workspace_service_has_automation_generation_service():
         suite_versioning,
         automation_candidate_generation_service,
         automation_code_generation_service,
+        workspace_artifact_repository,
     ) = build_service()
 
     assert (
@@ -307,6 +376,11 @@ def test_workspace_service_has_automation_generation_service():
         is automation_code_generation_service
     )
 
+    assert (
+        service.workspace_artifact_repository
+        is workspace_artifact_repository
+    )
+
 
 def test_generate_qa_suite_raises_for_unknown_project():
     (
@@ -317,10 +391,13 @@ def test_generate_qa_suite_raises_for_unknown_project():
         suite_versioning,
         automation_candidate_generation_service,
         automation_code_generation_service,
+        workspace_artifact_repository,
     ) = build_service()
 
     project_context.get_project.side_effect = (
-        ValueError("Project not found: missing")
+        ValueError(
+            "Project not found: missing"
+        )
     )
 
     with pytest.raises(
@@ -333,7 +410,95 @@ def test_generate_qa_suite_raises_for_unknown_project():
         )
 
     workflow.run.assert_not_called()
-    requirement_versioning \
-        .create_requirement_version.assert_not_called()
-    suite_versioning \
-        .create_suite_version.assert_not_called()
+
+    requirement_versioning.create_requirement_version.assert_not_called()
+
+    suite_versioning.create_suite_version.assert_not_called()
+
+    workspace_artifact_repository.save.assert_not_called()
+
+
+def test_generate_qa_suite_rejects_automation_case_without_test_case_id():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    automation_case = Mock(
+        spec=["id", "model_dump"]
+    )
+
+    automation_case.id = "AC-001"
+
+    automation_case.model_dump.return_value = {
+        "automation_type": "playwright",
+    }
+
+    automation_candidate_generation_service.generate.return_value = [
+        automation_case
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="missing test_case_id",
+    ):
+        service.generate_qa_suite(
+            project_id="qa-project",
+            requirement="User can reset password.",
+        )
+
+    automation_code_generation_service.generate.assert_called_once_with(
+        automation_case
+    )
+
+    workspace_artifact_repository.save.assert_not_called()
+
+
+def test_generate_qa_suite_rejects_unknown_test_case_reference():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    automation_case = Mock(
+        spec=["id", "test_case_id", "model_dump"]
+    )
+
+    automation_case.id = "AC-001"
+    automation_case.test_case_id = "TC-UNKNOWN"
+
+    automation_case.model_dump.return_value = {
+        "test_case_id": "TC-UNKNOWN",
+        "automation_type": "playwright",
+    }
+
+    automation_candidate_generation_service.generate.return_value = [
+        automation_case
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="unknown test case: TC-UNKNOWN",
+    ):
+        service.generate_qa_suite(
+            project_id="qa-project",
+            requirement="User can reset password.",
+        )
+
+    automation_code_generation_service.generate.assert_called_once_with(
+        automation_case
+    )
+
+    workspace_artifact_repository.save.assert_not_called()

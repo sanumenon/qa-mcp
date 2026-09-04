@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from qa_mcp.core.project.context import ProjectContext
 from qa_mcp.core.automation.candidate_service import (
     AutomationCandidateService,
@@ -16,6 +18,9 @@ from qa_mcp.core.automation.candidate_selector import (
 from qa_mcp.core.versioning.service import (
     QARequirementVersioningService,
     QASuiteVersioningService,
+)
+from qa_mcp.infrastructure.sqlite_qa_workspace_artifact_repository import (
+    SQLiteQAWorkspaceArtifactRepository,
 )
 from qa_mcp.models.schemas import (
     QAProject,
@@ -49,27 +54,40 @@ class QAWorkspaceService:
         automation_code_generation_service: (
             AutomationCodeGenerationService | None
         ) = None,
+        workspace_artifact_repository: (
+            SQLiteQAWorkspaceArtifactRepository | None
+        ) = None,
     ):
         self.project_context = project_context
         self.qa_suite_workflow = qa_suite_workflow
+
         self.requirement_versioning_service = (
             requirement_versioning_service
         )
+
         self.suite_versioning_service = (
             suite_versioning_service
         )
+
         self.automation_candidate_service = (
             automation_candidate_service
             or AutomationCandidateService(
                 AutomationCandidateSelector()
             )
         )
+
         self.automation_candidate_generation_service = (
             automation_candidate_generation_service
         )
+
         self.automation_code_generation_service = (
             automation_code_generation_service
             or AutomationCodeGenerationService()
+        )
+
+        self.workspace_artifact_repository = (
+            workspace_artifact_repository
+            or SQLiteQAWorkspaceArtifactRepository()
         )
 
     def create_project(
@@ -158,6 +176,7 @@ class QAWorkspaceService:
         )
 
         automation_cases = []
+
         if self.automation_candidate_generation_service:
             automation_cases = (
                 self.automation_candidate_generation_service
@@ -166,12 +185,55 @@ class QAWorkspaceService:
                 )
             )
 
-        automation_artifacts = [
-            self.automation_code_generation_service.generate(
-                automation_case
+        # Build a lookup so every generated automation artifact
+        # can be associated with its originating test case.
+        test_cases_by_id = {
+            test_case.id: test_case
+            for test_case in result.test_cases.test_cases
+        }
+
+        automation_artifacts = []
+
+        created_at = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        for automation_case in automation_cases:
+            artifact = (
+                self.automation_code_generation_service
+                .generate(
+                    automation_case
+                )
             )
-            for automation_case in automation_cases
-        ]
+
+            test_case_id = getattr(
+                automation_case,
+                "test_case_id",
+                None,
+            )
+
+            if not test_case_id:
+                raise ValueError(
+                    "Generated automation case is missing "
+                    f"test_case_id: {automation_case.id}"
+                )
+
+            if test_case_id not in test_cases_by_id:
+                raise ValueError(
+                    "Generated automation case references "
+                    f"unknown test case: {test_case_id}"
+                )
+
+            self.workspace_artifact_repository.save(
+                artifact=artifact,
+                project_id=project.project_id,
+                test_case_id=test_case_id,
+                created_at=created_at,
+            )
+
+            automation_artifacts.append(
+                artifact
+            )
 
         return {
             "project": project.model_dump(),

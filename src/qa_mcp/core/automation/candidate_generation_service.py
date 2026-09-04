@@ -25,10 +25,25 @@ class AutomationCandidateGenerationService:
             candidate_result.candidate_ids
         )
 
-        return [
-            self.automation_service.generate_automation(
-                test_case
+        automation_cases = []
+
+        for test_case in test_cases:
+            if test_case.id not in candidate_ids:
+                continue
+
+            response = (
+                self.automation_service.generate_automation(
+                    test_case
+                )
             )
-            for test_case in test_cases
-            if test_case.id in candidate_ids
-        ]
+
+            if isinstance(response, dict):
+                automation_cases.append(
+                    response
+                )
+            else:
+                automation_cases.extend(
+                    response.automation_cases
+                )
+
+        return automation_cases
