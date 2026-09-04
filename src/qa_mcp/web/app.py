@@ -177,6 +177,13 @@ def health():
 # QA Project Workspace API
 # ---------------------------------------------------------
 
+@app.get("/api/projects")
+def list_qa_projects():
+    return [
+        project.model_dump()
+        for project in qa_workspace_service.list_projects()
+    ]
+
 
 @app.post("/api/projects")
 def create_qa_project(
@@ -536,18 +543,20 @@ test suite from a requirement.
             value="test"
         >
     </div>
+        <div class="field field-full">
 
+            <label for="project-description">
+                Description
+            </label>
 
-    <div class="field field-full">
-        <label for="project-description">
-            Description
-        </label>
+            <textarea
+                id="project-description"
+                rows="3"
+                placeholder="Describe the QA project..."
+            ></textarea>
 
-        <textarea
-            id="project-description"
-            rows="3"
-            placeholder="Optional project description"
-        ></textarea>
+        </div>
+
     </div>
 
 </div>
@@ -585,14 +594,21 @@ test suite from a requirement.
     <div class="field field-full">
 
         <label for="qa-project-id">
-            Project ID
+            Project
         </label>
 
-        <input
+        <select
             id="qa-project-id"
-            type="text"
-            placeholder="Project ID created above"
+            onchange="updateSelectedProjectId()"
         >
+            <option value="">Select a project</option>
+        </select>
+
+        <div
+            id="selected-project-id"
+            class="success"
+            style="margin-top: 8px;"
+        ></div>
 
     </div>
 
@@ -780,6 +796,92 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+async function loadQAProjects(selectedProjectId = "") {
+
+    const select =
+        document.getElementById("qa-project-id");
+
+    try {
+
+        const response =
+            await fetch("/api/projects");
+
+        const payload =
+            await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                payload.detail ||
+                "Unable to load QA projects."
+            );
+        }
+
+        select.innerHTML =
+            '<option value="">Select a project</option>';
+
+        payload.forEach(project => {
+
+            const option =
+                document.createElement("option");
+
+            option.value =
+                project.project_id;
+
+            option.textContent =
+                `${project.name} — ${project.project_id}`;
+
+            select.appendChild(option);
+        });
+
+        if (selectedProjectId) {
+            select.value = selectedProjectId;
+        }
+
+        if (
+            !select.value &&
+            payload.length === 1
+        ) {
+            select.value =
+                payload[0].project_id;
+        }
+
+        updateSelectedProjectId();
+
+    } catch (error) {
+
+        console.error(
+            "Project loading failed:",
+            error
+        );
+
+        select.innerHTML =
+            '<option value="">Unable to load projects</option>';
+    }
+}
+
+function updateSelectedProjectId() {
+
+    const select =
+        document.getElementById(
+            "qa-project-id"
+        );
+
+    const selectedProjectId =
+        select.value;
+
+    const display =
+        document.getElementById(
+            "selected-project-id"
+        );
+
+    if (selectedProjectId) {
+        display.textContent =
+            "Selected Project ID: " +
+            selectedProjectId;
+    } else {
+        display.textContent = "";
+    }
+}
 
 async function createQAProject() {
 
@@ -886,9 +988,9 @@ async function createQAProject() {
             );
         }
 
-        document.getElementById(
-            "qa-project-id"
-        ).value = payload.project_id;
+        await loadQAProjects(
+            payload.project_id
+        );
 
         successElement.textContent =
             "QA project created successfully: " +
@@ -1212,6 +1314,8 @@ ${review.missing_scenarios.map(
 
 async function loadDashboard() {
 
+    await loadQAProjects();
+
     try {
 
         const report =
@@ -1349,7 +1453,12 @@ ${escapeHtml(item.message)}
 }
 
 
-loadDashboard();
+async function initializeDashboard() {
+    await loadQAProjects();
+    await loadDashboard();
+}
+
+initializeDashboard();
 
 </script>
 

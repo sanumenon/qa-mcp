@@ -22,6 +22,12 @@ class ProjectRepository(ABC):
         ...
 
     @abstractmethod
+    def list(
+        self,
+    ) -> list[QAProject]:
+        ...
+
+    @abstractmethod
     def exists(
         self,
         project_id: str,

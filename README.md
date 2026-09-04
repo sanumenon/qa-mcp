@@ -35,7 +35,7 @@ Previous commit:     e449daa Update continuity for P2-S9.11
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
+Current checkpoint:  P2-S9.11 — AI QA Workspace Project Selection and Artifact Generation
 Next implementation: P2-S9.12 — Next functional capability
 Checkpoint commit:   928e5a4
 ```
@@ -66,6 +66,15 @@ working tree clean
 The warnings are known non-blocking technical debt and are documented below.
 
 The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
+
+P2-S9.11 project workspace completion:
+- Added persistent project listing through ProjectRepository and SQLiteProjectRepository.
+- Added ProjectContext and QAWorkspaceService project-listing support.
+- Added GET /api/projects for dashboard project discovery.
+- Replaced the QA Suite Project ID text input with a project dropdown.
+- Project selection now drives QA Suite generation using the selected project_id.
+- Newly created projects are automatically refreshed into the dropdown and selected.
+- Verified end-to-end project selection and successful AI QA test-case generation.
 
 ## Latest completed automation checkpoint
 

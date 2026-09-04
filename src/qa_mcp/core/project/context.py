@@ -32,6 +32,11 @@ class ProjectContext:
             project
         )
 
+    def list_projects(
+        self,
+    ) -> list[QAProject]:
+        return self.repository.list()
+
     def get_project(
         self,
         project_id: str,

@@ -90,6 +90,11 @@ class QAWorkspaceService:
             or SQLiteQAWorkspaceArtifactRepository()
         )
 
+    def list_projects(
+        self,
+    ) -> list[QAProject]:
+        return self.project_context.list_projects()
+
     def create_project(
         self,
         project_id: str,
@@ -115,6 +120,7 @@ class QAWorkspaceService:
         )
 
         return result.model_dump()
+
 
     def get_project(
         self,

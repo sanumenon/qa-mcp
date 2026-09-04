@@ -144,6 +144,41 @@ class SQLiteProjectRepository(
             ),
         )
 
+    def list(
+        self,
+    ) -> list[QAProject]:
+
+        with self._connect() as connection:
+
+            rows = connection.execute(
+                """
+                SELECT
+                    project_id,
+                    name,
+                    description,
+                    application,
+                    environment,
+                    metadata
+                FROM qa_projects
+                ORDER BY name COLLATE NOCASE,
+                         project_id COLLATE NOCASE
+                """
+            ).fetchall()
+
+        return [
+            QAProject(
+                project_id=row["project_id"],
+                name=row["name"],
+                description=row["description"],
+                application=row["application"],
+                environment=row["environment"],
+                metadata=json.loads(
+                    row["metadata"]
+                ),
+            )
+            for row in rows
+        ]
+
     def exists(
         self,
         project_id: str,
