@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       16d471f Connect AI QA Workspace to artifact generation
+Latest commit:       928e5a4 Complete P2-S9.11 AI QA Workspace artifact generation
 Previous commit:     e449daa Update continuity for P2-S9.11
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
 Next implementation: P2-S9.12 — Next functional capability
-Checkpoint commit:   16d471f
+Checkpoint commit:   928e5a4
 ```
 
 ## Latest verified baseline
