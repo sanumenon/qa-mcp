@@ -254,20 +254,61 @@ def test_dashboard_contains_ai_qa_workspace_controls():
     assert 'id="qa-project-id"' in html
     assert 'id="qa-requirement"' in html
 
-    # JavaScript action wiring
+    # JavaScript action wiring remains in the HTML.
     assert "onclick=\"createQAProject()\"" in html
     assert "onclick=\"generateQASuite()\"" in html
 
-    # Backend API wiring
-    assert '"/api/projects"' in html
-    assert '"/api/projects/"' in html
-    assert '"/qa-suite"' in html
+    # Static JavaScript asset is now responsible for
+    # backend API wiring.
+    assert '<script src="/static/js/dashboard.js"></script>' in html
 
     # Result/error areas
     assert 'id="project-error"' in html
     assert 'id="project-success"' in html
     assert 'id="qa-workspace-error"' in html
     assert 'id="qa-workspace-result"' in html
+
+def test_dashboard_javascript_contains_backend_api_wiring():
+    response = client.get("/static/js/dashboard.js")
+
+    assert response.status_code == 200
+
+    javascript = response.text
+
+    # Project APIs
+    assert 'fetch("/api/projects")' in javascript
+    assert '"/api/projects/"' in javascript
+
+    # QA suite generation API
+    assert '"/qa-suite"' in javascript
+
+    # Core UI functions
+    assert "async function loadQAProjects" in javascript
+    assert "async function createQAProject" in javascript
+    assert "async function generateQASuite" in javascript
+    assert "function renderQASuite" in javascript
+    assert "async function loadDashboard" in javascript
+
+def test_dashboard_static_assets_are_served():
+    css_response = client.get(
+        "/static/css/dashboard.css"
+    )
+
+    assert css_response.status_code == 200
+    assert "text/css" in (
+        css_response.headers.get("content-type") or ""
+    )
+    assert "body {" in css_response.text
+
+    js_response = client.get(
+        "/static/js/dashboard.js"
+    )
+
+    assert js_response.status_code == 200
+    assert "javascript" in (
+        js_response.headers.get("content-type") or ""
+    )
+    assert "function escapeHtml" in js_response.text
 
 def test_dashboard_ai_qa_workspace_browser_flow():
     import threading
