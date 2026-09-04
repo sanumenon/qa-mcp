@@ -63,7 +63,9 @@ class QAProject(BaseModel):
     description: str = ""
     application: str
     environment: str
-    metadata: dict[str, str] = {}
+    metadata: dict[str, str] = Field(
+        default_factory=dict
+    )
 
 class QARequirementVersion(BaseModel):
     version_id: str
@@ -308,4 +310,6 @@ class QAProjectCreateRequest(BaseModel):
     application: str = Field(min_length=1)
     environment: str = Field(min_length=1)
     description: str = ""
-    metadata: dict[str, str] = {}
+    metadata: dict[str, str] = Field(
+        default_factory=dict
+    )

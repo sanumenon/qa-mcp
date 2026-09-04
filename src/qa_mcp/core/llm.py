@@ -215,7 +215,7 @@ class MockLLM:
 """.strip()
 
 class BedrockLLM:
-    """AWS Bedrock provider."""
+    """AWS Bedrock provider using the Converse API."""
 
     def __init__(self, region: str, model_id: str):
         if not region:
@@ -236,34 +236,30 @@ class BedrockLLM:
         if not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
 
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
-            "messages": [
+        response = self.client.converse(
+            modelId=self.model_id,
+            messages=[
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": [
+                        {
+                            "text": prompt,
+                        }
+                    ],
                 }
             ],
-        }
-
-        response = self.client.invoke_model(
-            modelId=self.model_id,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
+            inferenceConfig={
+                "maxTokens": 4096,
+            },
         )
 
-        payload = json.loads(response["body"].read())
-
-        content = payload.get("content", [])
+        content = response["output"]["message"]["content"]
 
         return "".join(
             item.get("text", "")
             for item in content
-            if item.get("type") == "text"
+            if item.get("text")
         )
-
 
 def create_llm(config: dict) -> LLMProvider:
     """Create the configured LLM provider."""

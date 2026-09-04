@@ -4,6 +4,8 @@ application:
 
 llm:
   provider: mock
+  region: ""
+  model_id: ""
 
 features:
   requirement_analyzer: true
