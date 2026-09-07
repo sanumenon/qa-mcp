@@ -243,6 +243,11 @@ async function generateQASuite() {
             "qa-workspace-result"
         );
 
+    const button =
+        document.getElementById(
+            "generate-qa-suite-button"
+        );
+
     errorElement.textContent = "";
     resultElement.innerHTML = "";
 
@@ -257,6 +262,9 @@ async function generateQASuite() {
             "Requirement is required.";
         return;
     }
+
+    button.disabled = true;
+    button.textContent = "Generating QA Suite...";
 
     try {
 
@@ -291,10 +299,15 @@ async function generateQASuite() {
     } catch (error) {
 
         errorElement.textContent =
-            error.message;
+            error.message ||
+            "Unable to generate QA suite.";
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = "Generate QA Suite";
     }
 }
-
 
 function renderQASuite(payload) {
 

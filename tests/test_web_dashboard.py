@@ -254,9 +254,9 @@ def test_dashboard_contains_ai_qa_workspace_controls():
     assert 'id="qa-project-id"' in html
     assert 'id="qa-requirement"' in html
 
-    # JavaScript action wiring remains in the HTML.
-    assert "onclick=\"createQAProject()\"" in html
-    assert "onclick=\"generateQASuite()\"" in html
+    # JavaScript action wiring is handled by the static dashboard.js asset.
+    assert 'id="create-qa-project-button"' in html
+    assert 'id="generate-qa-suite-button"' in html
 
     # Static JavaScript asset is now responsible for
     # backend API wiring.
@@ -282,6 +282,9 @@ def test_dashboard_javascript_contains_backend_api_wiring():
 
     # QA suite generation API
     assert '"/qa-suite"' in javascript
+    assert "generateQASuite()" in javascript
+    assert "button.disabled = true" in javascript
+    assert "button.disabled = false" in javascript
 
     # Core UI functions
     assert "async function loadQAProjects" in javascript
@@ -293,6 +296,10 @@ def test_dashboard_javascript_contains_backend_api_wiring():
     assert "Save Selected Test Cases" in javascript
     assert "Select All" in javascript
     assert "Clear All" in javascript
+    assert "Generating QA Suite..." in javascript
+    assert "button.disabled = true" in javascript
+    assert "button.disabled = false" in javascript
+    assert "finally" in javascript
 
     assert (
         "async function saveSelectedTestCases"
@@ -548,6 +555,14 @@ def test_dashboard_ai_qa_workspace_browser_flow():
                 "button",
                 name="Generate QA Suite",
             ).is_visible()
+
+            assert page.locator(
+                "#generate-qa-suite-button"
+            ).is_visible()
+
+            assert page.locator(
+                "#generate-qa-suite-button"
+            ).is_enabled()
 
             # Verify the important workspace controls exist
             # in the rendered DOM.
