@@ -36,8 +36,22 @@ Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
-Next implementation: P2-S9.12 — Next functional capability
-Checkpoint commit:   9dce673
+Next implementation: P2-S9.12 — Resolve Bedrock test-case generation guardrail block
+Checkpoint commit:   03aec28
+
+Latest validation:
+- 288 pytest tests passing.
+- LLM JSON response parsing hardened through `qa_mcp.core.json_response.parse_json_response()`.
+- Parser safely accepts plain JSON, JSON wrapped in Markdown fences, and clearly decodable JSON surrounded by explanatory text.
+- Malformed JSON remains rejected.
+- Requirement analysis through AWS Bedrock succeeds.
+- End-to-end QA-suite execution is currently blocked at test-case generation because the configured Bedrock request returns the organization guardrail message:
+  `The response was blocked by dev-guardrails policy. If this looks like a false positive, ping #ai-guardrails.`
+- No further application code changes should be made until the Bedrock/AI Guardrails team confirms the triggering policy and whether this is a false positive.
+
+Next action:
+- Engage office IT / AI Guardrails team to identify the policy triggering the test-case-generation request.
+- Resume implementation only after the guardrail behavior is understood and an approved resolution is available.
 ```
 
 ## Latest verified baseline
