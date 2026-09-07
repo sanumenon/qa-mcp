@@ -1,5 +1,6 @@
-import json
+from qa_mcp.core.json_response import parse_json_response
 
+import json
 from qa_mcp.models.schemas import (
     AutomationCaseResponse,
     TestCase,
@@ -58,9 +59,9 @@ Rules:
         )
 
         try:
-            data = json.loads(
-                response
-            )
+            data = parse_json_response(
+            response
+        )
         except (
             json.JSONDecodeError,
             TypeError,

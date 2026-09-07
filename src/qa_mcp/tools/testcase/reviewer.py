@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from qa_mcp.core.json_response import parse_json_response
 
 from qa_mcp.core.llm import LLMProvider
 
@@ -87,9 +88,7 @@ class TestCaseReviewer:
 
         try:
 
-            payload = json.loads(
-                raw_response
-            )
+            payload = parse_json_response(raw_response)
 
         except json.JSONDecodeError as exc:
 
