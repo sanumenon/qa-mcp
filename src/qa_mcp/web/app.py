@@ -458,12 +458,12 @@ test suite from a requirement.
 <div style="margin-top: 16px;">
 
     <button
-    id="generate-qa-suite-button"
-    class="primary-button"
-    type="button"
-    onclick="generateQASuite()"
+        id="create-qa-project-button"
+        class="primary-button"
+        type="button"
+        onclick="createQAProject()"
     >
-        Generate QA Suite
+        Create QA Project
     </button>
 
 </div>
@@ -527,12 +527,12 @@ test suite from a requirement.
 <div style="margin-top: 16px;">
 
     <button
-        id="create-qa-project-button"
+        id="generate-qa-suite-button"
         class="primary-button"
         type="button"
-        onclick="createQAProject()"
+        onclick="generateQASuite()"
     >
-        Create QA Project
+        Generate QA Suite
     </button>
 
 </div>
