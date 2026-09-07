@@ -5,7 +5,7 @@ from typing import Any
 
 
 def parse_json_response(raw_response: str) -> Any:
-    """Parse an LLM JSON response while tolerating safe formatting wrappers."""
+    """Parse JSON returned by an LLM, tolerating common formatting wrappers."""
 
     if not isinstance(raw_response, str):
         raise TypeError("LLM response must be a string")
@@ -22,29 +22,36 @@ def parse_json_response(raw_response: str) -> Any:
     # LLMs commonly wrap valid JSON in Markdown code fences.
     lines = text.splitlines()
 
-    if (
-        len(lines) >= 2
-        and lines[0].strip().lower() in {"```", "```json"}
-        and lines[-1].strip() == "```"
-    ):
-        text = "\n".join(lines[1:-1]).strip()
+    if len(lines) >= 2:
+        first = lines[0].strip().lower()
+        last = lines[-1].strip()
 
+        if first in {"```", "```json"} and last == "```":
+            text = "\n".join(lines[1:-1]).strip()
+
+    # First try the complete response as JSON.
     try:
         return json.loads(text)
+    except json.JSONDecodeError as exc:
+        original_error = exc
 
-    except json.JSONDecodeError as original_error:
-        # Allow short explanatory text before/after one clearly decodable
-        # JSON object/array, but never attempt to repair malformed JSON.
-        decoder = json.JSONDecoder()
+    # Bedrock models may occasionally return explanatory text
+    # before or after an otherwise valid JSON object/array.
+    decoder = json.JSONDecoder()
 
-        for index, character in enumerate(text):
-            if character not in "[{":
-                continue
+    for index, character in enumerate(text):
+        if character not in "[{":
+            continue
 
-            try:
-                value, _ = decoder.raw_decode(text[index:])
-                return value
-            except json.JSONDecodeError:
-                continue
+        try:
+            value, end = decoder.raw_decode(text[index:])
+        except json.JSONDecodeError:
+            continue
 
-        raise original_error
+        remainder = text[index + end:].strip()
+
+        # Valid JSON may be surrounded by explanatory prose.
+        # The JSON itself must still be completely decodable.
+        return value
+
+    raise original_error
