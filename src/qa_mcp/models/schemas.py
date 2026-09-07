@@ -40,6 +40,7 @@ class TestCaseGenerationRequest(BaseModel):
     requirement: RequirementRequest
     analysis: RequirementAnalysis
 
+
 class TestCaseReview(BaseModel):
     overall_quality: str
     coverage_score: int = Field(ge=0, le=100)
@@ -50,6 +51,16 @@ class TestCaseReview(BaseModel):
     priority_issues: list[str]
     recommendations: list[str]
     summary: str
+
+class QASuiteSaveRequest(BaseModel):
+    requirement_version_id: str = Field(
+        min_length=1
+    )
+    test_cases: TestCaseResponse
+    review: TestCaseReview
+    selected_test_case_ids: list[str] = Field(
+        min_length=1
+    )
 
 class QASuiteResult(BaseModel):
     requirement: RequirementRequest

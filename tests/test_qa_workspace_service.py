@@ -246,7 +246,9 @@ def test_generate_qa_suite_runs_complete_workflow():
         environment="test",
     )
 
-    suite_versioning.create_suite_version.assert_called_once()
+    suite_versioning.create_suite_version.assert_not_called()
+
+    assert result["suite_version"] is None
 
     assert (
         result["project"]["project_id"]
@@ -258,10 +260,9 @@ def test_generate_qa_suite_runs_complete_workflow():
         == "REQ-001"
     )
 
-    assert (
-        result["suite_version"]["suite_id"]
-        == "SUITE-001"
-    )
+    assert       result["suite_version"] is None
+
+    suite_versioning.create_suite_version.assert_not_called()
 
     assert result["analysis"]["summary"] == (
         "Password reset workflow."
@@ -413,7 +414,7 @@ def test_generate_qa_suite_raises_for_unknown_project():
 
     requirement_versioning.create_requirement_version.assert_not_called()
 
-    suite_versioning.create_suite_version.assert_not_called()
+
 
     workspace_artifact_repository.save.assert_not_called()
 
@@ -502,3 +503,140 @@ def test_generate_qa_suite_rejects_unknown_test_case_reference():
     )
 
     workspace_artifact_repository.save.assert_not_called()
+
+def test_save_selected_test_cases_persists_only_selected_cases():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    result = service.generate_qa_suite(
+        project_id="qa-project",
+        requirement="User can reset password.",
+    )
+
+    suite_versioning.create_suite_version.assert_not_called()
+
+    saved_suite = Mock()
+    saved_suite.model_dump.return_value = {
+        "suite_id": "SUITE-002",
+        "project_id": "qa-project",
+        "version": 1,
+    }
+
+    suite_versioning.create_suite_version.return_value = (
+        saved_suite
+    )
+
+    saved = service.save_selected_test_cases(
+        project_id="qa-project",
+        requirement_version_id=(
+            result["requirement_version"]["version_id"]
+        ),
+        test_cases=result["test_cases"],
+        review=result["review"],
+        selected_test_case_ids=["TC-001"],
+    )
+
+    suite_versioning.create_suite_version.assert_called_once()
+
+    save_call = (
+        suite_versioning
+        .create_suite_version
+        .call_args.kwargs
+    )
+
+    assert save_call["project_id"] == "qa-project"
+
+    assert save_call["requirement_version_id"] == (
+        "REQ-001"
+    )
+
+    assert (
+        save_call["test_cases"]
+        .test_cases[0]
+        .id
+        == "TC-001"
+    )
+
+    assert len(
+        save_call["test_cases"].test_cases
+    ) == 1
+
+    assert save_call["review"] == build_result().review
+
+    assert saved["suite_id"] == "SUITE-002"
+
+def test_save_selected_test_cases_rejects_empty_selection():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    result = service.generate_qa_suite(
+        project_id="qa-project",
+        requirement="User can reset password.",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="At least one test case must be selected",
+    ):
+        service.save_selected_test_cases(
+            project_id="qa-project",
+            requirement_version_id=(
+                result["requirement_version"]["version_id"]
+            ),
+            test_cases=result["test_cases"],
+            review=result["review"],
+            selected_test_case_ids=[],
+        )
+
+    suite_versioning.create_suite_version.assert_not_called()
+
+def test_save_selected_test_cases_rejects_unknown_test_case():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    result = service.generate_qa_suite(
+        project_id="qa-project",
+        requirement="User can reset password.",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown test case: TC-UNKNOWN",
+    ):
+        service.save_selected_test_cases(
+            project_id="qa-project",
+            requirement_version_id=(
+                result["requirement_version"]["version_id"]
+            ),
+            test_cases=result["test_cases"],
+            review=result["review"],
+            selected_test_case_ids=[
+                "TC-UNKNOWN"
+            ],
+        )
+
+    suite_versioning.create_suite_version.assert_not_called()

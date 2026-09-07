@@ -268,6 +268,7 @@ def test_dashboard_contains_ai_qa_workspace_controls():
     assert 'id="qa-workspace-error"' in html
     assert 'id="qa-workspace-result"' in html
 
+
 def test_dashboard_javascript_contains_backend_api_wiring():
     response = client.get("/static/js/dashboard.js")
 
@@ -288,6 +289,30 @@ def test_dashboard_javascript_contains_backend_api_wiring():
     assert "async function generateQASuite" in javascript
     assert "function renderQASuite" in javascript
     assert "async function loadDashboard" in javascript
+    assert '"/qa-suite/save"' in javascript
+    assert "Save Selected Test Cases" in javascript
+    assert "Select All" in javascript
+    assert "Clear All" in javascript
+
+    assert (
+        "async function saveSelectedTestCases"
+        in javascript
+    )
+
+    assert (
+        "function toggleAllTestCases"
+        in javascript
+    )
+
+    assert (
+        "function updateSelectedTestCaseCount"
+        in javascript
+    )
+
+    assert (
+        "function getSelectedTestCaseIds"
+        in javascript
+    )
 
 def test_dashboard_static_assets_are_served():
     css_response = client.get(
@@ -348,6 +373,158 @@ def test_dashboard_ai_qa_workspace_browser_flow():
             browser = p.chromium.launch(headless=True)
 
             page = browser.new_page()
+            generated_suite = {
+                "project": {
+                    "project_id": "qa-project",
+                    "name": "Customer Portal QA",
+                },
+                "requirement_version": {
+                    "version_id": "REQ-001",
+                    "version": 1,
+                },
+                "suite_version": None,
+                "requirement": {
+                    "requirement": "User can reset password.",
+                    "application": "Customer Portal",
+                },
+                "analysis": {
+                    "summary": "Password reset workflow.",
+                    "actors": ["User"],
+                    "functional_requirements": [
+                        "User can request a password reset."
+                    ],
+                    "positive_scenarios": [
+                        "Valid password reset request succeeds."
+                    ],
+                    "negative_scenarios": [
+                        "Invalid reset request is rejected."
+                    ],
+                    "edge_cases": [
+                        "Expired reset link is rejected."
+                    ],
+                },
+                "test_cases": {
+                    "test_cases": [
+                        {
+                            "id": "TC-001",
+                            "title": "Reset password",
+                            "priority": "High",
+                            "test_type": "Functional",
+                            "preconditions": [],
+                            "steps": [
+                                "Request password reset"
+                            ],
+                            "expected_result": (
+                                "Password reset succeeds"
+                            ),
+                        },
+                        {
+                            "id": "TC-002",
+                            "title": "Reject invalid reset request",
+                            "priority": "Medium",
+                            "test_type": "Negative",
+                            "preconditions": [],
+                            "steps": [
+                                "Submit invalid reset request"
+                            ],
+                            "expected_result": (
+                                "Invalid request is rejected"
+                            ),
+                        },
+                        {
+                            "id": "TC-003",
+                            "title": "Reject expired reset link",
+                            "priority": "Medium",
+                            "test_type": "Edge",
+                            "preconditions": [],
+                            "steps": [
+                                "Open expired reset link"
+                            ],
+                            "expected_result": (
+                                "Expired link is rejected"
+                            ),
+                        },
+                    ]
+                },
+                "review": {
+                    "overall_quality": "Good",
+                    "coverage_score": 90,
+                    "duplicate_test_cases": [],
+                    "missing_scenarios": [],
+                    "weak_test_cases": [],
+                    "requirement_gaps": [],
+                    "priority_issues": [],
+                    "recommendations": [],
+                    "summary": "Good coverage.",
+                },
+            }
+
+            save_requests = []
+
+            def handle_save_request(route):
+                import json
+
+                request_payload = json.loads(
+                    route.request.post_data
+                )
+
+                save_requests.append(request_payload)
+
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(
+                        {
+                            "suite_id": "SUITE-002",
+                            "project_id": "qa-project",
+                            "version": len(save_requests) + 1,
+                        }
+                    ),
+                )
+
+            def handle_projects_request(route):
+                import json
+
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(
+                        [
+                            {
+                                "project_id": "qa-project",
+                                "name": "Customer Portal QA",
+                                "description": "",
+                                "application": "Customer Portal",
+                                "environment": "test",
+                                "metadata": {},
+                            }
+                        ]
+                    ),
+                )
+
+            def handle_generate_request(route):
+                import json
+
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(generated_suite),
+                )
+
+            page.route(
+                "**/api/projects",
+                handle_projects_request,
+            )
+
+            page.route(
+                "**/api/projects/qa-project/qa-suite",
+                handle_generate_request,
+            )
+
+            page.route(
+                "**/api/projects/qa-project/qa-suite/save",
+                handle_save_request,
+            )
 
             page.goto(
                 "http://127.0.0.1:8765/",
@@ -397,7 +574,120 @@ def test_dashboard_ai_qa_workspace_browser_flow():
             assert page.locator(
                 "#qa-requirement"
             ).is_visible()
+            # Generate a deterministic QA suite through the
+            # existing UI.
+            page.locator(
+                "#qa-project-id"
+            ).select_option("qa-project")
 
+            page.locator(
+                "#qa-requirement"
+            ).fill(
+                "User can reset password."
+            )
+
+            page.get_by_role(
+                "button",
+                name="Generate QA Suite",
+            ).click()
+
+            page.get_by_role(
+                "heading",
+                name="Generated Test Cases",
+            ).wait_for()
+
+            test_case_checkboxes = page.locator(
+                ".qa-test-case-checkbox"
+            )
+
+            assert test_case_checkboxes.count() == 3
+
+            assert page.locator(
+                "#qa-selected-test-case-count"
+            ).inner_text().strip() == "3"
+
+            # Clear all generated test cases.
+            page.get_by_role(
+                "button",
+                name="Clear All",
+            ).click()
+
+            assert page.locator(
+                "#qa-selected-test-case-count"
+            ).inner_text().strip() == "0"
+
+            # Select only TC-001 and TC-003.
+            page.locator(
+                '.qa-test-case-checkbox[value="TC-001"]'
+            ).check()
+
+            page.locator(
+                '.qa-test-case-checkbox[value="TC-003"]'
+            ).check()
+
+            assert page.locator(
+                "#qa-selected-test-case-count"
+            ).inner_text().strip() == "2"
+
+            # Save only the selected cases.
+            page.get_by_role(
+                "button",
+                name="Save Selected Test Cases",
+            ).click()
+
+            page.locator(
+                "#qa-save-success"
+            ).wait_for()
+
+            assert page.locator(
+                "#qa-save-success"
+            ).inner_text() == (
+                "2 test cases saved successfully."
+            )
+
+            assert len(save_requests) == 1
+
+            assert save_requests[0][
+                "selected_test_case_ids"
+            ] == [
+                "TC-001",
+                "TC-003",
+            ]
+
+            # Select all generated cases and save again.
+            page.get_by_role(
+                "button",
+                name="Select All",
+            ).click()
+
+            assert page.locator(
+                "#qa-selected-test-case-count"
+            ).inner_text().strip() == "3"
+
+            page.get_by_role(
+                "button",
+                name="Save Selected Test Cases",
+            ).click()
+
+            page.locator(
+                "#qa-save-success"
+            ).wait_for()
+
+            assert page.locator(
+                "#qa-save-success"
+            ).inner_text() == (
+                "3 test cases saved successfully."
+            )
+
+            assert len(save_requests) == 2
+
+            assert save_requests[1][
+                "selected_test_case_ids"
+            ] == [
+                "TC-001",
+                "TC-002",
+                "TC-003",
+            ]
             # Verify the execution dashboard has not disappeared.
             assert page.get_by_role(
                 "heading",
@@ -414,3 +704,121 @@ def test_dashboard_ai_qa_workspace_browser_flow():
             raise AssertionError(
                 "Uvicorn server did not shut down cleanly"
             )
+
+def test_save_selected_test_cases_endpoint():
+    with patch(
+        "qa_mcp.web.app.qa_workspace_service"
+    ) as service:
+
+        service.save_selected_test_cases.return_value = {
+            "suite_id": "SUITE-002",
+            "project_id": "qa-project",
+            "version": 2,
+        }
+
+        response = client.post(
+            "/api/projects/qa-project/qa-suite/save",
+            json={
+                "requirement_version_id": "REQ-001",
+                "test_cases": {
+                    "test_cases": [
+                        {
+                            "id": "TC-001",
+                            "title": "Reset password",
+                            "priority": "High",
+                            "test_type": "Functional",
+                            "preconditions": [],
+                            "steps": [
+                                "Request password reset"
+                            ],
+                            "expected_result": (
+                                "Password reset succeeds"
+                            ),
+                        }
+                    ]
+                },
+                "review": {
+                    "overall_quality": "Good",
+                    "coverage_score": 90,
+                    "duplicate_test_cases": [],
+                    "missing_scenarios": [],
+                    "weak_test_cases": [],
+                    "requirement_gaps": [],
+                    "priority_issues": [],
+                    "recommendations": [],
+                    "summary": "Good coverage.",
+                },
+                "selected_test_case_ids": [
+                    "TC-001"
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+
+        assert response.json() == {
+            "suite_id": "SUITE-002",
+            "project_id": "qa-project",
+            "version": 2,
+        }
+
+        service.save_selected_test_cases.assert_called_once_with(
+            project_id="qa-project",
+            requirement_version_id="REQ-001",
+            test_cases={
+                "test_cases": [
+                    {
+                        "id": "TC-001",
+                        "title": "Reset password",
+                        "priority": "High",
+                        "test_type": "Functional",
+                        "preconditions": [],
+                        "steps": [
+                            "Request password reset"
+                        ],
+                        "expected_result": (
+                            "Password reset succeeds"
+                        ),
+                    }
+                ]
+            },
+            review={
+                "overall_quality": "Good",
+                "coverage_score": 90,
+                "duplicate_test_cases": [],
+                "missing_scenarios": [],
+                "weak_test_cases": [],
+                "requirement_gaps": [],
+                "priority_issues": [],
+                "recommendations": [],
+                "summary": "Good coverage.",
+            },
+            selected_test_case_ids=[
+                "TC-001"
+            ],
+        )
+
+def test_save_selected_test_cases_rejects_empty_selection():
+    response = client.post(
+        "/api/projects/qa-project/qa-suite/save",
+        json={
+            "requirement_version_id": "REQ-001",
+            "test_cases": {
+                "test_cases": []
+            },
+            "review": {
+                "overall_quality": "Good",
+                "coverage_score": 90,
+                "duplicate_test_cases": [],
+                "missing_scenarios": [],
+                "weak_test_cases": [],
+                "requirement_gaps": [],
+                "priority_issues": [],
+                "recommendations": [],
+                "summary": "Good coverage.",
+            },
+            "selected_test_case_ids": [],
+        },
+    )
+
+    assert response.status_code == 422

@@ -47,6 +47,7 @@ from qa_mcp.infrastructure.versioning.sqlite_version_repository import (
 )
 from qa_mcp.models.schemas import (
     QAProjectCreateRequest,
+    QASuiteSaveRequest,
     QASuiteWorkspaceRequest,
 )
 from qa_mcp.tools.workflow.qa_suite import (
@@ -254,6 +255,40 @@ def generate_qa_suite(
             detail=str(exc),
         ) from exc
 
+@app.post(
+    "/api/projects/{project_id}/qa-suite/save"
+)
+def save_qa_suite(
+    project_id: str,
+    request: QASuiteSaveRequest,
+):
+    try:
+        return qa_workspace_service.save_selected_test_cases(
+            project_id=project_id,
+            requirement_version_id=(
+                request.requirement_version_id
+            ),
+            test_cases=request.test_cases.model_dump(),
+            review=request.review.model_dump(),
+            selected_test_case_ids=(
+                request.selected_test_case_ids
+            ),
+        )
+    except ValueError as exc:
+        message = str(exc)
+
+        if (
+            "not found" in message.lower()
+            or "unknown test case" in message.lower()
+        ):
+            status_code = 404
+        else:
+            status_code = 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from exc
 
 # ---------------------------------------------------------
 # Existing Execution APIs

@@ -298,6 +298,8 @@ async function generateQASuite() {
 
 function renderQASuite(payload) {
 
+    window.qaSuitePayload = payload;
+
     const resultElement =
         document.getElementById(
             "qa-workspace-result"
@@ -314,19 +316,28 @@ function renderQASuite(payload) {
 
 
     const testCaseRows =
-        testCases.map(
-            item => `
-<tr>
-<td>${escapeHtml(item.id)}</td>
-<td>${escapeHtml(item.title)}</td>
-<td>${escapeHtml(item.priority)}</td>
-<td>${escapeHtml(item.test_type)}</td>
-<td>
-${escapeHtml(item.expected_result)}
-</td>
-</tr>
-`
-        ).join("");
+    testCases.map(
+        item => `
+        <tr>
+        <td>
+        <input
+            type="checkbox"
+            class="qa-test-case-checkbox"
+            value="${escapeHtml(item.id)}"
+            checked
+            onchange="updateSelectedTestCaseCount()"
+        >
+        </td>
+        <td>${escapeHtml(item.id)}</td>
+        <td>${escapeHtml(item.title)}</td>
+        <td>${escapeHtml(item.priority)}</td>
+        <td>${escapeHtml(item.test_type)}</td>
+        <td>
+        ${escapeHtml(item.expected_result)}
+        </td>
+        </tr>
+        `
+    ).join("");
 
 
     resultElement.innerHTML = `
@@ -361,14 +372,11 @@ ${escapeHtml(item.expected_result)}
 
     <div class="card">
         Suite Version
-        <div class="value">
-            ${escapeHtml(
-                String(
-                    payload
-                        .suite_version
-                        .version
-                )
-            )}
+        <div
+            class="value"
+            id="qa-suite-version"
+        >
+            Not saved
         </div>
     </div>
 
@@ -453,11 +461,50 @@ ${analysis.edge_cases.map(
 
 <h3>Generated Test Cases</h3>
 
+<div style="margin-bottom: 12px;">
+
+    <button
+        class="secondary-button"
+        type="button"
+        onclick="toggleAllTestCases(true)"
+    >
+        Select All
+    </button>
+
+    <button
+        class="secondary-button"
+        type="button"
+        onclick="toggleAllTestCases(false)"
+    >
+        Clear All
+    </button>
+
+</div>
+
+<p>
+    <strong>
+        Selected:
+        <span id="qa-selected-test-case-count">
+            ${testCases.length}
+        </span>
+        /
+        ${testCases.length}
+    </strong>
+</p>
+
 <table>
 
 <thead>
 
 <tr>
+<th>
+<input
+    type="checkbox"
+    id="qa-select-all"
+    checked
+    onchange="toggleAllTestCases(this.checked)"
+>
+</th>
 <th>ID</th>
 <th>Title</th>
 <th>Priority</th>
@@ -472,6 +519,28 @@ ${testCaseRows}
 </tbody>
 
 </table>
+
+<div style="margin-top: 16px;">
+
+    <button
+        class="primary-button"
+        type="button"
+        onclick="saveSelectedTestCases()"
+    >
+        Save Selected Test Cases
+    </button>
+
+</div>
+
+<div
+    id="qa-save-error"
+    class="error"
+></div>
+
+<div
+    id="qa-save-success"
+    class="success"
+></div>
 
 </section>
 
@@ -522,6 +591,190 @@ ${review.missing_scenarios.map(
 `;
 }
 
+function getSelectedTestCaseIds() {
+
+    return Array.from(
+        document.querySelectorAll(
+            ".qa-test-case-checkbox:checked"
+        )
+    ).map(
+        checkbox => checkbox.value
+    );
+}
+
+
+function updateSelectedTestCaseCount() {
+
+    const checkboxes =
+        document.querySelectorAll(
+            ".qa-test-case-checkbox"
+        );
+
+    const selected =
+        document.querySelectorAll(
+            ".qa-test-case-checkbox:checked"
+        );
+
+    const countElement =
+        document.getElementById(
+            "qa-selected-test-case-count"
+        );
+
+    if (countElement) {
+        countElement.textContent =
+            selected.length;
+    }
+
+    const selectAll =
+        document.getElementById(
+            "qa-select-all"
+        );
+
+    if (selectAll) {
+        selectAll.checked =
+            checkboxes.length > 0 &&
+            selected.length ===
+                checkboxes.length;
+    }
+}
+
+
+function toggleAllTestCases(selected) {
+
+    document
+        .querySelectorAll(
+            ".qa-test-case-checkbox"
+        )
+        .forEach(
+            checkbox => {
+                checkbox.checked = selected;
+            }
+        );
+
+    const selectAll =
+        document.getElementById(
+            "qa-select-all"
+        );
+
+    if (selectAll) {
+        selectAll.checked = selected;
+    }
+
+    updateSelectedTestCaseCount();
+}
+
+
+async function saveSelectedTestCases() {
+
+
+
+    const errorElement =
+        document.getElementById(
+            "qa-save-error"
+        );
+
+    const successElement =
+        document.getElementById(
+            "qa-save-success"
+        );
+
+    errorElement.textContent = "";
+    successElement.textContent = "";
+
+    const selectedTestCaseIds =
+        getSelectedTestCaseIds();
+
+    if (
+        selectedTestCaseIds.length === 0
+    ) {
+        errorElement.textContent =
+            "Select at least one test case to save.";
+        return;
+    }
+
+    if (!window.qaSuitePayload) {
+        errorElement.textContent =
+            "No generated QA suite is available to save.";
+        return;
+    }
+
+    try {
+
+        const projectId =
+            window.qaSuitePayload
+                .project
+                .project_id;
+
+        const response = await fetch(
+            "/api/projects/" +
+            encodeURIComponent(projectId) +
+            "/qa-suite/save",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    requirement_version_id:
+                        window.qaSuitePayload
+                            .requirement_version
+                            .version_id,
+
+                    test_cases:
+                        window.qaSuitePayload
+                            .test_cases,
+
+                    review:
+                        window.qaSuitePayload
+                            .review,
+
+                    selected_test_case_ids:
+                        selectedTestCaseIds
+                })
+            }
+        );
+
+        const payload =
+            await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                payload.detail ||
+                "Unable to save selected test cases."
+            );
+        }
+
+        window.qaSuitePayload.suite_version =
+            payload;
+
+        const suiteVersionElement =
+            document.getElementById(
+                "qa-suite-version"
+            );
+
+            if (suiteVersionElement) {
+                suiteVersionElement.textContent =
+                    "v" +
+                    payload.version;
+            }
+
+        successElement.textContent =
+            selectedTestCaseIds.length +
+            " test case" +
+            (
+                selectedTestCaseIds.length === 1
+                    ? ""
+                    : "s"
+            ) +
+            " saved successfully.";
+
+    } catch (error) {
+
+        errorElement.textContent =
+            error.message;
+    }
+}
 
 async function loadDashboard() {
 

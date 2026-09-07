@@ -26,6 +26,8 @@ from qa_mcp.models.schemas import (
     QAProject,
     QASuiteResult,
     RequirementRequest,
+    TestCaseResponse,
+    TestCaseReview,
 )
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
@@ -137,7 +139,7 @@ class QAWorkspaceService:
         project_id: str,
         requirement: str,
     ) -> dict:
-        """Generate and persist a complete QA suite."""
+        """Generate a QA suite preview without persisting test cases."""
 
         project = self.get_project(
             project_id
@@ -162,17 +164,7 @@ class QAWorkspaceService:
             )
         )
 
-        suite_version = (
-            self.suite_versioning_service
-            .create_suite_version(
-                project_id=project.project_id,
-                requirement_version_id=(
-                    requirement_version.version_id
-                ),
-                test_cases=result.test_cases,
-                review=result.review,
-            )
-        )
+
 
         automation_candidates = (
             self.automation_candidate_service
@@ -257,9 +249,7 @@ class QAWorkspaceService:
             "requirement_version": (
                 requirement_version.model_dump()
             ),
-            "suite_version": (
-                suite_version.model_dump()
-            ),
+            "suite_version": None,
             "requirement": (
                 result.requirement.model_dump()
             ),
@@ -273,3 +263,78 @@ class QAWorkspaceService:
                 result.review.model_dump()
             ),
         }
+    def save_selected_test_cases(
+        self,
+        project_id: str,
+        requirement_version_id: str,
+        test_cases: dict,
+        review: dict,
+        selected_test_case_ids: list[str],
+    ) -> dict:
+        """Persist only the selected generated test cases."""
+
+        if not selected_test_case_ids:
+            raise ValueError(
+                "At least one test case must be selected"
+            )
+
+        generated_test_cases = test_cases.get(
+            "test_cases",
+            [],
+        )
+
+        selected_ids = set(
+            selected_test_case_ids
+        )
+
+        generated_ids = {
+            test_case["id"]
+            for test_case in generated_test_cases
+        }
+
+        unknown_ids = (
+            selected_ids - generated_ids
+        )
+
+        if unknown_ids:
+            unknown_id = sorted(
+                unknown_ids
+            )[0]
+
+            raise ValueError(
+                f"Unknown test case: {unknown_id}"
+            )
+
+        selected_test_cases = [
+            test_case
+            for test_case in generated_test_cases
+            if test_case["id"] in selected_ids
+        ]
+
+        selected_response = (
+            TestCaseResponse.model_validate(
+                {
+                    "test_cases": selected_test_cases
+                }
+            )
+        )
+
+        review_response = (
+            TestCaseReview.model_validate(
+                review
+            )
+        )
+
+        suite_version = (
+            self.suite_versioning_service
+            .create_suite_version(
+                project_id=project_id,
+                requirement_version_id=(
+                    requirement_version_id
+                ),
+                test_cases=selected_response,
+                review=review_response,
+            )
+        )
+
+        return suite_version.model_dump()
