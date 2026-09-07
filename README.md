@@ -30,23 +30,25 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       9dce673 Correct QA workspace button wiring
-Previous commit:     f833dd8 Update continuity for QA workspace hardening
+Latest commit:       ff8dfaa Update continuity for Bedrock guardrail blocker
+Previous commit:     03aec28 Harden LLM JSON response parsing
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
 Next implementation: P2-S9.12 — Resolve Bedrock test-case generation guardrail block
-Checkpoint commit:   03aec28
+Checkpoint commit:   ff8dfaa
 
 Latest validation:
-- 288 pytest tests passing.
+- 287 pytest tests passing.
 - LLM JSON response parsing hardened through `qa_mcp.core.json_response.parse_json_response()`.
 - Parser safely accepts plain JSON, JSON wrapped in Markdown fences, and clearly decodable JSON surrounded by explanatory text.
 - Malformed JSON remains rejected.
 - Requirement analysis through AWS Bedrock succeeds.
-- End-to-end QA-suite execution is currently blocked at test-case generation because the configured Bedrock request returns the organization guardrail message:
+- End-to-end QA-suite execution was validated through Bedrock requirement analysis, but is currently blocked at test-case generation because the configured Bedrock request returns the organization guardrail message:
   `The response was blocked by dev-guardrails policy. If this looks like a false positive, ping #ai-guardrails.`
+- The application correctly converts the blocked Bedrock response into the existing QA-suite error path; this is an external organization guardrail issue, not an unresolved JSON parsing defect.
+- Office AI/Guardrails support has been engaged; the current proposed action is to temporarily disable the guardrail while the triggering policy is investigated.
 - No further application code changes should be made until the Bedrock/AI Guardrails team confirms the triggering policy and whether this is a false positive.
 
 Next action:
@@ -58,7 +60,7 @@ Next action:
 
 ```text
 pytest -q
-281 passed
+287 passed
 8 warnings
 0 failures
 
