@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       24a341b Implement AI QA workspace artifact generation
-Previous commit:     610d4b4 Update continuity for P2-S9.11
+Latest commit:       9dce673 Correct QA workspace button wiring
+Previous commit:     f833dd8 Update continuity for QA workspace hardening
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
 Next implementation: P2-S9.12 — Next functional capability
-Checkpoint commit:   df066e2
+Checkpoint commit:   9dce673
 ```
 
 ## Latest verified baseline
@@ -79,6 +79,15 @@ P2-S9.x Bedrock integration completion:
 - `moonshotai.kimi-k2.5` was tested separately but is not the validated application baseline; do not make it the default until its organization-approved application path is confirmed.
 
 The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
+
+P2-S9.11 UI correction:
+
+- Corrected the QA Workspace button wiring so `Create QA Project` invokes project creation and `Generate QA Suite` invokes QA suite generation.
+- Preserved the stable `create-qa-project-button` and `generate-qa-suite-button` identifiers.
+- Verified the focused dashboard suite: 16 passed, 1 known warning.
+- Verified the browser-level dashboard flow: 1 passed.
+- Verified the full regression suite: 281 passed, 8 known warnings, 0 failures.
+- This correction is committed as `9dce673`.
 
 P2-S9.11 UI execution hardening:
 
