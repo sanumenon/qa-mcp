@@ -30,30 +30,30 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       64eb5f6 Implement Bedrock Converse API integration
+Latest commit:       24a341b Implement AI QA workspace artifact generation
 Previous commit:     e449daa Update continuity for P2-S9.11
 Previous implementation checkpoint: 1138115 Harden automation command boundary
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.11 — AI QA Workspace Project Selection and Artifact Generation
+Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
 Next implementation: P2-S9.12 — Next functional capability
-Checkpoint commit:   64eb5f6
+Checkpoint commit:   24a341b
 ```
 
 ## Latest verified baseline
 
 ```text
 pytest -q
-276 passed
+281 passed
 8 warnings
 0 failures
 
 P2-S9.11 Web Dashboard focused suite:
-12 passed
+16 passed
 0 failures
 
 P2-S9.11 Browser regression test:
-1 passed, 11 deselected
+1 passed
 0 failures
 
 git diff --check
@@ -79,6 +79,20 @@ P2-S9.x Bedrock integration completion:
 - `moonshotai.kimi-k2.5` was tested separately but is not the validated application baseline; do not make it the default until its organization-approved application path is confirmed.
 
 The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
+
+P2-S9.11 artifact generation completion:
+- Added deterministic browser-level verification of the AI QA Workspace.
+- Added UI-driven QA suite generation through the selected project.
+- Added generated test-case selection with Select All / Clear All controls.
+- Added selected test-case count tracking in the dashboard.
+- Added selective QA suite persistence through POST /api/projects/{project_id}/qa-suite/save.
+- Added validation that only generated test-case IDs can be persisted.
+- Added suite version feedback after successful save.
+- Added browser regression coverage for partial and full test-case selection/save flows.
+- Verified the focused dashboard suite: 16 passed, 1 known warning, 0 failures.
+- Verified the full regression suite: 281 passed, 8 known warnings, 0 failures.
+- `git diff --check` is clean.
+- Commit: `24a341b Implement AI QA workspace artifact generation`.
 
 P2-S9.11 project workspace completion:
 - Added persistent project listing through ProjectRepository and SQLiteProjectRepository.
