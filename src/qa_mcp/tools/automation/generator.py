@@ -82,10 +82,38 @@ class AutomationCaseGenerator:
             assertions = case.get("assertions")
 
             if isinstance(assertions, list):
-                case["assertions"] = [
-                    AutomationCaseGenerator._normalize_assertion(item)
-                    for item in assertions
-                ]
+                normalized_assertions = []
+
+                for assertion in assertions:
+                    normalized_assertion = (
+                        AutomationCaseGenerator._normalize_assertion(
+                            assertion
+                        )
+                    )
+
+                    if normalized_assertion is not None:
+                        normalized_assertions.append(
+                            normalized_assertion
+                        )
+                    else:
+                        if isinstance(assertion, str):
+                            value = assertion.strip()
+                            if value:
+                                limitations.append(value)
+                        else:
+                            limitations.append(
+                                AutomationCaseGenerator._automation_item_to_string(
+                                    assertion
+                                )
+                            )
+
+                case["assertions"] = normalized_assertions
+
+            case["limitations"] = [
+                str(item)
+                for item in limitations
+                if str(item).strip()
+            ]
 
             normalized_cases.append(case)
 
@@ -114,7 +142,7 @@ class AutomationCaseGenerator:
         return None
 
     @staticmethod
-    def _normalize_assertion(assertion: object) -> str:
+    def _normalize_assertion(assertion: object) -> str | None:
         """Normalize structured assertions to the code-generation schema."""
         if isinstance(assertion, str):
             value = assertion.strip()
@@ -124,7 +152,7 @@ class AutomationCaseGenerator:
             ):
                 return value
 
-            return value
+            return None
 
         if isinstance(assertion, dict):
             assertion_type = assertion.get("type")
@@ -243,7 +271,12 @@ Rules:
 - Steps must use one of these exact formats: `goto: URL`, `click: selector`, `fill: selector = value`, or `press: selector = key`.
 - Do not use natural-language navigation, click, fill, or keyboard instructions in steps.
 - Keep the steps executable and specific.
-- Keep assertions observable.
+- Keep assertions observable and executable.
+- Assertions must use one of these exact formats: `visible: selector`, `text: selector = expected text`, or `url: expected URL`.
+- Do not use natural-language assertions such as "Assert that...", "Verify that...", or "is visible".
+- For element visibility, use `visible: selector`.
+- For expected element text, use `text: selector = expected text`.
+- For expected URL, use `url: expected URL`.
 - For UI/browser automation, the framework MUST be "Playwright".
 - Do not select Selenium, WebDriver, Cypress, Puppeteer, or any other UI framework.
 - Use "Playwright" as the framework whenever the test case is suitable for browser/UI automation.
