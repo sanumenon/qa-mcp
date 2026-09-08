@@ -640,3 +640,198 @@ def test_save_selected_test_cases_rejects_unknown_test_case():
         )
 
     suite_versioning.create_suite_version.assert_not_called()
+
+def test_get_project_qa_workspace_returns_persisted_qa_artifacts():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    requirement_version = Mock()
+    requirement_version.model_dump.return_value = {
+        "version_id": "REQ-001",
+        "project_id": "qa-project",
+        "version": 1,
+        "requirement": "User can reset password.",
+        "application": "Customer Portal",
+        "environment": "test",
+        "created_at": "2026-09-01T10:00:00+00:00",
+    }
+
+    suite_version = Mock()
+    suite_version.suite_id = "SUITE-001"
+    suite_version.version = 1
+    suite_version.requirement_version_id = "REQ-001"
+    suite_version.model_dump.return_value = {
+        "suite_id": "SUITE-001",
+        "project_id": "qa-project",
+        "requirement_version_id": "REQ-001",
+        "version": 1,
+        "test_cases": {
+            "test_cases": [
+                {
+                    "id": "TC-001",
+                    "title": "Reset password",
+                    "priority": "High",
+                    "test_type": "Functional",
+                    "preconditions": [],
+                    "steps": [
+                        "Request password reset"
+                    ],
+                    "expected_result": (
+                        "Password reset succeeds"
+                    ),
+                }
+            ]
+        },
+        "review": {
+            "overall_quality": "Good",
+            "coverage_score": 90,
+            "duplicate_test_cases": [],
+            "missing_scenarios": [],
+            "weak_test_cases": [],
+            "requirement_gaps": [],
+            "priority_issues": [],
+            "recommendations": [],
+            "summary": "Good coverage.",
+        },
+        "created_at": "2026-09-01T10:05:00+00:00",
+    }
+
+    suite_version.test_cases = (
+        build_result().test_cases
+    )
+
+    requirement_versioning.list_requirement_versions.return_value = [
+        requirement_version
+    ]
+
+    suite_versioning.list_suite_versions.return_value = [
+        suite_version
+    ]
+
+    workspace_artifact_repository.list_for_project.return_value = [
+        {
+            "artifact_id": "ART-001",
+            "project_id": "qa-project",
+            "automation_case_id": "AC-001",
+            "test_case_id": "TC-001",
+            "framework": "Playwright",
+            "language": "Python",
+            "file_name": "test_reset_password.py",
+            "code": "test code",
+            "created_at": "2026-09-01T10:10:00+00:00",
+        }
+    ]
+
+    result = service.get_project_qa_workspace(
+        "qa-project"
+    )
+
+    project_context.get_project.assert_called_once_with(
+        "qa-project"
+    )
+
+    requirement_versioning.list_requirement_versions.assert_called_once_with(
+        "qa-project"
+    )
+
+    suite_versioning.list_suite_versions.assert_called_once_with(
+        "qa-project"
+    )
+
+    workspace_artifact_repository.list_for_project.assert_called_once_with(
+        "qa-project"
+    )
+
+    assert (
+        result["project"]["project_id"]
+        == "qa-project"
+    )
+
+    assert len(
+        result["requirement_versions"]
+    ) == 1
+
+    assert len(
+        result["suite_versions"]
+    ) == 1
+
+    assert len(
+        result["test_cases"]
+    ) == 1
+
+    assert (
+        result["test_cases"][0]["id"]
+        == "TC-001"
+    )
+    assert (
+        result["test_cases"][0]["title"]
+        == "Reset password"
+    )
+
+    assert (
+        result["test_cases"][0]["test_type"]
+        == "Functional"
+    )
+
+    assert (
+        result["test_cases"][0]["expected_result"]
+        == "Password reset succeeds"
+    )
+    assert (
+        result["test_cases"][0]["suite_id"]
+        == "SUITE-001"
+    )
+
+    assert (
+        result["test_cases"][0]["suite_version"]
+        == 1
+    )
+
+    assert (
+        result["test_cases"][0]["requirement_version_id"]
+        == "REQ-001"
+    )
+
+    assert (
+        result["test_cases"][0]["automation_candidate"]
+        is True
+    )
+
+    assert (
+        result["automation_artifacts"][0]["artifact_id"]
+        == "ART-001"
+    )
+
+def test_get_project_qa_workspace_returns_empty_collections_for_new_project():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    requirement_versioning.list_requirement_versions.return_value = []
+    suite_versioning.list_suite_versions.return_value = []
+    workspace_artifact_repository.list_for_project.return_value = []
+
+    result = service.get_project_qa_workspace(
+        "qa-project"
+    )
+
+    assert result["project"]["project_id"] == "qa-project"
+    assert result["requirement_versions"] == []
+    assert result["suite_versions"] == []
+    assert result["test_cases"] == []
+    assert result["automation_artifacts"] == []

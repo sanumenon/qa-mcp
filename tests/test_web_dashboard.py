@@ -133,6 +133,93 @@ def test_qa_workspace_endpoint():
             ),
         )
 
+def test_qa_project_workspace_endpoint():
+    with patch(
+        "qa_mcp.web.app.qa_workspace_service"
+    ) as service:
+
+        service.get_project_qa_workspace.return_value = {
+            "project": {
+                "project_id": "qa-project"
+            },
+            "requirement_versions": [
+                {
+                    "version_id": "REQ-001"
+                }
+            ],
+            "suite_versions": [
+                {
+                    "suite_id": "SUITE-001",
+                    "version": 1,
+                }
+            ],
+            "test_cases": [
+                {
+                    "id": "TC-001",
+                    "title": "Reset password",
+                    "suite_id": "SUITE-001",
+                    "suite_version": 1,
+                    "requirement_version_id": "REQ-001",
+                    "automation_candidate": True,
+                }
+            ],
+            "automation_artifacts": [
+                {
+                    "artifact_id": "ART-001",
+                    "test_case_id": "TC-001",
+                }
+            ],
+        }
+
+        response = client.get(
+            "/api/projects/qa-project/workspace"
+        )
+
+        assert response.status_code == 200
+
+        payload = response.json()
+
+        assert (
+            payload["project"]["project_id"]
+            == "qa-project"
+        )
+
+        assert (
+            payload["requirement_versions"][0][
+                "version_id"
+            ]
+            == "REQ-001"
+        )
+
+        assert (
+            payload["suite_versions"][0][
+                "suite_id"
+            ]
+            == "SUITE-001"
+        )
+
+        assert (
+            payload["test_cases"][0]["id"]
+            == "TC-001"
+        )
+
+        assert (
+            payload["test_cases"][0][
+                "automation_candidate"
+            ]
+            is True
+        )
+
+        assert (
+            payload["automation_artifacts"][0][
+                "artifact_id"
+            ]
+            == "ART-001"
+        )
+
+        service.get_project_qa_workspace.assert_called_once_with(
+            "qa-project"
+        )
 
 def test_qa_workspace_rejects_empty_requirement():
     response = client.post(
@@ -267,6 +354,93 @@ def test_dashboard_contains_ai_qa_workspace_controls():
     assert 'id="project-success"' in html
     assert 'id="qa-workspace-error"' in html
     assert 'id="qa-workspace-result"' in html
+
+def test_project_qa_workspace_page_contains_repository_controls():
+    response = client.get(
+        "/project-workspace"
+    )
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    assert "Project QA Workspace" in html
+
+    assert (
+        'id="repository-project-id"'
+        in html
+    )
+
+    assert (
+        'id="load-project-workspace-button"'
+        in html
+    )
+
+    assert (
+        "loadProjectQAWorkspace()"
+        in html
+    )
+
+    assert (
+        'id="project-workspace-result"'
+        in html
+    )
+
+    assert (
+        "/static/js/project_workspace.js"
+        in html
+    )
+
+def test_dashboard_retains_generate_qa_suite_control():
+    response = client.get("/")
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    assert (
+        'id="generate-qa-suite-button"'
+        in html
+    )
+
+    assert (
+        "Generate QA Suite"
+        in html
+    )
+
+    assert (
+        'onclick="generateQASuite()"'
+        in html
+    )
+
+    assert (
+        "/project-workspace"
+        in html
+    )
+
+def test_project_qa_workspace_javascript_is_served():
+    response = client.get(
+        "/static/js/project_workspace.js"
+    )
+
+    assert response.status_code == 200
+
+    javascript = response.text
+
+    assert (
+        "loadProjectQAWorkspace"
+        in javascript
+    )
+
+    assert (
+        "/api/projects/"
+        in javascript
+    )
+
+    assert (
+        "/workspace"
+        in javascript
+    )
 
 
 def test_dashboard_javascript_contains_backend_api_wiring():

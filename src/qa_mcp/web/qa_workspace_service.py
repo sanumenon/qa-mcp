@@ -26,6 +26,7 @@ from qa_mcp.models.schemas import (
     QAProject,
     QASuiteResult,
     RequirementRequest,
+    TestCase,
     TestCaseResponse,
     TestCaseReview,
 )
@@ -133,6 +134,94 @@ class QAWorkspaceService:
         return self.project_context.get_project(
             project_id
         )
+
+    def get_project_qa_workspace(
+        self,
+        project_id: str,
+    ) -> dict:
+        """Return persisted QA artifacts for a project."""
+
+        project = self.get_project(
+            project_id
+        )
+
+        requirement_versions = (
+            self.requirement_versioning_service
+            .list_requirement_versions(
+                project_id
+            )
+        )
+
+        suite_versions = (
+            self.suite_versioning_service
+            .list_suite_versions(
+                project_id
+            )
+        )
+
+        test_cases = []
+
+        for suite_version in suite_versions:
+            for test_case in suite_version.test_cases.test_cases:
+                test_cases.append(
+                    {
+                        "suite_id": suite_version.suite_id,
+                        "suite_version": suite_version.version,
+                        "requirement_version_id": (
+                            suite_version.requirement_version_id
+                        ),
+                        "test_case": test_case.model_dump(),
+                    }
+                )
+
+        automation_artifacts = (
+            self.workspace_artifact_repository
+            .list_for_project(
+                project_id
+            )
+        )
+
+        candidate_test_cases = [
+            TestCase.model_validate(
+                item["test_case"]
+            )
+            for item in test_cases
+        ]
+
+        candidate_ids = set(
+            self.automation_candidate_service
+            .select_candidates(
+                candidate_test_cases
+            ).candidate_ids
+        )
+
+        return {
+            "project": project.model_dump(),
+            "requirement_versions": [
+                version.model_dump()
+                for version in requirement_versions
+            ],
+            "suite_versions": [
+                version.model_dump()
+                for version in suite_versions
+            ],
+            "test_cases": [
+                {
+                    **item["test_case"],
+                    "suite_id": item["suite_id"],
+                    "suite_version": item["suite_version"],
+                    "requirement_version_id": (
+                        item["requirement_version_id"]
+                    ),
+                    "automation_candidate": (
+                        item["test_case"]["id"]
+                        in candidate_ids
+                    ),
+                }
+                for item in test_cases
+            ],
+            "automation_artifacts": automation_artifacts,
+        }
 
     def generate_qa_suite(
         self,

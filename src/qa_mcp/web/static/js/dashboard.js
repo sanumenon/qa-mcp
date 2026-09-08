@@ -10,7 +10,9 @@ function escapeHtml(value) {
 async function loadQAProjects(selectedProjectId = "") {
 
     const select =
-        document.getElementById("qa-project-id");
+        document.getElementById(
+            "qa-project-id"
+        );
 
     try {
 
@@ -42,6 +44,7 @@ async function loadQAProjects(selectedProjectId = "") {
                 `${project.name} — ${project.project_id}`;
 
             select.appendChild(option);
+
         });
 
         if (selectedProjectId) {

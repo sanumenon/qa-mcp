@@ -237,6 +237,26 @@ def get_qa_project(
         ) from exc
 
 
+@app.get(
+    "/api/projects/{project_id}/workspace"
+)
+def get_qa_project_workspace(
+    project_id: str,
+):
+    try:
+        return (
+            qa_workspace_service
+            .get_project_qa_workspace(
+                project_id
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+
 @app.post(
     "/api/projects/{project_id}/qa-suite"
 )
@@ -358,7 +378,16 @@ def dashboard():
 </head>
 
 <body>
+<nav class="dashboard-navigation">
 
+    <a
+        href="/project-workspace"
+        class="secondary-button"
+    >
+        Project QA Workspace
+    </a>
+
+</nav>
 <h1>QA MCP Dashboard</h1>
 <p>
     <small>
@@ -688,3 +717,109 @@ test suite from a requirement.
 </html>
         """
     )
+
+@app.get(
+    "/project-workspace",
+    response_class=HTMLResponse,
+)
+def project_workspace():
+    return """
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Project QA Workspace</title>
+
+<link
+    rel="stylesheet"
+    href="/static/css/dashboard.css"
+>
+
+</head>
+
+<body>
+
+<nav class="dashboard-navigation">
+
+    <a
+        href="/"
+        class="secondary-button"
+    >
+        ← QA Dashboard
+    </a>
+
+</nav>
+
+<main>
+
+<section>
+
+<h1>Project QA Workspace</h1>
+
+<p>
+View requirements, saved test cases, suite versions,
+automation candidates, and generated automation artifacts
+already prepared for the selected project.
+</p>
+
+<div class="workspace-grid">
+
+    <div class="field field-full">
+
+        <label for="repository-project-id">
+            Project
+        </label>
+
+        <select id="repository-project-id">
+
+            <option value="">
+                Select a project
+            </option>
+
+        </select>
+
+    </div>
+
+</div>
+
+<div style="margin-top: 16px;">
+
+    <button
+        id="load-project-workspace-button"
+        class="primary-button"
+        type="button"
+        onclick="loadProjectQAWorkspace()"
+    >
+        Load Project Workspace
+    </button>
+
+</div>
+
+<div
+    id="project-workspace-error"
+    class="error"
+></div>
+
+<div
+    id="project-workspace-result"
+    class="result-block"
+></div>
+
+</section>
+
+</main>
+
+<script src="/static/js/project_workspace.js"></script>
+
+</body>
+
+</html>
+"""
