@@ -34,12 +34,45 @@ class AutomationCaseGenerator:
 
             case = dict(case)
 
+            steps = case.get("steps")
+            limitations = case.get("limitations")
+
+            if not isinstance(limitations, list):
+                limitations = []
+
+            if isinstance(steps, list):
+                normalized_steps = []
+
+                for step in steps:
+                    normalized_step = (
+                        AutomationCaseGenerator._normalize_step(step)
+                    )
+
+                    if normalized_step is not None:
+                        normalized_steps.append(normalized_step)
+                    elif isinstance(step, str) and step.strip():
+                        limitations.append(step.strip())
+
+                case["steps"] = normalized_steps
+
+            case["limitations"] = [
+                str(item)
+                for item in limitations
+                if str(item).strip()
+            ]
+
             test_data = case.get("test_data")
+
             if isinstance(test_data, list):
                 case["test_data"] = [
                     {
-                        "field": item.get("name", item.get("field", "")),
-                        "value": str(item.get("value", "")),
+                        "field": item.get(
+                            "name",
+                            item.get("field", ""),
+                        ),
+                        "value": str(
+                            item.get("value", "")
+                        ),
                     }
                     if isinstance(item, dict)
                     else item
@@ -47,9 +80,10 @@ class AutomationCaseGenerator:
                 ]
 
             assertions = case.get("assertions")
+
             if isinstance(assertions, list):
                 case["assertions"] = [
-                    AutomationCaseGenerator._automation_item_to_string(item)
+                    AutomationCaseGenerator._normalize_assertion(item)
                     for item in assertions
                 ]
 
@@ -59,26 +93,113 @@ class AutomationCaseGenerator:
         return normalized
 
     @staticmethod
+    def _normalize_step(step: object) -> str | None:
+        """Normalize supported structured steps and reject non-executable steps."""
+        if not isinstance(step, str):
+            return None
+
+        value = step.strip()
+
+        if not value:
+            return None
+
+        if (
+            value.startswith("goto: ")
+            or value.startswith("click: ")
+            or value.startswith("fill: ")
+            or value.startswith("press: ")
+        ):
+            return value
+
+        return None
+
+    @staticmethod
+    def _normalize_assertion(assertion: object) -> str:
+        """Normalize structured assertions to the code-generation schema."""
+        if isinstance(assertion, str):
+            value = assertion.strip()
+
+            if value.startswith(
+                ("visible: ", "text: ", "url: ")
+            ):
+                return value
+
+            return value
+
+        if isinstance(assertion, dict):
+            assertion_type = assertion.get("type")
+            selector = assertion.get("selector")
+            expected = assertion.get("expected")
+
+            if assertion_type in (
+                "element_visible",
+                "visible",
+            ):
+                if selector:
+                    return f"visible: {selector}"
+
+            if assertion_type in (
+                "text",
+                "element_text",
+                "text_equals",
+            ):
+                if selector and expected is not None:
+                    return (
+                        f"text: {selector} = {expected}"
+                    )
+
+            if assertion_type in (
+                "url",
+                "url_equals",
+            ):
+                if expected:
+                    return f"url: {expected}"
+
+            return (
+                AutomationCaseGenerator
+                ._automation_item_to_string(assertion)
+            )
+
+        return str(assertion)
+
+    @staticmethod
     def _automation_item_to_string(item: object) -> str:
         """Convert a structured automation item into readable text."""
         if isinstance(item, str):
             return item
 
         if isinstance(item, dict):
-            preferred_keys = ["type", "selector", "description", "expected", "reason"]
+            preferred_keys = [
+                "type",
+                "selector",
+                "description",
+                "expected",
+                "reason",
+            ]
             parts = []
 
             for key in preferred_keys:
                 value = item.get(key)
+
                 if value is not None:
                     if isinstance(value, list):
-                        value = ", ".join(str(entry) for entry in value)
-                    parts.append(f"{key}: {value}")
+                        value = ", ".join(
+                            str(entry)
+                            for entry in value
+                        )
+
+                    parts.append(
+                        f"{key}: {value}"
+                    )
 
             if parts:
                 return "; ".join(parts)
 
-            return json.dumps(item, ensure_ascii=False, sort_keys=True)
+            return json.dumps(
+                item,
+                ensure_ascii=False,
+                sort_keys=True,
+            )
 
         return str(item)
 
