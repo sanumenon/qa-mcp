@@ -213,6 +213,13 @@ class SlackThread(BaseModel):
         default_factory=list
     )
 
+class AutomationTestData(BaseModel):
+    """Structured test-data field/value pair for automation."""
+
+    field: str
+    value: str
+
+
 class AutomationCase(BaseModel):
     """Normalized automation candidate representation."""
 
@@ -226,7 +233,7 @@ class AutomationCase(BaseModel):
     preconditions: list[str] = Field(
         default_factory=list
     )
-    test_data: list[str] = Field(
+    test_data: list[AutomationTestData] = Field(
         default_factory=list
     )
     steps: list[str] = Field(

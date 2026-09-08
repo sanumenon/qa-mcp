@@ -26,8 +26,14 @@ class MockLLM:
                         "User account exists"
                     ],
                     "test_data": [
-                        "Valid username",
-                        "Valid password"
+                        {
+                            "field": "username",
+                            "value": "user@example.com"
+                        },
+                        {
+                            "field": "password",
+                            "value": "ValidPassword123"
+                        }
                     ],
                     "steps": [
                         "Open login page",

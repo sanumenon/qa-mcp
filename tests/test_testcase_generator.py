@@ -237,6 +237,37 @@ def test_generator_rejects_invalid_json():
         )
 
 
+def test_generator_accepts_single_test_case_object_response():
+    payload = {
+        "id": "TC001",
+        "title": "Successful password reset",
+        "priority": "High",
+        "test_type": "Functional",
+        "preconditions": [
+            "User is registered"
+        ],
+        "steps": [
+            "Open password reset page",
+            "Enter registered email",
+            "Submit reset request",
+        ],
+        "expected_result": (
+            "Password reset instructions are sent"
+        ),
+    }
+
+    generator = Generator(
+        FakeLLM(payload)
+    )
+
+    response = generator.generate(
+        build_request()
+    )
+
+    assert len(response.test_cases) == 1
+    assert response.test_cases[0].id == "TC001"
+
+
 def test_generator_rejects_non_sequential_ids():
 
     payload = sample_test_cases()

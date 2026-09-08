@@ -180,6 +180,37 @@ def sample_review():
     }
 
 
+def test_reviewer_normalizes_structured_weak_test_cases():
+    payload = sample_review()
+
+    payload["weak_test_cases"] = [
+        {
+            "id": "TC001",
+            "reason": "Expected result is not sufficiently testable",
+        }
+    ]
+
+    reviewer = Reviewer(
+        FakeLLM(payload)
+    )
+
+    result = reviewer.review(
+        requirement=RequirementRequest(
+            requirement=(
+                "User can reset password "
+                "using email."
+            ),
+            application="Customer Portal",
+        ),
+        analysis=sample_analysis(),
+        test_cases=sample_test_cases(),
+    )
+
+    assert result.weak_test_cases == [
+        "TC001: Expected result is not sufficiently testable"
+    ]
+
+
 def test_reviewer_returns_structured_review():
 
     fake_llm = FakeLLM(
@@ -290,3 +321,77 @@ def test_reviewer_rejects_invalid_coverage_score():
 
             test_cases=sample_test_cases(),
         )
+
+
+def test_reviewer_normalizes_structured_llm_review_items():
+    fake_llm = FakeLLM(
+        {
+            "overall_quality": "Good",
+            "coverage_score": 82,
+            "duplicate_test_cases": [
+                {
+                    "test_case_ids": ["TC002", "TC003"],
+                    "reason": "Both validate the same reset flow.",
+                }
+            ],
+            "missing_scenarios": [
+                {
+                    "scenario": "Expired reset link",
+                    "reason": "Not covered by the generated suite.",
+                }
+            ],
+            "weak_test_cases": [
+                {
+                    "test_case_id": "TC004",
+                    "issue": "Expected result is not observable.",
+                }
+            ],
+            "requirement_gaps": [
+                {
+                    "gap": "Email delivery behavior is not defined."
+                }
+            ],
+            "priority_issues": [
+                {
+                    "issue": "TC014 should be reviewed for priority."
+                }
+            ],
+            "recommendations": [
+                {
+                    "recommendation": "Add an expired reset-link test."
+                }
+            ],
+            "summary": "Good coverage with several review findings.",
+        }
+    )
+
+    reviewer = Reviewer(fake_llm)
+
+    result = reviewer.review(
+        requirement=RequirementRequest(
+            requirement=(
+                "User can reset password "
+                "using email."
+            ),
+            application="Customer Portal",
+        ),
+        analysis=sample_analysis(),
+        test_cases=sample_test_cases(),
+    )
+
+    assert result.coverage_score == 82
+
+    assert (
+        "scenario: Expired reset link"
+        in result.missing_scenarios[0]
+    )
+
+    assert (
+        "issue: TC014 should be reviewed for priority."
+        in result.priority_issues[0]
+    )
+
+    assert (
+        "recommendation: Add an expired reset-link test."
+        in result.recommendations[0]
+    )

@@ -84,6 +84,24 @@ class TestCaseGenerator:
                 "LLM returned invalid JSON for test-case generation."
             ) from exc
 
+        # Bedrock may occasionally return a single test-case object
+        # instead of the requested {"test_cases": [...]} wrapper.
+        # Normalize only when the payload is unambiguously a TestCase.
+        if (
+            isinstance(payload, dict)
+            and "test_cases" not in payload
+            and "id" in payload
+            and "title" in payload
+            and "priority" in payload
+            and "test_type" in payload
+            and "preconditions" in payload
+            and "steps" in payload
+            and "expected_result" in payload
+        ):
+            payload = {
+                "test_cases": [payload]
+            }
+
         response = TestCaseResponse.model_validate(
             payload
         )
