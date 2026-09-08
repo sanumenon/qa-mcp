@@ -52,6 +52,11 @@ Rules:
 - Describe the automation approach only.
 - Keep the steps executable and specific.
 - Keep assertions observable.
+- For UI/browser automation, the framework MUST be "Playwright".
+- Do not select Selenium, WebDriver, Cypress, Puppeteer, or any other UI framework.
+- Use "Playwright" as the framework whenever the test case is suitable for browser/UI automation.
+- For email validation, API calls, or other supporting interactions, do not replace Playwright as the primary UI framework.
+- If a supporting capability is required but is not available in the requirement, record it in limitations rather than selecting another automation framework.
 """
 
         response = self.llm.generate(
