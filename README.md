@@ -2580,7 +2580,7 @@ git diff --check:                   clean
 ### Next implementation checkpoint
 
 ```text
-P2-S9.12 — Next functional capability
+P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 ```
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
