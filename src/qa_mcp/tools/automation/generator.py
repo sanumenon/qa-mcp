@@ -49,7 +49,9 @@ Rules:
 - Preserve the source test case ID.
 - Do not invent requirements.
 - Do not generate executable automation code.
-- Describe the automation approach only.
+- Describe the automation approach using normalized automation steps.
+- Steps must use one of these exact formats: `goto: URL`, `click: selector`, `fill: selector = value`, or `press: selector = key`.
+- Do not use natural-language navigation, click, fill, or keyboard instructions in steps.
 - Keep the steps executable and specific.
 - Keep assertions observable.
 - For UI/browser automation, the framework MUST be "Playwright".
