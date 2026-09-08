@@ -30,37 +30,33 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       ff8dfaa Update continuity for Bedrock guardrail blocker
-Previous commit:     03aec28 Harden LLM JSON response parsing
-Previous implementation checkpoint: 1138115 Harden automation command boundary
+Latest commit:       cf572c2 Implement persistent project QA workspace
+Previous commit:     0bb5b0e Harden automation payload normalization
+Previous implementation checkpoint: P2-S9.11 — AI QA Workspace Artifact Generation
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.11 — AI QA Workspace Artifact Generation
-Next implementation: P2-S9.12 — Resolve Bedrock test-case generation guardrail block
-Checkpoint commit:   ff8dfaa
+Current checkpoint:  P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
+Next implementation: P2-S9.12 continuation — Automation Candidate Selection and Execution from Project QA Workspace
+Checkpoint commit:   cf572c2
 
 Latest validation:
-- 287 pytest tests passing.
-- LLM JSON response parsing hardened through `qa_mcp.core.json_response.parse_json_response()`.
-- Parser safely accepts plain JSON, JSON wrapped in Markdown fences, and clearly decodable JSON surrounded by explanatory text.
-- Malformed JSON remains rejected.
-- Requirement analysis through AWS Bedrock succeeds.
-- End-to-end QA-suite execution was validated through Bedrock requirement analysis, but is currently blocked at test-case generation because the configured Bedrock request returns the organization guardrail message:
-  `The response was blocked by dev-guardrails policy. If this looks like a false positive, ping #ai-guardrails.`
-- The application correctly converts the blocked Bedrock response into the existing QA-suite error path; this is an external organization guardrail issue, not an unresolved JSON parsing defect.
-- Office AI/Guardrails support has been engaged; the current proposed action is to temporarily disable the guardrail while the triggering policy is investigated.
-- No further application code changes should be made until the Bedrock/AI Guardrails team confirms the triggering policy and whether this is a false positive.
+- 298 pytest tests passing.
+- P2-S9.12 QA workspace and dashboard focused tests: 30 passed.
+- Full regression suite: 298 passed, 8 known non-blocking warnings, 0 failures.
+- `git diff --check` is clean.
+- Project QA Workspace browser/dashboard functionality has been verified without regression to the existing Generate QA Suite workflow.
+- The persistent workspace exposes existing project requirements, requirement versions, saved QA suite versions, persisted test cases, automation candidates, and generated automation artifacts.
+- The current implementation checkpoint is committed as `cf572c2 Implement persistent project QA workspace` and pushed to `origin/main`.
 
 Next action:
-- Engage office IT / AI Guardrails team to identify the policy triggering the test-case-generation request.
-- Resume implementation only after the guardrail behavior is understood and an approved resolution is available.
-```
-
+- Continue P2-S9.12 by making automation candidate selection actionable from the Project QA Workspace.
+- Reuse the existing automation candidate generation, automation case generation, validation, artifact generation, controlled execution, execution history, reporting, and failure-analysis services.
+- Do not recreate completed capabilities or redesign the existing QA Suite generation workflow.
 ## Latest verified baseline
 
 ```text
 pytest -q
-287 passed
+298 passed
 8 warnings
 0 failures
 
@@ -2457,6 +2453,85 @@ Automation Candidate Generation
 Automation Case Generation
 ```
 
+### P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
+
+Status: IN PROGRESS
+
+Checkpoint: cf572c2 — Implement persistent project QA workspace
+
+Completed in this checkpoint:
+
+- Added persistent project QA workspace aggregation through `QAWorkspaceService`.
+- Added project workspace retrieval through `GET /api/projects/{project_id}/workspace`.
+- Reused the existing requirement-versioning and QA-suite versioning services.
+- Exposed previously prepared requirement versions for the selected project.
+- Exposed previously saved QA suite versions for the selected project.
+- Exposed persisted test cases so users can inspect test cases already prepared for the project.
+- Reused the existing automation candidate selection capability.
+- Normalized persisted test-case dictionaries back into the existing `TestCase` model before automation-candidate processing.
+- Exposed automation candidates associated with the persisted project QA workspace.
+- Exposed generated automation artifacts already associated with the project.
+- Added a dedicated Project QA Workspace page separate from the active Generate QA Suite workflow.
+- Preserved the existing Generate QA Suite button and workflow.
+- Added focused service and dashboard regression coverage.
+- QA workspace and dashboard focused tests: 30 passed.
+- Full regression suite: 298 passed, 8 known non-blocking warnings, 0 failures.
+- `git diff --check` is clean.
+- Checkpoint commit `cf572c2` has been pushed to `origin/main`.
+
+P2-S9.12 product flow:
+
+Project
+  -> Requirement
+  -> Requirement Analysis
+  -> Test Case Generation
+  -> AI Review
+  -> Preview
+  -> User selects test cases
+  -> Save
+  -> QASuiteVersioningService
+  -> SQLite qa_suite_versions
+  -> Project QA Workspace
+       -> Existing Requirements
+       -> Requirement Versions
+       -> Saved Suite Versions
+       -> Existing Test Cases
+       -> Automation Candidates
+       -> Automation Artifacts
+
+The Project QA Workspace is a persistent/read-oriented view of QA work already prepared for a project. It must not replace, duplicate, or regress the existing active QA Suite generation workflow.
+
+Required user capability:
+
+- View requirements already provided or prepared for the project.
+- View requirement analysis and version information already prepared.
+- View test cases already generated and persisted for the project.
+- View automation candidates derived from persisted test cases.
+- Continue from persisted automation candidates into automation generation.
+- Continue into controlled automation execution.
+- View resulting execution history, reporting, and failure analysis.
+
+Remaining P2-S9.12 scope:
+
+Project QA Workspace
+  -> View persisted test cases
+  -> View automation candidates
+  -> Select automation candidates
+  -> Generate/use automation cases
+  -> Validate automation cases
+  -> Generate automation artifacts
+  -> Controlled automation execution
+  -> Execution result/history/reporting
+  -> Failure analysis
+
+Existing automation candidate selection, automation candidate generation, automation case generation, validation, Playwright code generation, controlled execution, execution history, reporting, and failure-analysis services are completed capabilities and must be reused rather than rebuilt.
+
+Next implementation:
+
+P2-S9.12 continuation — Automation Candidate Selection and Execution from Project QA Workspace
+
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
+
 ### P2-S9.11 — AI QA Workspace Artifact Generation
 
 Status: COMPLETE
@@ -2582,5 +2657,7 @@ git diff --check:                   clean
 ```text
 P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 ```
+
+P2-S9.12 has now started with checkpoint `cf572c2`, implementing the persistent Project QA Workspace. The remaining work is to make automation-candidate selection and controlled execution actionable from that workspace.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
