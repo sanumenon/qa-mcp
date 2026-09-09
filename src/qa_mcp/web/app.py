@@ -46,6 +46,7 @@ from qa_mcp.infrastructure.versioning.sqlite_version_repository import (
     SQLiteSuiteVersionRepository,
 )
 from qa_mcp.models.schemas import (
+    QAProjectAutomationGenerationRequest,
     QAProjectCreateRequest,
     QASuiteSaveRequest,
     QASuiteWorkspaceRequest,
@@ -274,6 +275,40 @@ def generate_qa_suite(
             status_code=404,
             detail=str(exc),
         ) from exc
+
+@app.post(
+    "/api/projects/{project_id}/automation"
+)
+def generate_project_automation(
+    project_id: str,
+    request: QAProjectAutomationGenerationRequest,
+):
+    try:
+        return (
+            qa_workspace_service
+            .generate_automation_from_project(
+                project_id=project_id,
+                selected_test_case_ids=(
+                    request.selected_test_case_ids
+                ),
+            )
+        )
+    except ValueError as exc:
+        message = str(exc)
+
+        if (
+            "not found" in message.lower()
+            or "unknown test case" in message.lower()
+        ):
+            status_code = 404
+        else:
+            status_code = 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from exc
+
 
 @app.post(
     "/api/projects/{project_id}/qa-suite/save"
@@ -807,6 +842,21 @@ already prepared for the selected project.
     id="project-workspace-error"
     class="error"
 ></div>
+
+<div
+    id="project-workspace-action"
+    style="margin-top: 16px;"
+>
+    <button
+        id="generate-project-automation-button"
+        class="primary-button"
+        type="button"
+        onclick="generateProjectAutomation()"
+        disabled
+    >
+        Generate Automation for Selected Candidates
+    </button>
+</div>
 
 <div
     id="project-workspace-result"

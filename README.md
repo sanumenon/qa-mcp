@@ -30,28 +30,33 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       cf572c2 Implement persistent project QA workspace
-Previous commit:     0bb5b0e Harden automation payload normalization
-Previous implementation checkpoint: P2-S9.11 — AI QA Workspace Artifact Generation
+Latest commit:       9c251e0 Update continuity for P2-S9.12 workspace
+Previous commit:     cf572c2 Implement persistent project QA workspace
+Previous implementation checkpoint: P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
-Next implementation: P2-S9.12 continuation — Automation Candidate Selection and Execution from Project QA Workspace
-Checkpoint commit:   cf572c2
+Current checkpoint:  P2-S9.12 — Automation Candidate Selection and Execution from Project QA Workspace
+Next implementation: P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
+Checkpoint commit:   PENDING
 
 Latest validation:
-- 298 pytest tests passing.
-- P2-S9.12 QA workspace and dashboard focused tests: 30 passed.
-- Full regression suite: 298 passed, 8 known non-blocking warnings, 0 failures.
+- 302 pytest tests passing.
+- Project QA Workspace and dashboard focused tests: 34 passed.
+- Full regression suite: 302 passed, 8 known non-blocking warnings, 0 failures.
 - `git diff --check` is clean.
-- Project QA Workspace browser/dashboard functionality has been verified without regression to the existing Generate QA Suite workflow.
-- The persistent workspace exposes existing project requirements, requirement versions, saved QA suite versions, persisted test cases, automation candidates, and generated automation artifacts.
-- The current implementation checkpoint is committed as `cf572c2 Implement persistent project QA workspace` and pushed to `origin/main`.
+- Project QA Workspace now provides actionable automation-candidate selection.
+- Users can select persisted automation candidates and invoke automation generation from the Project QA Workspace.
+- The browser UI is wired to `POST /api/projects/{project_id}/automation`.
+- Persisted test cases are revalidated through the existing automation candidate-selection service before generation.
+- The existing automation candidate generation, automation case generation, validation, Playwright code generation, artifact generation, controlled execution, execution history, reporting, and failure-analysis pipeline remains reused rather than duplicated.
+- Existing Generate QA Suite functionality remains preserved.
+- Today's implementation changes are currently uncommitted and must be committed only after final verification.
 
 Next action:
-- Continue P2-S9.12 by making automation candidate selection actionable from the Project QA Workspace.
-- Reuse the existing automation candidate generation, automation case generation, validation, artifact generation, controlled execution, execution history, reporting, and failure-analysis services.
+- Complete P2-S9.12 by continuing from generated automation artifacts into controlled automation execution from the Project QA Workspace.
+- Reuse the completed execution configuration, command boundary, execution runner, execution history, reporting, and failure-analysis services.
 - Do not recreate completed capabilities or redesign the existing QA Suite generation workflow.
+
 ## Latest verified baseline
 
 ```text
@@ -2457,27 +2462,28 @@ Automation Case Generation
 
 Status: IN PROGRESS
 
-Checkpoint: cf572c2 — Implement persistent project QA workspace
+Current implementation state:
 
-Completed in this checkpoint:
-
-- Added persistent project QA workspace aggregation through `QAWorkspaceService`.
-- Added project workspace retrieval through `GET /api/projects/{project_id}/workspace`.
-- Reused the existing requirement-versioning and QA-suite versioning services.
-- Exposed previously prepared requirement versions for the selected project.
-- Exposed previously saved QA suite versions for the selected project.
-- Exposed persisted test cases so users can inspect test cases already prepared for the project.
-- Reused the existing automation candidate selection capability.
-- Normalized persisted test-case dictionaries back into the existing `TestCase` model before automation-candidate processing.
-- Exposed automation candidates associated with the persisted project QA workspace.
-- Exposed generated automation artifacts already associated with the project.
-- Added a dedicated Project QA Workspace page separate from the active Generate QA Suite workflow.
-- Preserved the existing Generate QA Suite button and workflow.
-- Added focused service and dashboard regression coverage.
-- QA workspace and dashboard focused tests: 30 passed.
-- Full regression suite: 298 passed, 8 known non-blocking warnings, 0 failures.
+- Persistent Project QA Workspace is implemented.
+- Persisted project requirements, requirement versions, saved QA suite versions, test cases, automation candidates, and generated automation artifacts are exposed through the workspace.
+- Automation candidates are now actionable from the Project QA Workspace.
+- Added `QAProjectAutomationGenerationRequest` for project-level automation generation requests.
+- Added `QAWorkspaceService.generate_automation_from_project()` to continue from persisted test cases.
+- Persisted test-case dictionaries are reconstructed through the existing `TestCase` model before candidate processing.
+- Requested test-case IDs are validated against the persisted project workspace.
+- Selected test cases are rechecked through the existing `AutomationCandidateService`.
+- Non-candidate selections are rejected instead of bypassing the existing candidate policy.
+- Existing `AutomationCandidateGenerationService` is reused to generate automation cases.
+- Existing `AutomationCodeGenerationService` is reused to generate automation artifacts.
+- Added `POST /api/projects/{project_id}/automation`.
+- Added Project QA Workspace UI controls for selecting automation candidates.
+- Added a Generate Automation action in the Project QA Workspace.
+- Browser-side UI wiring invokes the new project automation endpoint and refreshes the persisted workspace state.
+- Existing Generate QA Suite functionality remains separate and unchanged.
+- Added dashboard/API regression coverage for the new workflow.
+- Focused workspace/dashboard tests: 34 passed.
+- Full regression suite: 302 passed, 8 known non-blocking warnings, 0 failures.
 - `git diff --check` is clean.
-- Checkpoint commit `cf572c2` has been pushed to `origin/main`.
 
 P2-S9.12 product flow:
 
@@ -2497,19 +2503,25 @@ Project
        -> Saved Suite Versions
        -> Existing Test Cases
        -> Automation Candidates
-       -> Automation Artifacts
+       -> Select Automation Candidates
+       -> Generate Automation
+       -> Automation Case Generation
+       -> Automation Artifact Generation
+       -> Controlled Automation Execution
+       -> Execution History / Reporting
+       -> Failure Analysis
 
-The Project QA Workspace is a persistent/read-oriented view of QA work already prepared for a project. It must not replace, duplicate, or regress the existing active QA Suite generation workflow.
-
-Required user capability:
+Implemented user capability:
 
 - View requirements already provided or prepared for the project.
 - View requirement analysis and version information already prepared.
 - View test cases already generated and persisted for the project.
 - View automation candidates derived from persisted test cases.
-- Continue from persisted automation candidates into automation generation.
-- Continue into controlled automation execution.
-- View resulting execution history, reporting, and failure analysis.
+- Select one or more persisted automation candidates.
+- Generate automation from the selected candidates.
+- Generate automation artifacts through the existing automation code-generation pipeline.
+- Keep generated automation associated with the project workspace.
+- Preserve the existing active Generate QA Suite workflow independently.
 
 Remaining P2-S9.12 scope:
 
@@ -2524,11 +2536,13 @@ Project QA Workspace
   -> Execution result/history/reporting
   -> Failure analysis
 
-Existing automation candidate selection, automation candidate generation, automation case generation, validation, Playwright code generation, controlled execution, execution history, reporting, and failure-analysis services are completed capabilities and must be reused rather than rebuilt.
+Completed automation candidate selection, candidate generation, automation case generation, validation, Playwright code generation, artifact generation, command-boundary enforcement, execution configuration, controlled execution, execution history, reporting, and failure-analysis services must continue to be reused rather than rebuilt.
 
 Next implementation:
 
-P2-S9.12 continuation — Automation Candidate Selection and Execution from Project QA Workspace
+P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
+
+The next implementation should wire the already-generated project automation artifacts into the completed controlled execution pipeline, including execution configuration, command-boundary enforcement, execution history, reporting, and failure analysis.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
 
@@ -2658,6 +2672,6 @@ git diff --check:                   clean
 P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 ```
 
-P2-S9.12 has now started with checkpoint `cf572c2`, implementing the persistent Project QA Workspace. The remaining work is to make automation-candidate selection and controlled execution actionable from that workspace.
+P2-S9.12 has progressed from the persistent Project QA Workspace to actionable automation-candidate selection and generation. The workspace can now select persisted automation candidates and invoke the existing automation generation and artifact-generation pipeline. The remaining work is to continue from generated automation artifacts into the completed controlled execution, execution-history, reporting, and failure-analysis pipeline.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.

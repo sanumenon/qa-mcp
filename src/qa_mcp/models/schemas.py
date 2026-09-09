@@ -320,6 +320,14 @@ class QASuiteWorkspaceRequest(BaseModel):
 
     requirement: str = Field(min_length=1)
 
+class QAProjectAutomationGenerationRequest(BaseModel):
+    """Request to generate automation from persisted project test cases."""
+
+    selected_test_case_ids: list[str] = Field(
+        min_length=1
+    )
+
+
 class QAProjectCreateRequest(BaseModel):
     """Request to create a QA project from the web workspace."""
 

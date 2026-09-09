@@ -1011,3 +1011,139 @@ def test_save_selected_test_cases_rejects_empty_selection():
     )
 
     assert response.status_code == 422
+
+def test_project_automation_generation_endpoint():
+    with patch(
+        "qa_mcp.web.app.qa_workspace_service"
+    ) as service:
+
+        service.generate_automation_from_project.return_value = {
+            "project": {
+                "project_id": "qa-project",
+                "name": "QA Project",
+            },
+            "selected_test_case_ids": [
+                "TC-001",
+                "TC-002",
+            ],
+            "automation_candidates": {
+                "candidate_ids": [
+                    "TC-001",
+                    "TC-002",
+                ],
+                "manual_ids": [],
+                "total": 2,
+            },
+            "automation_cases": [
+                {
+                    "id": "AUTO-001",
+                    "test_case_id": "TC-001",
+                },
+            ],
+            "automation_artifacts": [
+                {
+                    "artifact_id": "ART-001",
+                    "test_case_id": "TC-001",
+                },
+            ],
+        }
+
+        response = client.post(
+            "/api/projects/qa-project/automation",
+            json={
+                "selected_test_case_ids": [
+                    "TC-001",
+                    "TC-002",
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+
+        payload = response.json()
+
+        assert payload["selected_test_case_ids"] == [
+            "TC-001",
+            "TC-002",
+        ]
+
+        assert payload["automation_candidates"][
+            "candidate_ids"
+        ] == [
+            "TC-001",
+            "TC-002",
+        ]
+
+        service.generate_automation_from_project.assert_called_once_with(
+            project_id="qa-project",
+            selected_test_case_ids=[
+                "TC-001",
+                "TC-002",
+            ],
+        )
+
+
+def test_project_automation_generation_rejects_empty_selection():
+    response = client.post(
+        "/api/projects/qa-project/automation",
+        json={
+            "selected_test_case_ids": [],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_project_qa_workspace_page_contains_automation_action():
+    response = client.get(
+        "/project-workspace"
+    )
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    assert (
+        'id="generate-project-automation-button"'
+        in html
+    )
+
+    assert (
+        "generateProjectAutomation()"
+        in html
+    )
+
+
+def test_project_qa_workspace_javascript_contains_automation_wiring():
+    response = client.get(
+        "/static/js/project_workspace.js"
+    )
+
+    assert response.status_code == 200
+
+    javascript = response.text
+
+    assert (
+        "generateProjectAutomation"
+        in javascript
+    )
+
+    assert (
+        'selected_test_case_ids'
+        in javascript
+    )
+
+    assert (
+        '"/automation"'
+        in javascript
+    )
+
+    assert (
+        'data-automation-candidate="true"'
+        in javascript
+    )
+
+    assert (
+        "updateProjectAutomationButton"
+        in javascript
+    )

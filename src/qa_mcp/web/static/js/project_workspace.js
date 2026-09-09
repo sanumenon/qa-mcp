@@ -10,6 +10,65 @@ function escapeHtml(value) {
 }
 
 
+function getProjectId() {
+
+    return document
+        .getElementById(
+            "repository-project-id"
+        )
+        .value
+        .trim();
+}
+
+
+function getProjectWorkspaceActionButton() {
+
+    return document.getElementById(
+        "generate-project-automation-button"
+    );
+}
+
+
+function getSelectedAutomationCandidateIds() {
+
+    return Array.from(
+        document.querySelectorAll(
+            'input[data-automation-candidate="true"]:checked'
+        )
+    ).map(
+        checkbox => checkbox.value
+    );
+}
+
+
+function updateProjectAutomationButton() {
+
+    const button =
+        getProjectWorkspaceActionButton();
+
+    if (!button) {
+        return;
+    }
+
+    const selectedIds =
+        getSelectedAutomationCandidateIds();
+
+    button.disabled =
+        selectedIds.length === 0;
+
+    if (selectedIds.length === 0) {
+
+        button.textContent =
+            "Generate Automation for Selected Candidates";
+
+    } else {
+
+        button.textContent =
+            `Generate Automation (${selectedIds.length} Selected)`;
+    }
+}
+
+
 async function loadProjectQAProjects() {
 
     const select =
@@ -66,12 +125,7 @@ async function loadProjectQAProjects() {
 async function loadProjectQAWorkspace() {
 
     const projectId =
-        document
-            .getElementById(
-                "repository-project-id"
-            )
-            .value
-            .trim();
+        getProjectId();
 
     const errorElement =
         document.getElementById(
@@ -88,6 +142,9 @@ async function loadProjectQAWorkspace() {
             "load-project-workspace-button"
         );
 
+    const automationButton =
+        getProjectWorkspaceActionButton();
+
     errorElement.textContent = "";
     resultElement.innerHTML = "";
 
@@ -96,6 +153,10 @@ async function loadProjectQAWorkspace() {
         errorElement.textContent =
             "Project ID is required.";
 
+        if (automationButton) {
+            automationButton.disabled = true;
+        }
+
         return;
     }
 
@@ -103,6 +164,10 @@ async function loadProjectQAWorkspace() {
 
     button.textContent =
         "Loading Project Workspace...";
+
+    if (automationButton) {
+        automationButton.disabled = true;
+    }
 
     try {
 
@@ -140,7 +205,164 @@ async function loadProjectQAWorkspace() {
 
         button.textContent =
             "Load Project Workspace";
+
+        updateProjectAutomationButton();
     }
+}
+
+
+async function generateProjectAutomation() {
+
+    const projectId =
+        getProjectId();
+
+    const selectedTestCaseIds =
+        getSelectedAutomationCandidateIds();
+
+    const errorElement =
+        document.getElementById(
+            "project-workspace-error"
+        );
+
+    const automationButton =
+        getProjectWorkspaceActionButton();
+
+    errorElement.textContent = "";
+
+    if (!projectId) {
+
+        errorElement.textContent =
+            "Project ID is required.";
+
+        return;
+    }
+
+    if (selectedTestCaseIds.length === 0) {
+
+        errorElement.textContent =
+            "Select at least one automation candidate.";
+
+        updateProjectAutomationButton();
+
+        return;
+    }
+
+    automationButton.disabled = true;
+
+    automationButton.textContent =
+        "Generating Automation...";
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/projects/" +
+                encodeURIComponent(projectId) +
+                "/automation",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify({
+                        selected_test_case_ids:
+                            selectedTestCaseIds,
+                    }),
+                }
+            );
+
+        const payload =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                payload.detail ||
+                "Unable to generate automation."
+            );
+        }
+
+        renderProjectAutomationResult(
+            payload
+        );
+
+        await loadProjectQAWorkspace();
+
+    } catch (error) {
+
+        errorElement.textContent =
+            error.message ||
+            "Unable to generate automation.";
+
+    } finally {
+
+        updateProjectAutomationButton();
+    }
+}
+
+
+function renderProjectAutomationResult(
+    payload
+) {
+
+    const resultElement =
+        document.getElementById(
+            "project-workspace-result"
+        );
+
+    const automationCases =
+        payload.automation_cases || [];
+
+    const automationArtifacts =
+        payload.automation_artifacts || [];
+
+    const project =
+        payload.project || {};
+
+    const summary =
+        document.createElement("div");
+
+    summary.className =
+        "result-block";
+
+    summary.innerHTML = `
+<h4>Automation Generation Result</h4>
+<p>
+Project:
+<strong>
+${escapeHtml(
+    project.name ||
+    project.project_id ||
+    ""
+)}
+</strong>
+</p>
+<p>
+Selected test cases:
+${escapeHtml(
+    String(
+        (payload.selected_test_case_ids || []).length
+    )
+)}
+</p>
+<p>
+Automation cases generated:
+${escapeHtml(
+    String(automationCases.length)
+)}
+</p>
+<p>
+Automation artifacts generated:
+${escapeHtml(
+    String(automationArtifacts.length)
+)}
+</p>
+`;
+
+    resultElement.prepend(
+        summary
+    );
 }
 
 
@@ -189,16 +411,36 @@ function renderProjectQAWorkspace(
 
     const testCaseRows =
         testCases.map(
-            item => `
+            item => {
+
+                const isCandidate =
+                    item.automation_candidate === true;
+
+                const checkbox =
+                    isCandidate
+                        ? `
+<input
+    type="checkbox"
+    value="${escapeHtml(item.id || "")}"
+    data-automation-candidate="true"
+    aria-label="Select ${escapeHtml(item.title || item.id || "")}"
+    onchange="updateProjectAutomationButton()"
+>
+`
+                        : "";
+
+                return `
 <tr>
+<td>${checkbox}</td>
 <td>${escapeHtml(item.id || "")}</td>
 <td>${escapeHtml(item.title || "")}</td>
 <td>${escapeHtml(item.priority || "")}</td>
 <td>${escapeHtml(item.test_type || "")}</td>
-<td>${item.automation_candidate ? "Yes" : "No"}</td>
+<td>${isCandidate ? "Yes" : "No"}</td>
 <td>${escapeHtml(String(item.suite_version || ""))}</td>
 </tr>
-`
+`;
+            }
         ).join("");
 
     const artifactRows =
@@ -270,6 +512,7 @@ ${suiteRows}
 
 <thead>
 <tr>
+<th>Select</th>
 <th>ID</th>
 <th>Title</th>
 <th>Priority</th>
@@ -307,6 +550,8 @@ ${artifactRows}
 </table>
 
 `;
+
+    updateProjectAutomationButton();
 }
 
 

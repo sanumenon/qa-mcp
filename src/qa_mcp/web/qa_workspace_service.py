@@ -223,6 +223,163 @@ class QAWorkspaceService:
             "automation_artifacts": automation_artifacts,
         }
 
+    def generate_automation_from_project(
+        self,
+        project_id: str,
+        selected_test_case_ids: list[str],
+    ) -> dict:
+        """Generate automation from persisted project test cases."""
+
+        if not selected_test_case_ids:
+            raise ValueError(
+                "At least one test case must be selected"
+            )
+
+        workspace = self.get_project_qa_workspace(
+            project_id
+        )
+
+        persisted_test_cases = workspace.get(
+            "test_cases",
+            []
+        )
+
+        test_cases_by_id = {}
+
+        for item in persisted_test_cases:
+            test_case_id = item.get("id")
+
+            if not test_case_id:
+                continue
+
+            test_cases_by_id[test_case_id] = (
+                TestCase.model_validate(item)
+            )
+
+        selected_ids = set(
+            selected_test_case_ids
+        )
+
+        unknown_ids = (
+            selected_ids
+            - set(test_cases_by_id)
+        )
+
+        if unknown_ids:
+            unknown_id = sorted(
+                unknown_ids
+            )[0]
+
+            raise ValueError(
+                f"Unknown test case: {unknown_id}"
+            )
+
+        selected_test_cases = [
+            test_cases_by_id[test_case_id]
+            for test_case_id in selected_test_case_ids
+        ]
+
+        candidate_result = (
+            self.automation_candidate_service
+            .select_candidates(
+                selected_test_cases
+            )
+        )
+
+        candidate_ids = set(
+            candidate_result.candidate_ids
+        )
+
+        non_candidate_ids = [
+            test_case.id
+            for test_case in selected_test_cases
+            if test_case.id not in candidate_ids
+        ]
+
+        if non_candidate_ids:
+            raise ValueError(
+                "Selected test case is not an automation candidate: "
+                f"{sorted(non_candidate_ids)[0]}"
+            )
+
+        if not self.automation_candidate_generation_service:
+            raise ValueError(
+                "Automation candidate generation is not configured"
+            )
+
+        automation_cases = (
+            self.automation_candidate_generation_service
+            .generate(
+                selected_test_cases
+            )
+        )
+
+        test_cases_by_id = {
+            test_case.id: test_case
+            for test_case in selected_test_cases
+        }
+
+        automation_artifacts = []
+
+        created_at = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        for automation_case in automation_cases:
+            artifact = (
+                self.automation_code_generation_service
+                .generate(
+                    automation_case
+                )
+            )
+
+            test_case_id = getattr(
+                automation_case,
+                "test_case_id",
+                None,
+            )
+
+            if not test_case_id:
+                raise ValueError(
+                    "Generated automation case is missing "
+                    f"test_case_id: {automation_case.id}"
+                )
+
+            if test_case_id not in test_cases_by_id:
+                raise ValueError(
+                    "Generated automation case references "
+                    f"unknown test case: {test_case_id}"
+                )
+
+            self.workspace_artifact_repository.save(
+                artifact=artifact,
+                project_id=project_id,
+                test_case_id=test_case_id,
+                created_at=created_at,
+            )
+
+            automation_artifacts.append(
+                artifact
+            )
+
+        return {
+            "project": workspace["project"],
+            "selected_test_case_ids": (
+                selected_test_case_ids
+            ),
+            "automation_candidates": (
+                candidate_result.model_dump()
+            ),
+            "automation_cases": [
+                automation_case.model_dump()
+                for automation_case in automation_cases
+            ],
+            "automation_artifacts": [
+                artifact.model_dump()
+                for artifact in automation_artifacts
+            ],
+        }
+
     def generate_qa_suite(
         self,
         project_id: str,
