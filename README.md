@@ -30,14 +30,14 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 ```text
 Repository:          https://github.com/sanumenon/qa-mcp/tree/main
 Branch:              main
-Latest commit:       9c251e0 Update continuity for P2-S9.12 workspace
-Previous commit:     cf572c2 Implement persistent project QA workspace
+Latest commit:       a3e6f76 Update continuity for project automation workflow
+Previous commit:     e186391 Implement project automation candidate workflow
 Previous implementation checkpoint: P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.12 — Automation Candidate Selection and Execution from Project QA Workspace
 Next implementation: P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
-Checkpoint commit:   e186391
+Checkpoint commit:   a3e6f76
 
 Latest validation:
 - 302 pytest tests passing.
