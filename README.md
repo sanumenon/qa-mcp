@@ -37,7 +37,7 @@ Remote:              origin/main
 Working tree before checkpoint: clean
 Current checkpoint:  P2-S9.12 — Automation Candidate Selection and Execution from Project QA Workspace
 Next implementation: P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
-Checkpoint commit:   PENDING
+Checkpoint commit:   e186391
 
 Latest validation:
 - 302 pytest tests passing.
@@ -50,7 +50,7 @@ Latest validation:
 - Persisted test cases are revalidated through the existing automation candidate-selection service before generation.
 - The existing automation candidate generation, automation case generation, validation, Playwright code generation, artifact generation, controlled execution, execution history, reporting, and failure-analysis pipeline remains reused rather than duplicated.
 - Existing Generate QA Suite functionality remains preserved.
-- Today's implementation changes are currently uncommitted and must be committed only after final verification.
+- Today's implementation changes are committed in checkpoint `e186391`.
 
 Next action:
 - Complete P2-S9.12 by continuing from generated automation artifacts into controlled automation execution from the Project QA Workspace.
@@ -2672,6 +2672,6 @@ git diff --check:                   clean
 P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 ```
 
-P2-S9.12 has progressed from the persistent Project QA Workspace to actionable automation-candidate selection and generation. The workspace can now select persisted automation candidates and invoke the existing automation generation and artifact-generation pipeline. The remaining work is to continue from generated automation artifacts into the completed controlled execution, execution-history, reporting, and failure-analysis pipeline.
+P2-S9.12 has progressed from the persistent Project QA Workspace to actionable automation-candidate selection and generation. The workspace can now select persisted automation candidates and invoke the existing automation generation and artifact-generation pipeline. This implementation is committed as `e186391`. The remaining work is to continue from generated automation artifacts into the completed controlled execution, execution-history, reporting, and failure-analysis pipeline.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
