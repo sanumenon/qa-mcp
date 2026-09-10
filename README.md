@@ -2561,6 +2561,10 @@ Warnings:                            8 known non-blocking warnings
 Failures:                            0
 git diff --check:                    clean
 ```
+The provider-failure diagnostic path now preserves the raw LLM provider response on `LLMGenerationError.provider_response` and logs that response at error level for IT troubleshooting. The API continues to return only the safe generic HTTP 502 message and does not expose the provider response to the end user.
+
+The diagnostic regression test verifies that the exact provider response is retained. Focused diagnostic validation passed with 39 tests, and the full regression suite remains at 304 passed with 8 known non-blocking warnings and 0 failures.
+
 The implementation is intentionally limited to prompt hardening, strict test-case response validation, LLM-generation error classification, API error mapping, and regression coverage. Do not bypass or weaken provider/dev-guardrail policy as part of this fix.
 
 Next implementation:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from pydantic import ValidationError
 
@@ -71,6 +72,9 @@ Rules:
 """
 
 
+logger = logging.getLogger(__name__)
+
+
 class TestCaseGenerator:
 
     def __init__(self, llm: LLMProvider):
@@ -98,8 +102,15 @@ class TestCaseGenerator:
 
         except json.JSONDecodeError as exc:
 
+            logger.error(
+                "QA test-case generation failed: LLM returned unusable "
+                "non-JSON response. Provider response: %r",
+                raw_response,
+            )
+
             raise LLMGenerationError(
-                "LLM returned an unusable response for test-case generation."
+                "LLM returned an unusable response for test-case generation.",
+                provider_response=raw_response,
             ) from exc
 
         if not isinstance(payload, dict):

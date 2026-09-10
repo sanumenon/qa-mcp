@@ -276,11 +276,13 @@ def test_generator_rejects_invalid_json():
     with pytest.raises(
         LLMGenerationError,
         match="unusable response for test-case generation",
-    ):
+    ) as exc_info:
 
         generator.generate(
             build_request()
         )
+
+    assert exc_info.value.provider_response == "not-json"
 
 
 def test_generator_rejects_single_test_case_object_response():

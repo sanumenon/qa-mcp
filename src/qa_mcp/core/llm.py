@@ -17,6 +17,15 @@ class LLMProvider(Protocol):
 class LLMGenerationError(RuntimeError):
     """Raised when the configured LLM cannot produce a usable response."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider_response: str | None = None,
+    ):
+        super().__init__(message)
+        self.provider_response = provider_response
+
 
 @dataclass
 class MockLLM:
