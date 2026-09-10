@@ -2538,13 +2538,38 @@ Project QA Workspace
 
 Completed automation candidate selection, candidate generation, automation case generation, validation, Playwright code generation, artifact generation, command-boundary enforcement, execution configuration, controlled execution, execution history, reporting, and failure-analysis services must continue to be reused rather than rebuilt.
 
+Current checkpoint:
+
+P2-S9.12 QA Suite Generation and LLM Error-Boundary Hardening
+
+The Project QA Workspace QA-suite generation flow has been hardened to require a complete test-case suite covering the supplied positive scenarios, negative scenarios, and edge cases. The generator now rejects malformed or incomplete LLM payloads instead of silently normalizing them into a single test case.
+
+The LLM generation boundary now distinguishes unusable provider output from application validation failures. In particular, a provider/guardrail refusal is surfaced as `LLMGenerationError` and returned by the QA-suite API as HTTP 502 rather than being incorrectly classified as HTTP 404.
+
+During validation, the configured Bedrock provider returned the following non-JSON response:
+
+`The response was blocked by dev-guardrails policy. If this looks like a false positive, ping #ai-guardrails.`
+
+This confirmed that the observed single-test-case UI symptom was not caused by application-side test-case truncation. The provider response was blocked before a test-case suite could be produced.
+
+Validation completed:
+
+```text
+Focused generator/dashboard tests:  30 passed
+Full regression suite:              304 passed
+Warnings:                            8 known non-blocking warnings
+Failures:                            0
+git diff --check:                    clean
+```
+The implementation is intentionally limited to prompt hardening, strict test-case response validation, LLM-generation error classification, API error mapping, and regression coverage. Do not bypass or weaken provider/dev-guardrail policy as part of this fix.
+
 Next implementation:
 
 P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
 
 The next implementation should wire the already-generated project automation artifacts into the completed controlled execution pipeline, including execution configuration, command-boundary enforcement, execution history, reporting, and failure analysis.
 
-Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
+Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, automation artifact generation, or the QA-suite generation/error-boundary hardening completed in this checkpoint.
 
 ### P2-S9.11 — AI QA Workspace Artifact Generation
 

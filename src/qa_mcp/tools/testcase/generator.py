@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+
+from pydantic import ValidationError
+
 from qa_mcp.core.json_response import parse_json_response
 
-from qa_mcp.core.llm import LLMProvider
+from qa_mcp.core.llm import (
+    LLMGenerationError,
+    LLMProvider,
+)
 from qa_mcp.models.schemas import (
     TestCaseGenerationRequest,
     TestCaseResponse,
@@ -43,12 +49,24 @@ Return ONLY valid JSON with exactly this structure:
 Rules:
 - Each test case must test one clear behavior.
 - Cover positive, negative and applicable boundary scenarios.
+- Generate a complete test-case suite for the supplied requirement analysis.
+- Collectively cover every materially distinct scenario in the supplied
+  positive_scenarios, negative_scenarios, and edge_cases.
+- Each materially distinct scenario must be represented by at least one
+  appropriate test case.
+- Multiple scenarios may be combined into one test case only when the
+  resulting test case still clearly verifies each scenario.
+- Do not stop after generating one or a small subset of scenarios.
+- Before returning the response, verify that the generated test-case suite
+  provides coverage across all supplied scenario categories.
 - Do not invent behavior that is not supported by the requirement.
 - Use missing_information from the analysis to avoid pretending unknowns are
   confirmed requirements.
 - Steps must be executable by a tester.
 - Expected results must be observable and testable.
 - IDs must start at TC001 and increment sequentially.
+- The response must always use the required "test_cases" wrapper.
+- Never return a single test-case object without the "test_cases" wrapper.
 - Do not include markdown or commentary outside the JSON.
 """
 
@@ -80,31 +98,38 @@ class TestCaseGenerator:
 
         except json.JSONDecodeError as exc:
 
-            raise ValueError(
-                "LLM returned invalid JSON for test-case generation."
+            raise LLMGenerationError(
+                "LLM returned an unusable response for test-case generation."
             ) from exc
 
-        # Bedrock may occasionally return a single test-case object
-        # instead of the requested {"test_cases": [...]} wrapper.
-        # Normalize only when the payload is unambiguously a TestCase.
-        if (
-            isinstance(payload, dict)
-            and "test_cases" not in payload
-            and "id" in payload
-            and "title" in payload
-            and "priority" in payload
-            and "test_type" in payload
-            and "preconditions" in payload
-            and "steps" in payload
-            and "expected_result" in payload
-        ):
-            payload = {
-                "test_cases": [payload]
-            }
+        if not isinstance(payload, dict):
+            raise LLMGenerationError(
+                "LLM returned an invalid test-case generation payload."
+            )
 
-        response = TestCaseResponse.model_validate(
-            payload
-        )
+        if "test_cases" not in payload:
+            raise LLMGenerationError(
+                "LLM returned an incomplete test-case generation payload."
+            )
+
+        if not isinstance(payload["test_cases"], list):
+            raise LLMGenerationError(
+                "LLM returned an invalid test_cases collection."
+            )
+
+        if not payload["test_cases"]:
+            raise LLMGenerationError(
+                "LLM returned no test cases."
+            )
+
+        try:
+            response = TestCaseResponse.model_validate(
+                payload
+            )
+        except ValidationError as exc:
+            raise LLMGenerationError(
+                "LLM returned an invalid test-case generation payload."
+            ) from exc
 
         self._validate_ids(response)
 

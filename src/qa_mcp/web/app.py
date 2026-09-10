@@ -32,7 +32,10 @@ from qa_mcp.core.automation.execution_reporting_service import (
     AutomationExecutionReportingService,
 )
 from qa_mcp.core.config import load_config
-from qa_mcp.core.llm import create_llm
+from qa_mcp.core.llm import (
+    LLMGenerationError,
+    create_llm,
+)
 from qa_mcp.core.project.context import ProjectContext
 from qa_mcp.core.versioning.service import (
     QARequirementVersioningService,
@@ -270,6 +273,11 @@ def generate_qa_suite(
             project_id=project_id,
             requirement=request.requirement,
         )
+    except LLMGenerationError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=str(exc),
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=404,

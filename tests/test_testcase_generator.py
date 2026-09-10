@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from qa_mcp.core.llm import LLMGenerationError
 from qa_mcp.models.schemas import (
     RequirementAnalysis,
     RequirementRequest,
@@ -212,6 +213,51 @@ def test_generator_returns_structured_test_cases():
     )
 
 
+def test_generator_prompt_requires_complete_scenario_coverage():
+
+    fake_llm = FakeLLM(
+        sample_test_cases()
+    )
+
+    generator = Generator(
+        fake_llm
+    )
+
+    generator.generate(
+        build_request()
+    )
+
+    assert (
+        "complete test-case suite"
+        in fake_llm.last_prompt
+    )
+
+    assert (
+        "positive_scenarios"
+        in fake_llm.last_prompt
+    )
+
+    assert (
+        "negative_scenarios"
+        in fake_llm.last_prompt
+    )
+
+    assert (
+        "edge_cases"
+        in fake_llm.last_prompt
+    )
+
+    assert (
+        "Do not stop after generating one or a small subset of scenarios."
+        in fake_llm.last_prompt
+    )
+
+    assert (
+        'test_cases" wrapper'
+        in fake_llm.last_prompt
+    )
+
+
 def test_generator_rejects_invalid_json():
 
     class InvalidLLM:
@@ -228,8 +274,8 @@ def test_generator_rejects_invalid_json():
     )
 
     with pytest.raises(
-        ValueError,
-        match="invalid JSON",
+        LLMGenerationError,
+        match="unusable response for test-case generation",
     ):
 
         generator.generate(
@@ -237,7 +283,7 @@ def test_generator_rejects_invalid_json():
         )
 
 
-def test_generator_accepts_single_test_case_object_response():
+def test_generator_rejects_single_test_case_object_response():
     payload = {
         "id": "TC001",
         "title": "Successful password reset",
@@ -260,12 +306,14 @@ def test_generator_accepts_single_test_case_object_response():
         FakeLLM(payload)
     )
 
-    response = generator.generate(
-        build_request()
-    )
+    with pytest.raises(
+        LLMGenerationError,
+        match="incomplete test-case generation payload",
+    ):
 
-    assert len(response.test_cases) == 1
-    assert response.test_cases[0].id == "TC001"
+        generator.generate(
+            build_request()
+        )
 
 
 def test_generator_rejects_non_sequential_ids():

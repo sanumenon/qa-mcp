@@ -133,6 +133,43 @@ def test_qa_workspace_endpoint():
             ),
         )
 
+def test_qa_workspace_returns_502_for_llm_generation_failure():
+    with patch(
+        "qa_mcp.web.app.qa_workspace_service"
+    ) as service:
+
+        from qa_mcp.core.llm import LLMGenerationError
+
+        service.generate_qa_suite.side_effect = LLMGenerationError(
+            "LLM returned an unusable response for test-case generation."
+        )
+
+        response = client.post(
+            "/api/projects/qa-project/qa-suite",
+            json={
+                "requirement": (
+                    "User can reset password."
+                )
+            },
+        )
+
+        assert response.status_code == 502
+
+        assert response.json() == {
+            "detail": (
+                "LLM returned an unusable response "
+                "for test-case generation."
+            )
+        }
+
+        service.generate_qa_suite.assert_called_once_with(
+            project_id="qa-project",
+            requirement=(
+                "User can reset password."
+            ),
+        )
+
+
 def test_qa_project_workspace_endpoint():
     with patch(
         "qa_mcp.web.app.qa_workspace_service"

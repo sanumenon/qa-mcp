@@ -14,6 +14,10 @@ class LLMProvider(Protocol):
         ...
 
 
+class LLMGenerationError(RuntimeError):
+    """Raised when the configured LLM cannot produce a usable response."""
+
+
 @dataclass
 class MockLLM:
     """Deterministic local provider used for development and tests."""
