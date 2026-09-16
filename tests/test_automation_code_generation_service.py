@@ -37,10 +37,8 @@ def test_code_generation_service_generates_playwright_python_artifact():
     assert result.language == "Python"
     assert result.file_name == "test_successful_login.py"
 
-    assert (
-        "page.goto('http://localhost:8000/login')"
-        in result.code
-    )
+    assert 'BASE_URL = os.getenv("BASE_URL", "").rstrip("/")' in result.code
+    assert "page.goto(f'{BASE_URL}/login')" in result.code
 
     assert (
         "page.locator('#username').fill('testuser')"

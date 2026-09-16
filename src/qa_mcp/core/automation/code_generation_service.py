@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from qa_mcp.models.schemas import (
     AutomationCase,
     GeneratedAutomationArtifact,
@@ -69,8 +71,12 @@ class AutomationCodeGenerationService:
         function_name: str,
     ) -> str:
         lines = [
+            "import os",
+            "",
             "from playwright.sync_api import Page, expect",
             "",
+            "",
+            'BASE_URL = os.getenv("BASE_URL", "").rstrip("/")',
             "",
             f"def {function_name}(page: Page):",
         ]
@@ -99,7 +105,23 @@ class AutomationCodeGenerationService:
                     "Invalid goto step: URL is required"
                 )
 
-            return f'page.goto({url!r})'
+            parsed_url = urlsplit(url)
+
+            if parsed_url.scheme in {"http", "https"} and parsed_url.netloc:
+                navigation_path = parsed_url.path or "/"
+
+                if parsed_url.query:
+                    navigation_path += f"?{parsed_url.query}"
+
+                if parsed_url.fragment:
+                    navigation_path += f"#{parsed_url.fragment}"
+
+                if not navigation_path.startswith("/"):
+                    navigation_path = f"/{navigation_path}"
+
+                return f"page.goto(f'{{BASE_URL}}{navigation_path}')"
+
+            return f"page.goto({url!r})"
 
         if step.startswith("click: "):
             selector = step[7:].strip()
