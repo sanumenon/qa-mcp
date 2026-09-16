@@ -27,131 +27,59 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 ## Repository checkpoint
 
-```text
-Repository:          https://github.com/sanumenon/qa-mcp/tree/main
-Branch:              main
-Latest commit:       a3e6f76 Update continuity for project automation workflow
-Previous commit:     e186391 Implement project automation candidate workflow
-Previous implementation checkpoint: P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
-Remote:              origin/main
-Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.12 — Project Workspace Execution History and Result Review
-Next implementation: P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent skills.md
-Checkpoint commit:   a3e6f76
+Current checkpoint: P2-S9.12 — Project Workspace Execution History and Result Review
 
-Latest validation:
-- 302 pytest tests passing.
-- Project QA Workspace and dashboard focused tests: 34 passed.
-- Full regression suite: 302 passed, 8 known non-blocking warnings, 0 failures.
-- `git diff --check` is clean.
-- Project QA Workspace now provides actionable automation-candidate selection.
-- Users can select persisted automation candidates and invoke automation generation from the Project QA Workspace.
-- The browser UI is wired to `POST /api/projects/{project_id}/automation`.
-- Persisted test cases are revalidated through the existing automation candidate-selection service before generation.
-- The existing automation candidate generation, automation case generation, validation, Playwright code generation, artifact generation, controlled execution, execution history, reporting, and failure-analysis pipeline remains reused rather than duplicated.
-- Existing Generate QA Suite functionality remains preserved.
-- Today's implementation changes are committed in checkpoint `e186391`.
+Checkpoint commit: 28f74bf — Implement project execution history and result review
 
-Next action:
-- Complete P2-S9.12 by continuing from generated automation artifacts into controlled automation execution from the Project QA Workspace.
-- Reuse the completed execution configuration, command boundary, execution runner, execution history, reporting, and failure-analysis services.
-- Do not recreate completed capabilities or redesign the existing QA Suite generation workflow.
+Repository state:
+- Branch: `main`
+- Remote: `origin/main`
+- Working tree: clean after the README continuity commit
+- Latest verified full regression: **310 passed, 8 known non-blocking warnings, 0 failures**
+- `git diff --check`: passed
+
+Implemented and verified in this checkpoint:
+- Project workspace execution history
+- Project execution detail retrieval
+- Project execution reporting
+- Project execution failure analysis
+- Backend API routes for project execution history and result review
+- Workspace-service integration for execution history and result review
+- Focused regression coverage for the project execution history APIs
+
+## Next implementation
+
+**P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent `skills.md`**
+
+The next step is an audit before coding:
+
+1. Inventory implemented backend capabilities.
+2. Inventory existing dashboard and project-workspace UI capabilities.
+3. Identify backend capabilities not exposed through the UI.
+4. Identify UI actions that are not correctly connected to backend services.
+5. Define the QA Agent `skills.md` contract based on verified capabilities.
+6. Do not redesign the existing UI.
+7. Implement one small, testable change at a time.
+8. Run focused tests, full regression, and MCP runtime verification.
+9. Update this README after every completed checkpoint.
 
 ## Latest verified baseline
 
+The latest repository verification was completed on the current `main` branch:
+
 ```text
 pytest -q
-298 passed
-8 warnings
-0 failures
-
-P2-S9.11 Web Dashboard focused suite:
-16 passed
-0 failures
-
-P2-S9.11 Browser regression test:
-1 passed
-0 failures
+310 passed, 8 warnings, 0 failures
 
 git diff --check
-clean
+passed
 
-git status
-working tree clean
+git status -sb
+## main...origin/main
 ```
 
-The warnings are known non-blocking technical debt and are documented below.
+The warnings are currently treated as known non-blocking technical debt and are documented in Section 15.
 
-
-P2-S9.x Bedrock integration completion:
-- Added Bedrock Converse API support to `BedrockLLM`.
-- Preserved the existing replaceable `LLMProvider` abstraction.
-- Added Converse-based response handling for supported Bedrock models.
-- Verified organization-provided Bedrock bearer-key authentication through the application path.
-- Verified `us-east-1` with `us.anthropic.claude-sonnet-4-5-20250929-v1:0`.
-- Verified real `BedrockLLM.generate()` execution successfully.
-- Expanded LLM regression coverage.
-- Full regression suite: 276 passed, 8 known warnings, 0 failures.
-- `.env` remains untracked and secrets are not committed.
-- `moonshotai.kimi-k2.5` was tested separately but is not the validated application baseline; do not make it the default until its organization-approved application path is confirmed.
-
-The full regression suite and the browser-level dashboard regression test have both been verified after the P2-S9.11 implementation.
-
-P2-S9.11 UI correction:
-
-- Corrected the QA Workspace button wiring so `Create QA Project` invokes project creation and `Generate QA Suite` invokes QA suite generation.
-- Preserved the stable `create-qa-project-button` and `generate-qa-suite-button` identifiers.
-- Verified the focused dashboard suite: 16 passed, 1 known warning.
-- Verified the browser-level dashboard flow: 1 passed.
-- Verified the full regression suite: 281 passed, 8 known warnings, 0 failures.
-- This correction is committed as `9dce673`.
-
-P2-S9.11 UI execution hardening:
-
-- Hardened the Generate QA Suite button state so a generation request disables the button and displays `Generating QA Suite...`.
-- The button is restored to `Generate QA Suite` and re-enabled in a `finally` path after both successful and failed generation attempts.
-- Generation errors are surfaced through the existing `qa-workspace-error` result area so the user receives a visible completion/error state instead of repeatedly submitting the request.
-- Added stable `create-qa-project-button` and `generate-qa-suite-button` identifiers for browser-level regression coverage.
-- Updated dashboard tests to verify the new UI wiring and generation-state behavior.
-- Verified the focused web dashboard suite: 16 passed, 1 known warning.
-- Verified the full regression suite: 281 passed, 8 known warnings, 0 failures.
-
-P2-S9.11 artifact generation completion:
-- Added deterministic browser-level verification of the AI QA Workspace.
-- Added UI-driven QA suite generation through the selected project.
-- Added generated test-case selection with Select All / Clear All controls.
-- Added selected test-case count tracking in the dashboard.
-- Added selective QA suite persistence through POST /api/projects/{project_id}/qa-suite/save.
-- Added validation that only generated test-case IDs can be persisted.
-- Added suite version feedback after successful save.
-- Added browser regression coverage for partial and full test-case selection/save flows.
-- Verified the focused dashboard suite: 16 passed, 1 known warning, 0 failures.
-- Verified the full regression suite: 281 passed, 8 known warnings, 0 failures.
-- `git diff --check` is clean.
-- Commit: `24a341b Implement AI QA workspace artifact generation`.
-
-P2-S9.11 project workspace completion:
-- Added persistent project listing through ProjectRepository and SQLiteProjectRepository.
-- Added ProjectContext and QAWorkspaceService project-listing support.
-- Added GET /api/projects for dashboard project discovery.
-- Replaced the QA Suite Project ID text input with a project dropdown.
-- Project selection now drives QA Suite generation using the selected project_id.
-- Newly created projects are automatically refreshed into the dropdown and selected.
-- Verified end-to-end project selection and successful AI QA test-case generation.
-
-## Latest completed automation checkpoint
-
-```text
-P2-S8.6   Automation Candidate Selection          COMPLETE
-P2-S8.7   Candidate → Automation Generation       COMPLETE
-P2-S8.8   Automation Case Validation              COMPLETE
-P2-S8.8+  Automation Code Generation              COMPLETE
-P2-S8.9   Controlled Automation Execution         COMPLETE
-```
-
-**Do not rebuild or redesign these completed checkpoints.**
-
----
 
 # 2. PRODUCT VISION
 
