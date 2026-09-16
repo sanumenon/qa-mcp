@@ -835,3 +835,128 @@ def test_get_project_qa_workspace_returns_empty_collections_for_new_project():
     assert result["suite_versions"] == []
     assert result["test_cases"] == []
     assert result["automation_artifacts"] == []
+
+
+def test_execute_project_automation_executes_and_saves_history():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    execution_service = Mock()
+    execution_history_service = Mock()
+
+    execution_result = Mock()
+    execution_result.model_dump.return_value = {
+        "execution_id": "EX-001",
+        "automation_artifact_id": "GA001",
+        "automation_case_id": "AC-001",
+        "status": "PASSED",
+        "exit_code": 0,
+        "stdout": "1 passed",
+        "stderr": "",
+        "duration_seconds": 0.12,
+        "error": None,
+    }
+
+    execution_service.execute.return_value = execution_result
+
+    service.automation_execution_service = execution_service
+    service.automation_execution_history_service = (
+        execution_history_service
+    )
+
+    workspace_artifact_repository.get_for_project.return_value = {
+        "artifact_id": "GA001",
+        "project_id": "qa-project",
+        "automation_case_id": "AC-001",
+        "test_case_id": "TC-001",
+        "framework": "Playwright",
+        "language": "Python",
+        "file_name": "test_reset_password.py",
+        "code": (
+            "from playwright.sync_api import Page, expect"
+        ),
+        "created_at": "2026-09-16T00:00:00+00:00",
+    }
+
+    result = service.execute_project_automation(
+        project_id="qa-project",
+        artifact_id="GA001",
+    )
+
+    project_context.get_project.assert_called_once_with(
+        "qa-project"
+    )
+
+    workspace_artifact_repository.get_for_project.assert_called_once_with(
+        project_id="qa-project",
+        artifact_id="GA001",
+    )
+
+    execution_service.execute.assert_called_once()
+
+    executed_artifact = (
+        execution_service.execute.call_args.args[0]
+    )
+
+    assert executed_artifact.id == "GA001"
+    assert executed_artifact.automation_case_id == "AC-001"
+    assert executed_artifact.framework == "Playwright"
+    assert executed_artifact.language == "Python"
+    assert executed_artifact.file_name == (
+        "test_reset_password.py"
+    )
+
+    execution_history_service.save.assert_called_once_with(
+        execution_result
+    )
+
+    assert result["execution_id"] == "EX-001"
+    assert result["status"] == "PASSED"
+
+
+def test_execute_project_automation_rejects_missing_artifact():
+    (
+        service,
+        project_context,
+        workflow,
+        requirement_versioning,
+        suite_versioning,
+        automation_candidate_generation_service,
+        automation_code_generation_service,
+        workspace_artifact_repository,
+    ) = build_service()
+
+    execution_service = Mock()
+    execution_history_service = Mock()
+
+    service.automation_execution_service = execution_service
+    service.automation_execution_history_service = (
+        execution_history_service
+    )
+
+    workspace_artifact_repository.get_for_project.return_value = None
+
+    with pytest.raises(
+        ValueError,
+        match="Automation artifact not found: GA404",
+    ):
+        service.execute_project_automation(
+            project_id="qa-project",
+            artifact_id="GA404",
+        )
+
+    workspace_artifact_repository.get_for_project.assert_called_once_with(
+        project_id="qa-project",
+        artifact_id="GA404",
+    )
+
+    execution_service.execute.assert_not_called()
+    execution_history_service.save.assert_not_called()

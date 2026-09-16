@@ -190,7 +190,8 @@ async function loadProjectQAWorkspace() {
         }
 
         renderProjectQAWorkspace(
-            payload
+            payload,
+            projectId
         );
 
     } catch (error) {
@@ -366,8 +367,131 @@ ${escapeHtml(
 }
 
 
+async function executeProjectAutomation(
+    artifactId
+) {
+
+    const projectId =
+        getProjectId();
+
+    const errorElement =
+        document.getElementById(
+            "project-workspace-error"
+        );
+
+    const resultElement =
+        document.getElementById(
+            "project-workspace-result"
+        );
+
+    if (!projectId || !artifactId) {
+
+        errorElement.textContent =
+            "Project ID and artifact ID are required.";
+
+        return;
+    }
+
+    errorElement.textContent = "";
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/projects/" +
+                encodeURIComponent(projectId) +
+                "/automation/" +
+                encodeURIComponent(artifactId) +
+                "/execute",
+                {
+                    method: "POST"
+                }
+            );
+
+        const payload =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                payload.detail ||
+                "Unable to execute automation."
+            );
+        }
+
+        const status =
+            escapeHtml(payload.status || "");
+
+        const stdout =
+            escapeHtml(
+                payload.stdout ||
+                payload.output ||
+                ""
+            );
+
+        const stderr =
+            escapeHtml(
+                payload.stderr ||
+                payload.error ||
+                ""
+            );
+
+        resultElement.insertAdjacentHTML(
+            "afterbegin",
+            `
+        <p>
+        <strong>Execution result for
+        ${escapeHtml(artifactId)}:
+        ${status}
+        </strong>
+        </p>
+
+        ${
+            stdout
+                ? `
+        <h5>Output</h5>
+        <pre>${stdout}</pre>
+        `
+                : ""
+        }
+
+        ${
+            stderr
+                ? `
+        <h5>Error Output</h5>
+        <pre>${stderr}</pre>
+        `
+                : ""
+        }
+        `
+        );
+
+        resultElement.insertAdjacentHTML(
+            "afterbegin",
+            `
+<p>
+<strong>Execution result for
+${escapeHtml(artifactId)}:
+${status}
+</strong>
+</p>
+<pre>${output}</pre>
+`
+        );
+
+    } catch (error) {
+
+        errorElement.textContent =
+            error.message ||
+            "Unable to execute automation.";
+
+    }
+}
+
+
 function renderProjectQAWorkspace(
-    payload
+    payload,
+    projectId
 ) {
 
     const resultElement =
@@ -445,15 +569,29 @@ function renderProjectQAWorkspace(
 
     const artifactRows =
         automationArtifacts.map(
-            item => `
+            item => {
+
+                const artifactId =
+                    item.artifact_id || "";
+
+                return `
 <tr>
-<td>${escapeHtml(item.artifact_id || "")}</td>
+<td>${escapeHtml(artifactId)}</td>
 <td>${escapeHtml(item.test_case_id || "")}</td>
 <td>${escapeHtml(item.automation_case_id || "")}</td>
 <td>${escapeHtml(item.framework || "")}</td>
 <td>${escapeHtml(item.language || "")}</td>
+<td>
+<button
+    type="button"
+    onclick="executeProjectAutomation('${escapeHtml(artifactId)}')"
+>
+    Execute
+</button>
+</td>
 </tr>
-`
+`;
+            }
         ).join("");
 
     const project =
@@ -540,6 +678,7 @@ ${testCaseRows}
 <th>Automation Case</th>
 <th>Framework</th>
 <th>Language</th>
+<th>Actions</th>
 </tr>
 </thead>
 

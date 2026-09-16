@@ -12,6 +12,12 @@ from qa_mcp.core.automation.candidate_generation_service import (
 from qa_mcp.core.automation.code_generation_service import (
     AutomationCodeGenerationService,
 )
+from qa_mcp.core.automation.execution_service import (
+    AutomationExecutionService,
+)
+from qa_mcp.core.automation.execution_history_service import (
+    AutomationExecutionHistoryService,
+)
 from qa_mcp.core.automation.candidate_selector import (
     AutomationCandidateSelector,
 )
@@ -29,6 +35,7 @@ from qa_mcp.models.schemas import (
     TestCase,
     TestCaseResponse,
     TestCaseReview,
+    GeneratedAutomationArtifact,
 )
 from qa_mcp.tools.workflow.qa_suite import (
     QASuiteWorkflow,
@@ -59,6 +66,12 @@ class QAWorkspaceService:
         ) = None,
         workspace_artifact_repository: (
             SQLiteQAWorkspaceArtifactRepository | None
+        ) = None,
+        automation_execution_service: (
+            AutomationExecutionService | None
+        ) = None,
+        automation_execution_history_service: (
+            AutomationExecutionHistoryService | None
         ) = None,
     ):
         self.project_context = project_context
@@ -91,6 +104,16 @@ class QAWorkspaceService:
         self.workspace_artifact_repository = (
             workspace_artifact_repository
             or SQLiteQAWorkspaceArtifactRepository()
+        )
+
+        self.automation_execution_service = (
+            automation_execution_service
+            or AutomationExecutionService()
+        )
+
+        self.automation_execution_history_service = (
+            automation_execution_history_service
+            or AutomationExecutionHistoryService()
         )
 
     def list_projects(
@@ -379,6 +402,47 @@ class QAWorkspaceService:
                 for artifact in automation_artifacts
             ],
         }
+
+    def execute_project_automation(
+        self,
+        project_id: str,
+        artifact_id: str,
+    ) -> dict:
+        """Execute a persisted automation artifact belonging to a project."""
+
+        self.get_project(project_id)
+
+        artifact_row = (
+            self.workspace_artifact_repository
+            .get_for_project(
+                project_id=project_id,
+                artifact_id=artifact_id,
+            )
+        )
+
+        if artifact_row is None:
+            raise ValueError(
+                f"Automation artifact not found: {artifact_id}"
+            )
+
+        artifact = GeneratedAutomationArtifact(
+            id=artifact_row["artifact_id"],
+            automation_case_id=artifact_row["automation_case_id"],
+            framework=artifact_row["framework"],
+            language=artifact_row["language"],
+            file_name=artifact_row["file_name"],
+            code=artifact_row["code"],
+        )
+
+        result = self.automation_execution_service.execute(
+            artifact
+        )
+
+        self.automation_execution_history_service.save(
+            result
+        )
+
+        return result.model_dump()
 
     def generate_qa_suite(
         self,

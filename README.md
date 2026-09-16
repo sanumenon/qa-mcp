@@ -2540,7 +2540,29 @@ Completed automation candidate selection, candidate generation, automation case 
 
 Current checkpoint:
 
-P2-S9.12 QA Suite Generation and LLM Error-Boundary Hardening
+P2-S9.12 — Controlled Automation Execution from Project QA Workspace
+
+The Project QA Workspace now supports controlled execution of persisted automation artifacts. Execution is scoped to the selected project, reuses the existing controlled execution pipeline, and persists results through the existing execution-history service.
+
+Implemented in this continuation:
+
+- Added project-scoped persisted automation-artifact lookup.
+- Added controlled execution through the existing `AutomationExecutionService`.
+- Added execution-result persistence through `AutomationExecutionHistoryService`.
+- Added `POST /api/projects/{project_id}/automation/{artifact_id}/execute`.
+- Added Execute actions for generated automation artifacts in the Project QA Workspace.
+- Added workspace feedback for execution status, stdout, stderr, and errors.
+- Preserved existing automation generation, validation, artifact generation, command-boundary enforcement, execution configuration, reporting, and failure-analysis functionality.
+
+Validation completed:
+
+```text
+Python compilation:                 passed
+Full regression suite:              306 passed
+Warnings:                            8 known non-blocking warnings
+Failures:                            0
+git diff --check:                    clean
+```
 
 The Project QA Workspace QA-suite generation flow has been hardened to require a complete test-case suite covering the supplied positive scenarios, negative scenarios, and edge cases. The generator now rejects malformed or incomplete LLM payloads instead of silently normalizing them into a single test case.
 
@@ -2569,9 +2591,9 @@ The implementation is intentionally limited to prompt hardening, strict test-cas
 
 Next implementation:
 
-P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
+P2-S9.12 continuation — Project Workspace Execution History and Result Review
 
-The next implementation should wire the already-generated project automation artifacts into the completed controlled execution pipeline, including execution configuration, command-boundary enforcement, execution history, reporting, and failure analysis.
+The next implementation should expose persisted execution history and result review from the Project QA Workspace by reusing the existing execution-history, reporting, and failure-analysis services.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, automation artifact generation, or the QA-suite generation/error-boundary hardening completed in this checkpoint.
 

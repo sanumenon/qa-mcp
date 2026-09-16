@@ -1184,3 +1184,18 @@ def test_project_qa_workspace_javascript_contains_automation_wiring():
         "updateProjectAutomationButton"
         in javascript
     )
+
+    assert (
+        "executeProjectAutomation"
+        in javascript
+    )
+
+    assert (
+        "/automation/"
+        in javascript
+    )
+
+    assert (
+        "/execute"
+        in javascript
+    )

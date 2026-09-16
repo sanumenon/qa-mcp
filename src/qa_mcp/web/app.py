@@ -28,6 +28,9 @@ from qa_mcp.tools.automation.generator import (
 from qa_mcp.core.automation.execution_history_service import (
     AutomationExecutionHistoryService,
 )
+from qa_mcp.core.automation.execution_service import (
+    AutomationExecutionService,
+)
 from qa_mcp.core.automation.execution_reporting_service import (
     AutomationExecutionReportingService,
 )
@@ -70,6 +73,10 @@ reporting_service = AutomationExecutionReportingService(
 
 failure_analysis_service = (
     AutomationExecutionFailureAnalysisService()
+)
+
+workspace_automation_execution_service = (
+    AutomationExecutionService()
 )
 
 
@@ -161,6 +168,12 @@ qa_workspace_service = QAWorkspaceService(
     ),
     automation_code_generation_service=(
         workspace_automation_code_generation_service
+    ),
+    automation_execution_service=(
+        workspace_automation_execution_service
+    ),
+    automation_execution_history_service=(
+        history_service
     ),
 )
 
@@ -308,6 +321,32 @@ def generate_project_automation(
             "not found" in message.lower()
             or "unknown test case" in message.lower()
         ):
+            status_code = 404
+        else:
+            status_code = 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from exc
+
+
+@app.post(
+    "/api/projects/{project_id}/automation/{artifact_id}/execute"
+)
+def execute_project_automation(
+    project_id: str,
+    artifact_id: str,
+):
+    try:
+        return qa_workspace_service.execute_project_automation(
+            project_id=project_id,
+            artifact_id=artifact_id,
+        )
+    except ValueError as exc:
+        message = str(exc)
+
+        if "not found" in message.lower():
             status_code = 404
         else:
             status_code = 400
