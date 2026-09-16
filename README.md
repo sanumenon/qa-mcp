@@ -25,61 +25,71 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-## Repository checkpoint
+**Current checkpoint:** P2-S9.12 — Automation Execution Configuration Hardening
 
-Current checkpoint: P2-S9.12 — Project Workspace Execution History and Result Review
+**Checkpoint commit:** `8b2e406`
 
-Checkpoint commit: 28f74bf — Implement project execution history and result review
+**Repository:** `https://github.com/sanumenon/qa-mcp`
 
-Repository state:
-- Branch: `main`
-- Remote: `origin/main`
-- Working tree: clean after the README continuity commit
-- Latest verified full regression: **310 passed, 8 known non-blocking warnings, 0 failures**
-- `git diff --check`: passed
+**Branch:** `main`
 
-Implemented and verified in this checkpoint:
-- Project workspace execution history
-- Project execution detail retrieval
-- Project execution reporting
-- Project execution failure analysis
-- Backend API routes for project execution history and result review
-- Workspace-service integration for execution history and result review
-- Focused regression coverage for the project execution history APIs
+**Latest verified baseline:**
+
+- Full regression: **310 passed**
+- Warnings: **8**
+- Failures: **0**
+- `git diff --check`: clean
+- Working tree: clean at the last verified checkpoint
+
+## Completed capabilities
+
+The following capabilities are implemented and verified:
+
+1. Persistent project QA workspace.
+2. Requirement analysis and test-case generation.
+3. Test-case selection using Select All and Clear All.
+4. Selective QA-suite persistence.
+5. QA-suite version feedback after successful persistence.
+6. Automation test-case generation.
+7. Executable Playwright code generation.
+8. Automation execution service.
+9. Execution history persistence.
+10. Execution result review.
+11. Environment-independent Playwright URL handling.
+12. `BASE_URL` injection into generated automation execution.
+13. Configurable execution timeout.
+14. Configurable automation workspace root.
+15. Configurable workspace retention.
+16. Controlled environment-variable propagation.
+17. Hardened automation execution configuration.
+18. Focused and full regression coverage for the completed implementation.
+
+## Current implementation boundary
+
+The current checkpoint is limited to automation execution configuration hardening.
+
+Do not redesign the existing UI.
+
+Do not rebuild completed functionality.
+
+Do not introduce unrelated features.
+
+All future implementation must preserve the existing architecture, tests, configuration approach, and README continuity rules.
 
 ## Next implementation
 
-**P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent `skills.md`**
+**P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent `skills.md` Contract**
 
-The next step is an audit before coding:
+The next step is to:
 
-1. Inventory implemented backend capabilities.
-2. Inventory existing dashboard and project-workspace UI capabilities.
-3. Identify backend capabilities not exposed through the UI.
-4. Identify UI actions that are not correctly connected to backend services.
-5. Define the QA Agent `skills.md` contract based on verified capabilities.
-6. Do not redesign the existing UI.
-7. Implement one small, testable change at a time.
-8. Run focused tests, full regression, and MCP runtime verification.
-9. Update this README after every completed checkpoint.
-
-## Latest verified baseline
-
-The latest repository verification was completed on the current `main` branch:
-
-```text
-pytest -q
-310 passed, 8 warnings, 0 failures
-
-git diff --check
-passed
-
-git status -sb
-## main...origin/main
-```
-
-The warnings are currently treated as known non-blocking technical debt and are documented in Section 15.
-
+1. Audit the complete backend-to-UI flow.
+2. Verify that generated automation cases are correctly represented in the UI.
+3. Verify that execution configuration is correctly surfaced and consumed.
+4. Verify that execution history and result review are correctly connected.
+5. Define and implement the QA Agent `skills.md` contract.
+6. Add focused tests before changing the implementation.
+7. Run the complete regression suite.
+8. Update this README before committing and pushing.
 
 # 2. PRODUCT VISION
 
@@ -1010,35 +1020,136 @@ When configuring a new environment:
 
 ---
 
-# 17. CONFIGURATION
+# 17. CONFIGURATION AND ENVIRONMENT CONTRACT
 
-Primary configuration:
+The primary application configuration file is:
 
-```text
-config/settings.yaml
-```
+`config/settings.yaml`
 
-Environment-specific secrets are supplied through environment variables.
+The application also supports environment-specific configuration through environment variables.
 
-Known integration variables:
+Environment variables take precedence over default configuration values where supported by the implementation.
 
-```text
-JIRA_URL
-JIRA_EMAIL
-JIRA_API_TOKEN
+## Application configuration
 
-GITHUB_URL
-GITHUB_TOKEN
-GITHUB_OWNER
+The configuration file contains settings for:
 
-SLACK_URL
-SLACK_TOKEN
-SLACK_DEFAULT_CHANNEL
-```
+- Application metadata
+- LLM provider and model configuration
+- Feature flags
+- Automation execution
+- Jira
+- GitHub
+- Slack
 
-Secrets must remain outside source control.
+## Automation environment variables
 
----
+| Variable | Purpose |
+|---|---|
+| `DEFAULT_TEST_ENV` | Default execution environment when no environment is explicitly selected |
+| `QA_BASE_URL` | Base URL for the QA environment |
+| `STAGE_BASE_URL` | Base URL for the staging environment |
+| `PROD_BASE_URL` | Base URL for the production environment |
+| `QA_AUTOMATION_TIMEOUT_SECONDS` | Automation execution timeout in seconds |
+| `QA_AUTOMATION_WORKSPACE_ROOT` | Root directory used for automation execution workspaces |
+| `QA_AUTOMATION_KEEP_WORKSPACE` | Controls whether automation workspaces are retained after execution |
+
+## Integration environment variables
+
+| Variable | Purpose | Secret? |
+|---|---|---|
+| `JIRA_URL` | Jira Cloud base URL | No |
+| `JIRA_EMAIL` | Jira API account email | No, but treat as configuration |
+| `JIRA_API_TOKEN` | Jira API authentication | Yes |
+| `GITHUB_URL` | GitHub API base URL | No |
+| `GITHUB_TOKEN` | GitHub API authentication | Yes |
+| `GITHUB_OWNER` | GitHub username or organization | No |
+| `SLACK_URL` | Slack API base URL | No |
+| `SLACK_TOKEN` | Slack API authentication | Yes |
+| `SLACK_DEFAULT_CHANNEL` | Default Slack channel | No |
+
+## Example local configuration
+
+The following values are examples only:
+
+~~~yaml
+application:
+  name: qa-mcp
+  environment: local
+
+llm:
+  provider: mock
+  region: ""
+  model_id: ""
+
+features:
+  requirement_analyzer: true
+  testcase_generator: true
+  testcase_reviewer: true
+  jira_connector: false
+  github_connector: false
+  slack_connector: false
+  automation_generator: false
+
+automation_execution:
+  base_url: ""
+  timeout_seconds: 60
+  workspace_root: ""
+  keep_workspace: false
+
+jira:
+  url: ""
+  email: ""
+  api_token: ""
+
+github:
+  url: "https://api.github.com"
+  token: ""
+  owner: ""
+
+slack:
+  url: "https://slack.com/api"
+  token: ""
+  default_channel: ""
+~~~
+
+## Example `.env` template
+
+These are placeholders only. Never commit real credentials or secrets.
+
+~~~dotenv
+JIRA_URL=https://your-company.atlassian.net
+JIRA_EMAIL=your-email
+JIRA_API_TOKEN=your-token
+
+GITHUB_URL=https://api.github.com
+GITHUB_TOKEN=your-github-token
+GITHUB_OWNER=your-github-username-or-org
+
+SLACK_URL=https://slack.com/api
+SLACK_TOKEN=
+SLACK_DEFAULT_CHANNEL=
+
+DEFAULT_TEST_ENV=qa
+QA_BASE_URL=
+STAGE_BASE_URL=
+PROD_BASE_URL=
+QA_AUTOMATION_TIMEOUT_SECONDS=60
+QA_AUTOMATION_WORKSPACE_ROOT=
+QA_AUTOMATION_KEEP_WORKSPACE=false
+~~~
+
+## Secret-handling rules
+
+- Never commit real credentials, access tokens, API keys, passwords, or production secrets.
+- Use environment variables or a local ignored `.env` file for secrets.
+- Never paste populated secret values into this README.
+- Verify that `.env` is protected by `.gitignore`.
+- Review `git diff` before committing configuration changes.
+- Run `git diff --check`.
+- Run focused tests.
+- Run the full regression suite.
+- Update this README with verified results before committing.
 
 # 18. DEVELOPMENT ENVIRONMENT
 
@@ -1178,68 +1289,36 @@ Future work must build on these components.
 
 ---
 
-# 21. NEXT DEVELOPMENT CHECKPOINT
+# 21. HISTORICAL EXECUTION-HARDENING ROADMAP
 
-## P2-S9.1 — Execution Hardening
+This section is retained for historical continuity.
 
-**STATUS: IN PROGRESS — P2-S9.1.b.1 COMPLETE**
+It is not the current development checkpoint.
 
-Completed sub-step:
+The current development checkpoint is defined at the beginning of this README under:
 
-```text
-P2-S9.1.b.1 — Controlled Automation Command Boundary
-```
+**P2-S9.12 — Automation Execution Configuration Hardening**
 
-Next sub-step:
+The earlier P2-S9.1 execution-hardening roadmap has been superseded by the completed implementation and later P2-S9.12 work.
 
-```text
-P2-S9.1.b.2 — Further Command/Execution Policy Hardening
-```
+Historical direction included:
 
-Do not return to:
+- Safe workspace and file handling
+- Stronger command validation
+- Execution identity
+- Configurable limits
+- Failure classification
+- Artifact and result retention
+- Execution evidence
+- Execution history
+- Reporting and analysis
+- Failure analysis
+- Web dashboard integration
+- Agent orchestration
 
-- candidate selection
-- automation generation
-- automation validation
-- already-completed controlled local execution foundation
+The completed historical checkpoints below must be preserved as historical records only.
 
-Immediate direction:
-
-```text
-P2-S8.9 Controlled local execution
-        |
-        v
-P2-S9.1 Execution hardening
-        |
-        +-- safe workspace/file handling
-        +-- stronger command validation
-        +-- execution identity
-        +-- configurable limits
-        +-- better failure classification
-        +-- artifact/result retention policy
-        |
-        v
-P2-S9.2 Execution evidence
-        |
-        +-- generated artifact metadata
-        +-- stdout/stderr evidence
-        +-- execution metadata
-        +-- result persistence
-        +-- traceability
-        |
-        v
-P2-S9.3 Execution history
-        |
-        v
-P2-S9.4 Reporting / analysis
-        |
-        v
-P2-S10 Agent orchestration
-```
-
-P2-S9.1.a and P2-S9.1.b.1 are implemented and verified. The next sub-step must be defined and tested before implementation.
-
----
+Future work must follow the current checkpoint at the top of this README and must not return to already-completed functionality without a new, explicitly documented requirement.
 
 # 21A. COMPLETED CHECKPOINT — P2-S9.1.a
 
