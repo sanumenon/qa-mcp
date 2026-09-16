@@ -23,6 +23,7 @@ class AutomationExecutionRunner:
         command: list[str],
         cwd: str,
         timeout_seconds: int,
+        env: dict[str, str] | None = None,
     ) -> ExecutionProcessResult:
         """Execute a command and capture its result."""
 
@@ -32,6 +33,7 @@ class AutomationExecutionRunner:
             completed = subprocess.run(
                 command,
                 cwd=cwd,
+                env=env,
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,

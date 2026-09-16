@@ -413,7 +413,8 @@ def test_generated_automation_artifact_can_be_executed(
     assert artifact.framework == "Playwright"
     assert artifact.file_name == "test_successful_login.py"
 
-    assert "page.goto('http://localhost:8000/login')" in artifact.code
+    assert 'BASE_URL = os.getenv("BASE_URL", "").rstrip("/")' in artifact.code
+    assert "page.goto(f'{BASE_URL}/login')" in artifact.code
     assert (
         "page.locator('#username').fill('testuser')"
         in artifact.code

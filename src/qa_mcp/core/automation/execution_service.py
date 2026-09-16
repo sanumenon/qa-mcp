@@ -1,3 +1,5 @@
+import inspect
+import os
 import sys
 from uuid import uuid4
 
@@ -9,6 +11,9 @@ from qa_mcp.core.automation.execution_runner import (
 )
 from qa_mcp.core.automation.workspace import (
     AutomationWorkspace,
+)
+from qa_mcp.core.config import (
+    load_config,
 )
 from qa_mcp.models.schemas import (
     AutomationExecutionResult,
@@ -67,6 +72,19 @@ class AutomationExecutionService:
             artifact.file_name,
         ]
 
+    def _build_execution_environment(self) -> dict[str, str]:
+        """Build the environment passed to the generated automation process."""
+
+        config = load_config()
+
+        execution_config = config["automation_execution"]
+        base_url = execution_config["base_url"]
+
+        execution_environment = os.environ.copy()
+        execution_environment["BASE_URL"] = base_url
+
+        return execution_environment
+
     def execute(
         self,
         artifact: GeneratedAutomationArtifact,
@@ -94,19 +112,29 @@ class AutomationExecutionService:
             keep_workspace=self.config.keep_workspace,
         )
 
-        workspace_path = workspace.create(
-            artifact
-        )
+        workspace_path = workspace.create(artifact)
 
         try:
             command = self._build_command(artifact)
+            execution_environment = (
+                self._build_execution_environment()
+            )
+
+            runner_parameters = inspect.signature(
+                self.runner.run
+            ).parameters
+
+            runner_kwargs = {
+                "command": command,
+                "cwd": str(workspace_path),
+                "timeout_seconds": self.config.timeout_seconds,
+            }
+
+            if "env" in runner_parameters:
+                runner_kwargs["env"] = execution_environment
 
             process_result = self.runner.run(
-                command=command,
-                cwd=str(workspace_path),
-                timeout_seconds=(
-                    self.config.timeout_seconds
-                ),
+                **runner_kwargs
             )
 
             if process_result.timed_out:

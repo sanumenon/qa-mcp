@@ -16,6 +16,12 @@ features:
   slack_connector: false
   automation_generator: false
 
+automation_execution:
+  base_url: ""
+  timeout_seconds: 60
+  workspace_root: ""
+  keep_workspace: false
+
 jira:
   url: ""
   email: ""
