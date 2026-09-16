@@ -35,8 +35,8 @@ Previous commit:     e186391 Implement project automation candidate workflow
 Previous implementation checkpoint: P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 Remote:              origin/main
 Working tree before checkpoint: clean
-Current checkpoint:  P2-S9.12 — Automation Candidate Selection and Execution from Project QA Workspace
-Next implementation: P2-S9.12 continuation — Controlled Automation Execution from Project QA Workspace
+Current checkpoint:  P2-S9.12 — Project Workspace Execution History and Result Review
+Next implementation: P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent skills.md
 Checkpoint commit:   a3e6f76
 
 Latest validation:
@@ -2458,7 +2458,27 @@ Automation Candidate Generation
 Automation Case Generation
 ```
 
-### P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
+#
+## P2-S9.12 — Project Workspace Execution History and Result Review
+
+Implemented:
+- Added project-scoped execution history listing.
+- Added project-scoped execution lookup.
+- Added project-scoped execution reporting.
+- Added project-scoped failure analysis.
+- Added artifact ownership filtering through the project artifact repository.
+- Added API coverage for project execution history and result review.
+
+Verification:
+- Focused tests: 4 passed.
+- Full regression: 310 passed, 8 warnings.
+- git diff --check: passed.
+
+Next implementation:
+- Audit remaining backend-to-UI integration.
+- Define and implement the QA Agent `skills.md` capability.
+
+## P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 
 Status: IN PROGRESS
 

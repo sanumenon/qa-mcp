@@ -392,6 +392,110 @@ def save_qa_suite(
             detail=message,
         ) from exc
 
+
+@app.get("/api/projects/{project_id}/executions")
+def project_executions(
+    project_id: str,
+    limit: int = 50,
+):
+    try:
+        results = qa_workspace_service.list_project_executions(
+            project_id=project_id,
+            limit=limit,
+        )
+
+        return [
+            result.model_dump()
+            for result in results
+        ]
+    except ValueError as exc:
+        message = str(exc)
+
+        if (
+            "not found" in message.lower()
+            or "unknown project" in message.lower()
+        ):
+            status_code = 404
+        else:
+            status_code = 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from exc
+
+
+@app.get("/api/projects/{project_id}/executions/report")
+def project_execution_report(
+    project_id: str,
+):
+    try:
+        return qa_workspace_service.project_execution_report(
+            project_id=project_id,
+        ).model_dump()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+
+@app.get("/api/projects/{project_id}/executions/failures")
+def project_execution_failures(
+    project_id: str,
+    limit: int = 50,
+):
+    try:
+        return qa_workspace_service.project_execution_failures(
+            project_id=project_id,
+            limit=limit,
+        ).model_dump()
+    except ValueError as exc:
+        message = str(exc)
+
+        if (
+            "not found" in message.lower()
+            or "unknown project" in message.lower()
+        ):
+            status_code = 404
+        else:
+            status_code = 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from exc
+
+
+@app.get(
+    "/api/projects/{project_id}/executions/{execution_id}"
+)
+def project_execution_detail(
+    project_id: str,
+    execution_id: str,
+):
+    try:
+        result = qa_workspace_service.get_project_execution(
+            project_id=project_id,
+            execution_id=execution_id,
+        )
+
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Execution not found: {execution_id}"
+                ),
+            )
+
+        return result.model_dump()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+
 # ---------------------------------------------------------
 # Existing Execution APIs
 # ---------------------------------------------------------

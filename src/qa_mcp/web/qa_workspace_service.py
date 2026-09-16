@@ -444,6 +444,64 @@ class QAWorkspaceService:
 
         return result.model_dump()
 
+
+    def list_project_executions(
+        self,
+        project_id: str,
+        limit: int = 50,
+    ) -> list:
+        """Return execution history for one project."""
+        self.get_project(project_id)
+
+        return self.automation_execution_history_service.list_for_project(
+            project_id=project_id,
+            artifact_repository=self.workspace_artifact_repository,
+            limit=limit,
+        )
+
+    def get_project_execution(
+        self,
+        project_id: str,
+        execution_id: str,
+    ):
+        """Return one execution only when it belongs to the project."""
+        self.get_project(project_id)
+
+        return self.automation_execution_history_service.get_for_project(
+            project_id=project_id,
+            execution_id=execution_id,
+            artifact_repository=self.workspace_artifact_repository,
+        )
+
+    def project_execution_report(
+        self,
+        project_id: str,
+    ):
+        """Return execution report for one project."""
+        self.get_project(project_id)
+
+        return self.automation_execution_history_service.report_for_project(
+            project_id=project_id,
+            artifact_repository=self.workspace_artifact_repository,
+        )
+
+    def project_execution_failures(
+        self,
+        project_id: str,
+        limit: int = 50,
+    ):
+        """Return execution failures for one project."""
+        self.get_project(project_id)
+
+        return (
+            self.automation_execution_history_service
+            .analyze_failures_for_project(
+                project_id=project_id,
+                artifact_repository=self.workspace_artifact_repository,
+                limit=limit,
+            )
+        )
+
     def generate_qa_suite(
         self,
         project_id: str,

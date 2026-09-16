@@ -141,7 +141,370 @@ class SQLiteAutomationExecutionRepository:
             self._to_model(row)
             for row in rows
         ]
+    def _project_artifact_ids(
+        self,
+        project_id: str,
+        artifact_repository,
+    ) -> list[str]:
+        artifacts = artifact_repository.list_for_project(
+            project_id=project_id
+        )
 
+        return [
+            artifact.artifact_id
+            if hasattr(artifact, "artifact_id")
+            else artifact["artifact_id"]
+            for artifact in artifacts
+        ]
+
+    def list_for_project(
+        self,
+        project_id: str,
+        artifact_repository,
+        limit: int = 50,
+    ):
+        if limit < 1:
+            raise ValueError("limit must be greater than zero")
+
+        artifact_ids = self._project_artifact_ids(
+            project_id=project_id,
+            artifact_repository=artifact_repository,
+        )
+
+        if not artifact_ids:
+            return []
+
+        placeholders = ", ".join("?" for _ in artifact_ids)
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    execution_id,
+                    automation_artifact_id,
+                    automation_case_id,
+                    status,
+                    exit_code,
+                    stdout,
+                    stderr,
+                    duration_seconds,
+                    error
+                FROM automation_execution_history
+                WHERE automation_artifact_id IN ({placeholders})
+                ORDER BY rowid DESC
+                LIMIT ?
+                """,
+                (*artifact_ids, limit),
+            ).fetchall()
+
+        return [self._to_model(row) for row in rows]
+
+    def get_for_project(
+        self,
+        project_id: str,
+        execution_id: str,
+        artifact_repository,
+    ):
+        artifact_ids = self._project_artifact_ids(
+            project_id=project_id,
+            artifact_repository=artifact_repository,
+        )
+
+        if not artifact_ids:
+            return None
+
+        placeholders = ", ".join("?" for _ in artifact_ids)
+
+        with self._connect() as connection:
+            row = connection.execute(
+                f"""
+                SELECT
+                    execution_id,
+                    automation_artifact_id,
+                    automation_case_id,
+                    status,
+                    exit_code,
+                    stdout,
+                    stderr,
+                    duration_seconds,
+                    error
+                FROM automation_execution_history
+                WHERE execution_id = ?
+                  AND automation_artifact_id IN ({placeholders})
+                LIMIT 1
+                """,
+                (execution_id, *artifact_ids),
+            ).fetchone()
+
+        return self._to_model(row) if row is not None else None
+
+    def report_for_project(
+        self,
+        project_id: str,
+        artifact_repository,
+    ):
+        artifact_ids = self._project_artifact_ids(
+            project_id=project_id,
+            artifact_repository=artifact_repository,
+        )
+
+        if not artifact_ids:
+            from qa_mcp.models.execution_reporting import (
+                AutomationExecutionReport,
+            )
+
+            return AutomationExecutionReport(
+                total_executions=0,
+                passed=0,
+                failed=0,
+                not_executed=0,
+                error=0,
+                pass_rate_percent=0.0,
+                total_duration_seconds=0.0,
+                average_duration_seconds=0.0,
+                latest_execution_id=None,
+                latest_status=None,
+            )
+
+        placeholders = ", ".join("?" for _ in artifact_ids)
+
+        from qa_mcp.models.execution_reporting import (
+            AutomationExecutionReport,
+        )
+
+        with self._connect() as connection:
+            summary = connection.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS total_executions,
+                    SUM(
+                        CASE WHEN status = 'PASSED'
+                        THEN 1 ELSE 0 END
+                    ) AS passed,
+                    SUM(
+                        CASE WHEN status = 'FAILED'
+                        THEN 1 ELSE 0 END
+                    ) AS failed,
+                    SUM(
+                        CASE WHEN status = 'NOT_EXECUTED'
+                        THEN 1 ELSE 0 END
+                    ) AS not_executed,
+                    SUM(
+                        CASE WHEN status = 'ERROR'
+                        THEN 1 ELSE 0 END
+                    ) AS error,
+                    COALESCE(SUM(duration_seconds), 0.0)
+                        AS total_duration_seconds,
+                    COALESCE(AVG(duration_seconds), 0.0)
+                        AS average_duration_seconds
+                FROM automation_execution_history
+                WHERE automation_artifact_id IN ({placeholders})
+                """,
+                artifact_ids,
+            ).fetchone()
+
+            latest = connection.execute(
+                f"""
+                SELECT execution_id, status
+                FROM automation_execution_history
+                WHERE automation_artifact_id IN ({placeholders})
+                ORDER BY rowid DESC
+                LIMIT 1
+                """,
+                artifact_ids,
+            ).fetchone()
+
+        total = summary["total_executions"] or 0
+        passed = summary["passed"] or 0
+
+        return AutomationExecutionReport(
+            total_executions=total,
+            passed=passed,
+            failed=summary["failed"] or 0,
+            not_executed=summary["not_executed"] or 0,
+            error=summary["error"] or 0,
+            pass_rate_percent=(
+                (passed / total) * 100.0
+                if total > 0
+                else 0.0
+            ),
+            total_duration_seconds=(
+                summary["total_duration_seconds"] or 0.0
+            ),
+            average_duration_seconds=(
+                summary["average_duration_seconds"] or 0.0
+            ),
+            latest_execution_id=(
+                latest["execution_id"]
+                if latest is not None
+                else None
+            ),
+            latest_status=(
+                latest["status"]
+                if latest is not None
+                else None
+            ),
+        )
+
+    def analyze_failures_for_project(
+        self,
+        project_id: str,
+        artifact_repository,
+        limit: int = 50,
+    ):
+        artifact_ids = self._project_artifact_ids(
+            project_id=project_id,
+            artifact_repository=artifact_repository,
+        )
+
+        if not artifact_ids:
+            from qa_mcp.models.execution_failure_analysis import (
+                AutomationExecutionFailureAnalysis,
+            )
+
+            return AutomationExecutionFailureAnalysis(
+                total_executions=0,
+                failed_executions=0,
+                error_executions=0,
+                total_failures=0,
+                failure_rate_percent=0.0,
+                affected_automation_cases=[],
+                latest_failure_execution_id=None,
+                latest_failure_status=None,
+                failures=[],
+            )
+
+        placeholders = ", ".join("?" for _ in artifact_ids)
+
+        from qa_mcp.models.execution_failure_analysis import (
+            AutomationExecutionFailure,
+            AutomationExecutionFailureAnalysis,
+        )
+
+        with self._connect() as connection:
+            total_row = connection.execute(
+                f"""
+                SELECT COUNT(*) AS total
+                FROM automation_execution_history
+                WHERE automation_artifact_id IN ({placeholders})
+                """,
+                artifact_ids,
+            ).fetchone()
+
+            failure_where = f"""
+                WHERE automation_artifact_id IN ({placeholders})
+                  AND status IN ('FAILED', 'ERROR')
+            """
+
+            counts = connection.execute(
+                f"""
+                SELECT
+                    SUM(
+                        CASE WHEN status = 'FAILED'
+                        THEN 1 ELSE 0 END
+                    ) AS failed_executions,
+                    SUM(
+                        CASE WHEN status = 'ERROR'
+                        THEN 1 ELSE 0 END
+                    ) AS error_executions
+                FROM automation_execution_history
+                {failure_where}
+                """,
+                artifact_ids,
+            ).fetchone()
+
+            rows = connection.execute(
+                f"""
+                SELECT
+                    execution_id,
+                    automation_artifact_id,
+                    automation_case_id,
+                    status,
+                    exit_code,
+                    stdout,
+                    stderr,
+                    duration_seconds,
+                    error
+                FROM automation_execution_history
+                {failure_where}
+                ORDER BY rowid DESC
+                LIMIT ?
+                """,
+                (*artifact_ids, limit),
+            ).fetchall()
+
+            affected_rows = connection.execute(
+                f"""
+                SELECT DISTINCT automation_case_id
+                FROM automation_execution_history
+                {failure_where}
+                ORDER BY automation_case_id
+                """,
+                artifact_ids,
+            ).fetchall()
+
+        total_executions = total_row["total"] or 0
+        failed_executions = counts["failed_executions"] or 0
+        error_executions = counts["error_executions"] or 0
+        total_failures = (
+            failed_executions + error_executions
+        )
+
+        failures = []
+
+        for row in rows:
+            message = (
+                row["error"]
+                or row["stderr"]
+                or row["stdout"]
+                or "Automation execution failed"
+            )
+
+            failures.append(
+                AutomationExecutionFailure(
+                    execution_id=row["execution_id"],
+                    automation_artifact_id=(
+                        row["automation_artifact_id"]
+                    ),
+                    automation_case_id=(
+                        row["automation_case_id"]
+                    ),
+                    status=row["status"],
+                    exit_code=row["exit_code"],
+                    message=message,
+                    stderr=row["stderr"],
+                    duration_seconds=row["duration_seconds"],
+                )
+            )
+
+        latest_failure = failures[0] if failures else None
+
+        return AutomationExecutionFailureAnalysis(
+            total_executions=total_executions,
+            failed_executions=failed_executions,
+            error_executions=error_executions,
+            total_failures=total_failures,
+            failure_rate_percent=(
+                (total_failures / total_executions) * 100.0
+                if total_executions > 0
+                else 0.0
+            ),
+            affected_automation_cases=[
+                row["automation_case_id"]
+                for row in affected_rows
+            ],
+            latest_failure_execution_id=(
+                latest_failure.execution_id
+                if latest_failure is not None
+                else None
+            ),
+            latest_failure_status=(
+                latest_failure.status
+                if latest_failure is not None
+                else None
+            ),
+            failures=failures,
+        )
     def report(
         self,
         automation_case_id: str | None = None,
