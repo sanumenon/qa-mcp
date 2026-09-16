@@ -1014,6 +1014,16 @@ already prepared for the selected project.
     class="result-block"
 ></div>
 
+<div
+    id="project-execution-history"
+    class="result-block"
+></div>
+
+<div
+    id="project-execution-review"
+    class="result-block"
+></div>
+
 </section>
 
 </main>

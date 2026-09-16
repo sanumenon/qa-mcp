@@ -194,6 +194,8 @@ async function loadProjectQAWorkspace() {
             projectId
         );
 
+        await loadProjectExecutionHistory();
+
     } catch (error) {
 
         errorElement.textContent =
@@ -466,6 +468,8 @@ async function executeProjectAutomation(
         `
         );
 
+        await loadProjectExecutionHistory();
+
     } catch (error) {
 
         errorElement.textContent =
@@ -680,6 +684,376 @@ ${artifactRows}
     updateProjectAutomationButton();
 }
 
+function formatExecutionDate(value) {
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return date.toLocaleString();
+}
+
+
+function executionStatusClass(status) {
+    const normalized = String(status || "").toLowerCase();
+
+    if (
+        normalized === "passed" ||
+        normalized === "success" ||
+        normalized === "completed"
+    ) {
+        return "execution-status-passed";
+    }
+
+    if (
+        normalized === "failed" ||
+        normalized === "error"
+    ) {
+        return "execution-status-failed";
+    }
+
+    return "execution-status-other";
+}
+
+
+function renderProjectExecutionReview(payload) {
+    const reviewElement = document.getElementById(
+        "project-execution-review"
+    );
+
+    if (!reviewElement) {
+        return;
+    }
+
+    const execution = payload || {};
+    const artifact = execution.artifact || {};
+    const project = execution.project || {};
+
+    const executionId =
+        execution.execution_id ||
+        execution.id ||
+        "";
+
+    const status =
+        execution.status ||
+        "Unknown";
+
+    const stdout =
+        execution.stdout ||
+        execution.output ||
+        "";
+
+    const stderr =
+        execution.stderr ||
+        execution.error ||
+        "";
+
+    const error =
+        execution.error ||
+        "";
+
+    reviewElement.innerHTML = `
+<h4>Execution Review</h4>
+
+<p>
+<strong>Execution ID:</strong>
+${escapeHtml(executionId)}
+</p>
+
+<p>
+<strong>Project:</strong>
+${escapeHtml(
+    project.name ||
+    project.project_id ||
+    getProjectId()
+)}
+</p>
+
+<p>
+<strong>Status:</strong>
+<span class="${executionStatusClass(status)}">
+${escapeHtml(status)}
+</span>
+</p>
+
+<p>
+<strong>Automation Artifact:</strong>
+${escapeHtml(
+    execution.automation_artifact_id ||
+    artifact.artifact_id ||
+    ""
+)}
+</p>
+
+<p>
+<strong>Automation Case:</strong>
+${escapeHtml(
+    execution.automation_case_id ||
+    artifact.automation_case_id ||
+    ""
+)}
+</p>
+
+<p>
+<strong>Exit Code:</strong>
+${escapeHtml(
+    execution.exit_code == null
+        ? ""
+        : String(execution.exit_code)
+)}
+</p>
+
+<p>
+<strong>Duration:</strong>
+${escapeHtml(
+    execution.duration_seconds == null
+        ? ""
+        : `${execution.duration_seconds} seconds`
+)}
+</p>
+
+${
+    stdout
+        ? `
+<h5>Standard Output</h5>
+<pre>${escapeHtml(stdout)}</pre>
+`
+        : ""
+}
+
+${
+    stderr
+        ? `
+<h5>Standard Error</h5>
+<pre>${escapeHtml(stderr)}</pre>
+`
+        : ""
+}
+
+${
+    error && error !== stderr
+        ? `
+<h5>Execution Error</h5>
+<pre>${escapeHtml(error)}</pre>
+`
+        : ""
+}
+`;
+}
+
+
+async function openProjectExecutionReview(executionId) {
+    const projectId = getProjectId();
+
+    const errorElement = document.getElementById(
+        "project-workspace-error"
+    );
+
+    const reviewElement = document.getElementById(
+        "project-execution-review"
+    );
+
+    if (!projectId || !executionId) {
+        if (errorElement) {
+            errorElement.textContent =
+                "Project ID and execution ID are required.";
+        }
+
+        return;
+    }
+
+    if (reviewElement) {
+        reviewElement.innerHTML =
+            "<p>Loading execution review...</p>";
+    }
+
+    if (errorElement) {
+        errorElement.textContent = "";
+    }
+
+    try {
+        const response = await fetch(
+            "/api/projects/" +
+            encodeURIComponent(projectId) +
+            "/executions/" +
+            encodeURIComponent(executionId)
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                payload.detail ||
+                "Unable to load execution review."
+            );
+        }
+
+        renderProjectExecutionReview(payload);
+    } catch (error) {
+        if (errorElement) {
+            errorElement.textContent =
+                error.message ||
+                "Unable to load execution review.";
+        }
+
+        if (reviewElement) {
+            reviewElement.innerHTML = "";
+        }
+    }
+}
+
+
+function renderProjectExecutionHistory(payload) {
+    const historyElement = document.getElementById(
+        "project-execution-history"
+    );
+
+    if (!historyElement) {
+        return;
+    }
+
+    const executions = Array.isArray(payload)
+        ? payload
+        : payload.executions || [];
+
+    if (executions.length === 0) {
+        historyElement.innerHTML = `
+<h4>Execution History</h4>
+<p>No executions have been recorded for this project.</p>
+`;
+
+        return;
+    }
+
+    const rows = executions.map(execution => {
+        const executionId =
+            execution.execution_id ||
+            execution.id ||
+            "";
+
+        const status =
+            execution.status ||
+            "Unknown";
+
+        const createdAt =
+            execution.created_at ||
+            execution.started_at ||
+            execution.completed_at ||
+            "";
+
+        const artifactId =
+            execution.automation_artifact_id ||
+            "";
+
+        const exitCode =
+            execution.exit_code == null
+                ? ""
+                : String(execution.exit_code);
+
+        return `
+<tr>
+<td>${escapeHtml(executionId)}</td>
+<td>
+<span class="${executionStatusClass(status)}">
+${escapeHtml(status)}
+</span>
+</td>
+<td>${escapeHtml(artifactId)}</td>
+<td>${escapeHtml(exitCode)}</td>
+<td>${escapeHtml(formatExecutionDate(createdAt))}</td>
+<td>
+<button
+    type="button"
+    onclick="openProjectExecutionReview('${escapeHtml(executionId)}')"
+>
+    Review
+</button>
+</td>
+</tr>
+`;
+    }).join("");
+
+    historyElement.innerHTML = `
+<h4>Execution History</h4>
+
+<table>
+<thead>
+<tr>
+<th>Execution ID</th>
+<th>Status</th>
+<th>Artifact</th>
+<th>Exit Code</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+${rows}
+</tbody>
+</table>
+`;
+}
+
+
+async function loadProjectExecutionHistory() {
+    const projectId = getProjectId();
+
+    const historyElement = document.getElementById(
+        "project-execution-history"
+    );
+
+    const errorElement = document.getElementById(
+        "project-workspace-error"
+    );
+
+    if (!projectId) {
+        if (historyElement) {
+            historyElement.innerHTML = "";
+        }
+
+        return;
+    }
+
+    if (historyElement) {
+        historyElement.innerHTML =
+            "<h4>Execution History</h4><p>Loading...</p>";
+    }
+
+    try {
+        const response = await fetch(
+            "/api/projects/" +
+            encodeURIComponent(projectId) +
+            "/executions?limit=50"
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                payload.detail ||
+                "Unable to load execution history."
+            );
+        }
+
+        renderProjectExecutionHistory(payload);
+    } catch (error) {
+        if (errorElement) {
+            errorElement.textContent =
+                error.message ||
+                "Unable to load execution history.";
+        }
+
+        if (historyElement) {
+            historyElement.innerHTML = "";
+        }
+    }
+}
 
 document.addEventListener(
     "DOMContentLoaded",

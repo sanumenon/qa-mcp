@@ -153,3 +153,18 @@ pre {
     white-space: pre-wrap;
     word-break: break-word;
 }
+
+.execution-status-passed {
+    color: #198754;
+    font-weight: 600;
+}
+
+.execution-status-failed {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.execution-status-other {
+    color: #6c757d;
+    font-weight: 600;
+}
