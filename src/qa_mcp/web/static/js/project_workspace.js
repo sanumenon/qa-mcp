@@ -466,19 +466,6 @@ async function executeProjectAutomation(
         `
         );
 
-        resultElement.insertAdjacentHTML(
-            "afterbegin",
-            `
-<p>
-<strong>Execution result for
-${escapeHtml(artifactId)}:
-${status}
-</strong>
-</p>
-<pre>${output}</pre>
-`
-        );
-
     } catch (error) {
 
         errorElement.textContent =
