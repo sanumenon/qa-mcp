@@ -25,9 +25,9 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.12 — Automation Execution Configuration Hardening
+**Current checkpoint:** P2-S9.12 — Bedrock Test-Case Generation Output and QA Suite Completeness
 
-**Checkpoint commit:** `8b2e406`
+**Checkpoint commit:** `70d1f8f`
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
@@ -35,11 +35,48 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 **Latest verified baseline:**
 
-- Full regression: **310 passed**
+- Full regression: **312 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
 - Working tree: clean at the last verified checkpoint
+
+## Latest verified implementation notes
+
+### Bedrock test-case generation hardening
+
+- Commit `9e5f8f7` normalizes a valid single test-case object into the required
+  `{"test_cases": [...]}` response wrapper.
+- Commit `70d1f8f` increases the Bedrock `maxTokens` configuration from `4096`
+  to `12000`.
+- The full regression suite remains green after both changes.
+- A single test-case response is accepted only when it matches the valid
+  test-case schema; unrelated or incomplete payloads remain errors.
+- The generation prompt already requires comprehensive coverage of positive,
+  negative, and edge scenarios.
+- Runtime verification is still required to confirm that the model returns the
+  complete suite rather than only one case.
+
+### Current known investigation
+
+The Customer Portal requirement analysis contains multiple scenario categories,
+but the runtime previously displayed only one generated test case. The larger
+Bedrock output limit is the first verification step.
+
+If regeneration still produces only one or an incomplete subset, the next
+implementation must be scenario-batched generation with:
+
+1. Explicit scenario-category inputs.
+2. Bounded batches.
+3. Stable sequential test-case IDs.
+4. Response validation for every batch.
+5. Deduplication and deterministic merge behavior.
+6. Minimum coverage/count validation.
+7. Controlled retry behavior.
+8. Focused tests and full regression coverage.
+
+Do not solve this by weakening validation, deleting tests, redesigning the UI,
+or blindly increasing token limits indefinitely.
 
 ## Completed capabilities
 
@@ -66,7 +103,7 @@ The following capabilities are implemented and verified:
 
 ## Current implementation boundary
 
-The current checkpoint is limited to automation execution configuration hardening.
+The current checkpoint covers Bedrock test-case generation output handling and the ongoing QA-suite completeness verification.
 
 Do not redesign the existing UI.
 
@@ -78,18 +115,20 @@ All future implementation must preserve the existing architecture, tests, config
 
 ## Next implementation
 
-**P2-S9.12 continuation — Backend-to-UI Integration Audit and QA Agent `skills.md` Contract**
+**P2-S9.12 continuation — Verify QA Suite Completeness and Define QA Agent `skills.md` Contract**
 
 The next step is to:
 
-1. Audit the complete backend-to-UI flow.
-2. Verify that generated automation cases are correctly represented in the UI.
-3. Verify that execution configuration is correctly surfaced and consumed.
-4. Verify that execution history and result review are correctly connected.
-5. Define and implement the QA Agent `skills.md` contract.
-6. Add focused tests before changing the implementation.
-7. Run the complete regression suite.
-8. Update this README before committing and pushing.
+1. Restart the QA-MCP runtime and regenerate the Customer Portal QA suite.
+2. Verify whether Bedrock now returns multiple test cases after increasing `maxTokens` to `12000`.
+3. Verify that positive, negative, and edge scenarios are represented in the generated suite.
+4. Confirm that the UI displays the complete generated collection without redesigning the existing UI.
+5. If the runtime still returns only one or an incomplete subset, implement scenario-batched generation.
+6. Add minimum-count and scenario-coverage validation without introducing brittle exact-count assumptions.
+7. Define and implement the QA Agent `skills.md` contract after the generation flow is reliable.
+8. Add focused tests before changing the implementation.
+9. Run the complete regression suite and verify the MCP/runtime path.
+10. Update this README before committing and pushing.
 
 # 2. PRODUCT VISION
 
