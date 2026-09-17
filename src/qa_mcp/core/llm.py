@@ -263,7 +263,7 @@ class BedrockLLM:
                     }
                 ],
                 inferenceConfig={
-                    "maxTokens": 4096,
+                    "maxTokens": 12000,
                 },
             )
         except Exception as exc:
