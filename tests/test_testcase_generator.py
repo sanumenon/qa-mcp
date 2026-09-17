@@ -285,7 +285,7 @@ def test_generator_rejects_invalid_json():
     assert exc_info.value.provider_response == "not-json"
 
 
-def test_generator_rejects_single_test_case_object_response():
+def test_generator_normalizes_single_test_case_object_response():
     payload = {
         "id": "TC001",
         "title": "Successful password reset",
@@ -308,14 +308,16 @@ def test_generator_rejects_single_test_case_object_response():
         FakeLLM(payload)
     )
 
-    with pytest.raises(
-        LLMGenerationError,
-        match="incomplete test-case generation payload",
-    ):
+    response = generator.generate(
+        build_request()
+    )
 
-        generator.generate(
-            build_request()
-        )
+    assert len(response.test_cases) == 1
+    assert response.test_cases[0].id == "TC001"
+    assert (
+        response.test_cases[0].title
+        == "Successful password reset"
+    )
 
 
 def test_generator_rejects_non_sequential_ids():
