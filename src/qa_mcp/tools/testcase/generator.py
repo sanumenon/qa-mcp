@@ -119,8 +119,14 @@ class TestCaseGenerator:
             )
 
         if "test_cases" not in payload:
+            logger.error(
+                "QA test-case generation returned JSON without "
+                "the required 'test_cases' key. Parsed payload: %r",
+                payload,
+            )
             raise LLMGenerationError(
-                "LLM returned an incomplete test-case generation payload."
+                "LLM returned an incomplete test-case generation payload.",
+                provider_response=raw_response,
             )
 
         if not isinstance(payload["test_cases"], list):

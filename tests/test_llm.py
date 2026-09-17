@@ -1,7 +1,11 @@
 import pytest
 
-from qa_mcp.core.llm import MockLLM, create_llm
-
+from qa_mcp.core.llm import (
+    BedrockLLM,
+    LLMGenerationError,
+    MockLLM,
+    create_llm,
+)
 
 def test_mock_llm_generates_response():
     llm = MockLLM(response="hello")
@@ -118,3 +122,48 @@ def test_bedrock_llm_requires_model_id():
             region="us-east-1",
             model_id="",
         )
+
+def test_bedrock_llm_rejects_guardrail_intervention():
+    class FakeClient:
+        def converse(self, **kwargs):
+            return {
+                "stopReason": "guardrail_intervened",
+                "output": {
+                    "message": {
+                        "content": []
+                    }
+                }
+            }
+
+    llm = object.__new__(BedrockLLM)
+    llm.model_id = "moonshotai.kimi-k2.5"
+    llm.client = FakeClient()
+
+    with pytest.raises(
+        LLMGenerationError,
+        match="Bedrock guardrails blocked LLM generation",
+    ):
+        llm.generate("hello")
+
+
+def test_bedrock_llm_rejects_empty_response_content():
+    class FakeClient:
+        def converse(self, **kwargs):
+            return {
+                "stopReason": "end_turn",
+                "output": {
+                    "message": {
+                        "content": []
+                    }
+                }
+            }
+
+    llm = object.__new__(BedrockLLM)
+    llm.model_id = "moonshotai.kimi-k2.5"
+    llm.client = FakeClient()
+
+    with pytest.raises(
+        LLMGenerationError,
+        match="Bedrock returned an empty LLM response",
+    ):
+        llm.generate("hello")

@@ -249,30 +249,54 @@ class BedrockLLM:
         if not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
 
-        response = self.client.converse(
-            modelId=self.model_id,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "text": prompt,
-                        }
-                    ],
-                }
-            ],
-            inferenceConfig={
-                "maxTokens": 4096,
-            },
+        try:
+            response = self.client.converse(
+                modelId=self.model_id,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "text": prompt,
+                            }
+                        ],
+                    }
+                ],
+                inferenceConfig={
+                    "maxTokens": 4096,
+                },
+            )
+        except Exception as exc:
+            raise LLMGenerationError(
+                "Bedrock LLM request failed.",
+            ) from exc
+
+        stop_reason = response.get("stopReason")
+
+        if stop_reason == "guardrail_intervened":
+            raise LLMGenerationError(
+                "Bedrock guardrails blocked LLM generation."
+            )
+
+        content = (
+            response.get("output", {})
+            .get("message", {})
+            .get("content", [])
         )
 
-        content = response["output"]["message"]["content"]
-
-        return "".join(
+        text = "".join(
             item.get("text", "")
             for item in content
             if item.get("text")
         )
+
+        if not text.strip():
+            raise LLMGenerationError(
+                "Bedrock returned an empty LLM response."
+            )
+
+        return text
+
 
 def create_llm(config: dict) -> LLMProvider:
     """Create the configured LLM provider."""
