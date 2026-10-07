@@ -25,9 +25,9 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.12 — Bedrock Test-Case Generation Output and QA Suite Completeness
+**Current checkpoint:** P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection
 
-**Checkpoint commit:** `70d1f8f`
+**Checkpoint commit:** `3de8511`
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
@@ -147,20 +147,15 @@ All future implementation must preserve the existing architecture, tests, config
 
 ## Next implementation
 
-**P2-S9.12 continuation — Verify QA Suite Completeness and Define QA Agent `skills.md` Contract**
+**Investigate automation execution failures (FAILED / exit code 1)**
 
-The next step is to:
+The Project QA Workspace rendering and automation-candidate selection path is now verified. The next investigation should focus separately on the existing automation execution failures reporting FAILED / exit code 1. Do not redesign the Project QA Workspace or change the established QA-suite generation contract as part of that investigation.
 
-1. Restart the QA-MCP runtime and regenerate the Customer Portal QA suite.
-2. Verify whether Bedrock now returns multiple test cases after increasing `maxTokens` to `12000`.
-3. Verify that positive, negative, and edge scenarios are represented in the generated suite.
-4. Confirm that the UI displays the complete generated collection without redesigning the existing UI.
-5. If the runtime still returns only one or an incomplete subset, implement scenario-batched generation.
-6. Add minimum-count and scenario-coverage validation without introducing brittle exact-count assumptions.
-7. Define and implement the QA Agent `skills.md` contract after the generation flow is reliable.
-8. Add focused tests before changing the implementation.
-9. Run the complete regression suite and verify the MCP/runtime path.
-10. Update this README before committing and pushing.
+### Next investigation sequence
+
+1. Inspect the existing automation execution failure and identify the actual exit-code-1 root cause.
+2. Add focused regression coverage, implement the smallest safe fix, run the full regression suite, and verify the runtime path.
+3. Update this README with the verified result before the next checkpoint commit and push.
 
 # 2. PRODUCT VISION
 
@@ -1659,7 +1654,7 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.1.b.2 — Further Command/Execution Policy Hardening**
+**P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection**
 
 P2-S9.1.a — Safe Workspace/File Handling and P2-S9.1.b.1 — Controlled Automation Command Boundary are complete and must not be recreated.
 
@@ -1680,21 +1675,18 @@ Verified baseline after P2-S9.1.b.1:
 7 warnings
 0 failures
 ```
-
 Latest repository implementation commit:
 
 ```text
 b6190d9 Harden automation workspace file handling
 ```
-
 Current checkpoint commit:
 
 ```text
-Pending user commit
+3de8511
 ```
 
 Previous implementation checkpoint:
-
 ```text
 3bdf761 Implement controlled automation execution
 ```
@@ -1719,7 +1711,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.1.b.2 — Further Command/Execution Policy Hardening**.
+5. Start from **P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
