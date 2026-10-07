@@ -480,10 +480,9 @@ def test_project_qa_workspace_javascript_is_served():
     )
 
 
-    assert (
-        "payload.test_cases?.test_cases || []"
-        in javascript
-    )
+    assert "const testCasesPayload =" in javascript
+    assert "Array.isArray(testCasesPayload)" in javascript
+    assert "testCasesPayload.test_cases || []" in javascript
 
 
 def test_dashboard_javascript_contains_backend_api_wiring():

@@ -496,8 +496,13 @@ function renderProjectQAWorkspace(
     const suiteVersions =
         payload.suite_versions || [];
 
+    const testCasesPayload =
+        payload.test_cases || [];
+
     const testCases =
-        payload.test_cases?.test_cases || [];
+        Array.isArray(testCasesPayload)
+            ? testCasesPayload
+            : testCasesPayload.test_cases || [];
 
     const automationArtifacts =
         payload.automation_artifacts || [];
