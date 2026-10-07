@@ -480,6 +480,12 @@ def test_project_qa_workspace_javascript_is_served():
     )
 
 
+    assert (
+        "payload.test_cases?.test_cases || []"
+        in javascript
+    )
+
+
 def test_dashboard_javascript_contains_backend_api_wiring():
     response = client.get("/static/js/dashboard.js")
 

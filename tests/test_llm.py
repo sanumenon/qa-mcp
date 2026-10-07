@@ -167,3 +167,124 @@ def test_bedrock_llm_rejects_empty_response_content():
         match="Bedrock returned an empty LLM response",
     ):
         llm.generate("hello")
+
+
+def test_bedrock_llm_uses_configured_http_settings(monkeypatch):
+    from qa_mcp.core.llm import BedrockLLM
+
+    captured = {}
+
+    class FakeConfig:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            captured["config_kwargs"] = kwargs
+
+    class FakeBoto3:
+        @staticmethod
+        def client(service_name, region_name, config):
+            captured["service_name"] = service_name
+            captured["region_name"] = region_name
+            captured["config"] = config
+            return object()
+
+    import sys
+    import types
+
+    fake_boto3 = types.SimpleNamespace(
+        client=FakeBoto3.client
+    )
+
+    fake_botocore_config = types.SimpleNamespace(
+        Config=FakeConfig
+    )
+
+    monkeypatch.setitem(sys.modules, "boto3", fake_boto3)
+    monkeypatch.setitem(
+        sys.modules,
+        "botocore.config",
+        fake_botocore_config,
+    )
+
+    BedrockLLM(
+        region="us-east-1",
+        model_id="test-model",
+        connect_timeout_seconds=45,
+        read_timeout_seconds=180,
+        retry_mode="standard",
+        max_attempts=1,
+    )
+
+    assert captured["service_name"] == "bedrock-runtime"
+    assert captured["region_name"] == "us-east-1"
+    assert captured["config"].kwargs["connect_timeout"] == 45
+    assert captured["config"].kwargs["read_timeout"] == 180
+    assert captured["config"].kwargs["retries"] == {
+        "mode": "standard",
+        "max_attempts": 1,
+    }
+
+
+def test_bedrock_llm_rejects_invalid_timeout():
+    from qa_mcp.core.llm import BedrockLLM
+
+    with pytest.raises(
+        ValueError,
+        match="Bedrock connect timeout must be greater than zero",
+    ):
+        BedrockLLM(
+            region="us-east-1",
+            model_id="test-model",
+            connect_timeout_seconds=0,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Bedrock read timeout must be greater than zero",
+    ):
+        BedrockLLM(
+            region="us-east-1",
+            model_id="test-model",
+            read_timeout_seconds=0,
+        )
+
+
+def test_bedrock_llm_rejects_invalid_max_attempts():
+    from qa_mcp.core.llm import BedrockLLM
+
+    with pytest.raises(
+        ValueError,
+        match="Bedrock max attempts must be greater than zero",
+    ):
+        BedrockLLM(
+            region="us-east-1",
+            model_id="test-model",
+            max_attempts=0,
+        )
+
+
+def test_load_config_reads_bedrock_settings(monkeypatch):
+    from qa_mcp.core.config import load_config
+
+    monkeypatch.setenv(
+        "BEDROCK_CONNECT_TIMEOUT_SECONDS",
+        "45",
+    )
+    monkeypatch.setenv(
+        "BEDROCK_READ_TIMEOUT_SECONDS",
+        "180",
+    )
+    monkeypatch.setenv(
+        "BEDROCK_RETRY_MODE",
+        "standard",
+    )
+    monkeypatch.setenv(
+        "BEDROCK_MAX_ATTEMPTS",
+        "1",
+    )
+
+    config = load_config()
+
+    assert config["llm"]["connect_timeout_seconds"] == 45
+    assert config["llm"]["read_timeout_seconds"] == 180
+    assert config["llm"]["retry_mode"] == "standard"
+    assert config["llm"]["max_attempts"] == 1

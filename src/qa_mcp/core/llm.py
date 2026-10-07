@@ -230,19 +230,52 @@ class MockLLM:
 class BedrockLLM:
     """AWS Bedrock provider using the Converse API."""
 
-    def __init__(self, region: str, model_id: str):
+    def __init__(
+        self,
+        region: str,
+        model_id: str,
+        *,
+        connect_timeout_seconds: int = 60,
+        read_timeout_seconds: int = 180,
+        retry_mode: str = "standard",
+        max_attempts: int = 1,
+    ):
         if not region:
             raise ValueError("AWS region is required for Bedrock.")
 
         if not model_id:
             raise ValueError("Bedrock model ID is required.")
 
+        if connect_timeout_seconds <= 0:
+            raise ValueError(
+                "Bedrock connect timeout must be greater than zero."
+            )
+
+        if read_timeout_seconds <= 0:
+            raise ValueError(
+                "Bedrock read timeout must be greater than zero."
+            )
+
+        if max_attempts <= 0:
+            raise ValueError(
+                "Bedrock max attempts must be greater than zero."
+            )
+
         import boto3
+        from botocore.config import Config
 
         self.model_id = model_id
         self.client = boto3.client(
             "bedrock-runtime",
             region_name=region,
+            config=Config(
+                connect_timeout=connect_timeout_seconds,
+                read_timeout=read_timeout_seconds,
+                retries={
+                    "mode": retry_mode,
+                    "max_attempts": max_attempts,
+                },
+            ),
         )
 
     def generate(self, prompt: str) -> str:
@@ -267,8 +300,41 @@ class BedrockLLM:
                 },
             )
         except Exception as exc:
+            provider_response = None
+
+            response = getattr(exc, "response", None)
+            if isinstance(response, dict):
+                error = response.get("Error", {})
+                metadata = response.get("ResponseMetadata", {})
+
+                code = error.get("Code")
+                message = error.get("Message")
+                request_id = metadata.get("RequestId")
+                http_status = metadata.get("HTTPStatusCode")
+
+                details = []
+
+                if code:
+                    details.append(f"code={code}")
+                if http_status:
+                    details.append(f"http_status={http_status}")
+                if request_id:
+                    details.append(f"request_id={request_id}")
+                if message:
+                    details.append(f"message={message}")
+
+                if details:
+                    provider_response = "; ".join(details)
+
+            if provider_response is None:
+                provider_response = (
+                    f"exception_type={type(exc).__name__}; "
+                    f"message={str(exc)}"
+                )
+
             raise LLMGenerationError(
                 "Bedrock LLM request failed.",
+                provider_response=provider_response,
             ) from exc
 
         stop_reason = response.get("stopReason")
@@ -325,6 +391,22 @@ def create_llm(config: dict) -> LLMProvider:
         return BedrockLLM(
             region=region,
             model_id=model_id,
+            connect_timeout_seconds=llm_config.get(
+                "connect_timeout_seconds",
+                60,
+            ),
+            read_timeout_seconds=llm_config.get(
+                "read_timeout_seconds",
+                180,
+            ),
+            retry_mode=llm_config.get(
+                "retry_mode",
+                "standard",
+            ),
+            max_attempts=llm_config.get(
+                "max_attempts",
+                1,
+            ),
         )
 
     raise ValueError(

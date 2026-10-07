@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -64,6 +66,8 @@ from qa_mcp.web.qa_workspace_service import (
     QAWorkspaceService,
 )
 
+
+logger = logging.getLogger(__name__)
 
 history_service = AutomationExecutionHistoryService()
 
@@ -287,6 +291,11 @@ def generate_qa_suite(
             requirement=request.requirement,
         )
     except LLMGenerationError as exc:
+        if exc.provider_response:
+            logger.error(
+                "Bedrock LLM provider failure: %s",
+                exc.provider_response,
+            )
         raise HTTPException(
             status_code=502,
             detail=str(exc),

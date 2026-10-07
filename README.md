@@ -35,11 +35,16 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 **Latest verified baseline:**
 
-- Full regression: **312 passed**
+- Full regression: **322 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Working tree: clean at the last verified checkpoint
+- Live QA-suite generation: **HTTP 200**
+- Live generated test cases: **50**
+- Live generated IDs: **TC001 → TC050**
+- Project-workspace JavaScript contract verified against the backend response shape
+- Working tree contains only the current checkpoint changes; no unrelated modifications were introduced
+- Current checkpoint changes are **not yet committed or pushed**
 
 ## Latest verified implementation notes
 
@@ -54,29 +59,56 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
   test-case schema; unrelated or incomplete payloads remain errors.
 - The generation prompt already requires comprehensive coverage of positive,
   negative, and edge scenarios.
-- Runtime verification is still required to confirm that the model returns the
-  complete suite rather than only one case.
+- Runtime verification has now confirmed that Bedrock returns a complete
+  multi-case suite.
 
-### Current known investigation
+### Bedrock runtime timeout resolution
 
-The Customer Portal requirement analysis contains multiple scenario categories,
-but the runtime previously displayed only one generated test case. The larger
-Bedrock output limit is the first verification step.
+The remaining runtime failure was not caused by guardrails or incomplete
+test-case parsing.
 
-If regeneration still produces only one or an incomplete subset, the next
-implementation must be scenario-batched generation with:
+The actual production failure was a Bedrock `ReadTimeoutError` caused by the
+default **60-second read timeout**. Real test-case generation could exceed
+that duration.
 
-1. Explicit scenario-category inputs.
-2. Bounded batches.
-3. Stable sequential test-case IDs.
-4. Response validation for every batch.
-5. Deduplication and deterministic merge behavior.
-6. Minimum coverage/count validation.
-7. Controlled retry behavior.
-8. Focused tests and full regression coverage.
+The production Bedrock configuration was hardened to:
 
-Do not solve this by weakening validation, deleting tests, redesigning the UI,
-or blindly increasing token limits indefinitely.
+- Connect timeout: **60 seconds**
+- Read timeout: **180 seconds**
+- Retry mode: **standard**
+- Maximum attempts: **1**
+
+The configuration supports environment-variable overrides for these values.
+
+A real diagnostic run using the hardened configuration completed successfully
+and generated a multi-case suite. Scenario-batched generation was therefore
+**not required to resolve this timeout blocker**.
+
+### QA suite completeness verification
+
+The live Customer Portal QA-suite endpoint was verified using the actual
+`QASuiteWorkspaceRequest` contract.
+
+The successful runtime verification returned:
+
+- HTTP status: **200**
+- `test_cases` response: wrapped object
+- Generated test cases: **50**
+- First ID: **TC001**
+- Last ID: **TC050**
+
+An earlier live verification also produced **60 test cases**, confirming that
+the generated collection is not limited to a single test case. The exact count
+may vary with the LLM response.
+
+The established backend contract remains:
+
+```text
+test_cases
+└── test_cases[]
+```
+
+No backend API contract was changed.
 
 ## Completed capabilities
 

@@ -6,6 +6,10 @@ llm:
   provider: mock
   region: ""
   model_id: ""
+  connect_timeout_seconds: 60
+  read_timeout_seconds: 180
+  retry_mode: standard
+  max_attempts: 1
 
 features:
   requirement_analyzer: true

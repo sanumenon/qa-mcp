@@ -48,6 +48,44 @@ def load_config() -> dict:
         ),
     )
 
+    config["llm"]["connect_timeout_seconds"] = int(
+        os.getenv(
+            "BEDROCK_CONNECT_TIMEOUT_SECONDS",
+            config["llm"].get(
+                "connect_timeout_seconds",
+                60,
+            ),
+        )
+    )
+
+    config["llm"]["read_timeout_seconds"] = int(
+        os.getenv(
+            "BEDROCK_READ_TIMEOUT_SECONDS",
+            config["llm"].get(
+                "read_timeout_seconds",
+                180,
+            ),
+        )
+    )
+
+    config["llm"]["retry_mode"] = os.getenv(
+        "BEDROCK_RETRY_MODE",
+        config["llm"].get(
+            "retry_mode",
+            "standard",
+        ),
+    )
+
+    config["llm"]["max_attempts"] = int(
+        os.getenv(
+            "BEDROCK_MAX_ATTEMPTS",
+            config["llm"].get(
+                "max_attempts",
+                1,
+            ),
+        )
+    )
+
     config.setdefault("jira", {})
 
     config["jira"]["url"] = os.getenv(
