@@ -482,6 +482,131 @@ async function executeProjectAutomation(
 }
 
 
+function appendTestCaseReviewValue(
+    reviewElement,
+    label,
+    value
+) {
+    const row = document.createElement("p");
+    const heading = document.createElement("strong");
+    heading.textContent = `${label}: `;
+    row.appendChild(heading);
+    row.appendChild(
+        document.createTextNode(
+            value == null || value === ""
+                ? "Not provided"
+                : String(value)
+        )
+    );
+    reviewElement.appendChild(row);
+}
+
+
+function appendTestCaseReviewList(
+    reviewElement,
+    label,
+    values,
+    ordered = false
+) {
+    const heading = document.createElement("h5");
+    heading.textContent = label;
+    reviewElement.appendChild(heading);
+
+    const list = document.createElement(
+        ordered ? "ol" : "ul"
+    );
+    const entries = Array.isArray(values) ? values : [];
+
+    if (entries.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.textContent = "None provided";
+        list.appendChild(emptyItem);
+    } else {
+        entries.forEach(value => {
+            const item = document.createElement("li");
+            item.textContent = value == null ? "" : String(value);
+            list.appendChild(item);
+        });
+    }
+
+    reviewElement.appendChild(list);
+}
+
+
+function renderProjectTestCaseReview(
+    testCase,
+    reviewElement
+) {
+    reviewElement.replaceChildren();
+    reviewElement.hidden = false;
+
+    const heading = document.createElement("h4");
+    heading.textContent = "Saved Test Case Review";
+    reviewElement.appendChild(heading);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "Close Review";
+    closeButton.addEventListener("click", () => {
+        reviewElement.hidden = true;
+        reviewElement.replaceChildren();
+    });
+    reviewElement.appendChild(closeButton);
+
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Test Case ID",
+        testCase.id
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Title",
+        testCase.title
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Priority",
+        testCase.priority
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Test Type",
+        testCase.test_type
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Suite ID",
+        testCase.suite_id
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Suite Version",
+        testCase.suite_version
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Requirement Version ID",
+        testCase.requirement_version_id
+    );
+    appendTestCaseReviewList(
+        reviewElement,
+        "Preconditions",
+        testCase.preconditions
+    );
+    appendTestCaseReviewList(
+        reviewElement,
+        "Steps",
+        testCase.steps,
+        true
+    );
+    appendTestCaseReviewValue(
+        reviewElement,
+        "Expected Result",
+        testCase.expected_result
+    );
+}
+
+
 function renderProjectQAWorkspace(
     payload,
     projectId
@@ -537,7 +662,7 @@ function renderProjectQAWorkspace(
 
     const testCaseRows =
         testCases.map(
-            item => {
+            (item, index) => {
 
                 const isCandidate =
                     item.automation_candidate === true;
@@ -564,6 +689,15 @@ function renderProjectQAWorkspace(
 <td>${escapeHtml(item.test_type || "")}</td>
 <td>${isCandidate ? "Yes" : "No"}</td>
 <td>${escapeHtml(String(item.suite_version || ""))}</td>
+<td>
+<button
+    type="button"
+    data-review-test-case-index="${index}"
+    aria-label="Review test case ${escapeHtml(item.id || "saved case")}"
+>
+    Review
+</button>
+</td>
 </tr>
 `;
             }
@@ -665,6 +799,7 @@ ${suiteRows}
 <th>Type</th>
 <th>Automation Candidate</th>
 <th>Suite Version</th>
+<th>Actions</th>
 </tr>
 </thead>
 
@@ -673,6 +808,13 @@ ${testCaseRows}
 </tbody>
 
 </table>
+
+<section
+    id="project-test-case-review"
+    class="test-case-review"
+    aria-live="polite"
+    hidden
+></section>
 
 
 <h4>Generated Automation Artifacts</h4>
@@ -704,6 +846,30 @@ ${artifactRows}
 ></section>
 
 `;
+
+    const testCaseReviewElement = document.getElementById(
+        "project-test-case-review"
+    );
+
+    resultElement
+        .querySelectorAll("[data-review-test-case-index]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                const index = Number(
+                    button.dataset.reviewTestCaseIndex
+                );
+                const testCase = testCases[index];
+
+                if (!testCase || !testCaseReviewElement) {
+                    return;
+                }
+
+                renderProjectTestCaseReview(
+                    testCase,
+                    testCaseReviewElement
+                );
+            });
+        });
 
     const reviewElement = document.getElementById(
         "project-artifact-review"

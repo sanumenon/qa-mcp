@@ -25,7 +25,7 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.14-C — Generated Automation Artifact Review
+**Current checkpoint:** P2-S9.14-D — Persisted Test Case Review
 
 **Checkpoint commit:** Pending review; implementation is in the working tree
 
@@ -33,16 +33,16 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 **Branch:** `main`
 
-**Latest verified baseline after P2-S9.14-C:**
+**Latest verified baseline after P2-S9.14-D:**
 
 - Focused web tests: **30 passed**
 - Full regression: **327 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Project QA Workspace artifact-review browser verification: **passed**
+- Project QA Workspace test-case/artifact review browser verification: **passed**
 - Existing Dashboard and Project QA Workspace workflows preserved
-- Existing workspace artifact data reused; no new API added
+- Existing project workspace response reused; no new API added
 - No backend API contracts were changed
 - Current checkpoint changes are **not committed or pushed**
 
@@ -138,8 +138,10 @@ The following capabilities are implemented and verified:
 P2-S9.14-B adds project-scoped execution metrics and recent failure review to
 the existing Project QA Workspace. P2-S9.14-C adds read-only review of
 generated automation artifacts in that workspace, reusing artifact data
-already returned by the workspace API. Review and Execute remain separate
-actions. The global Execution and Reports pages and all backend contracts
+already returned by the workspace API. P2-S9.14-D adds read-only review of
+persisted test case details from the existing project workspace response.
+Review remains separate from candidate selection, artifact review, and
+execution. The global Execution and Reports pages and all backend contracts
 remain unchanged.
 
 # 2. PRODUCT VISION
@@ -1639,12 +1641,12 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.14-C — Generated Automation Artifact Review**
+**P2-S9.14-D — Persisted Test Case Review**
 
-P2-S9.14-A — QA-MCP Production UI Architecture Shell and P2-S9.14-B — Project
-Execution Insights are complete and must not be recreated. P2-S9.14-C adds
-read-only review of generated automation source in the existing Project QA
-Workspace.
+P2-S9.14-A — QA-MCP Production UI Architecture Shell, P2-S9.14-B — Project
+Execution Insights, and P2-S9.14-C — Generated Automation Artifact Review are
+complete and must not be recreated. P2-S9.14-D adds read-only review of
+persisted test case details in the existing Project QA Workspace.
 
 Previous completed checkpoints:
 
@@ -1665,9 +1667,11 @@ Full regression: 327 passed
 0 failures
 ```
 
-P2-S9.14-B checkpoint commit: `7439119`. At the start of P2-S9.14-C, `main`
-was synchronized with `origin/main` and the working tree was clean. Its
-validation baseline was 327 passed, 8 warnings, and 0 failures.
+P2-S9.14-B checkpoint commit: `7439119`.
+P2-S9.14-C checkpoint commit: `f5dbc8d` — Complete P2-S9.14-C generated
+artifact review. At the start of P2-S9.14-D, `main` was synchronized with
+`origin/main` and the working tree was clean. The prior validation baseline
+was 327 passed, 8 warnings, and 0 failures.
 
 Current automation MCP surface:
 
@@ -1689,7 +1693,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.14-C — Generated Automation Artifact Review**.
+5. Start from **P2-S9.14-D — Persisted Test Case Review**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -2946,7 +2950,7 @@ The P2-S9.14-B implementation is committed as `7439119` and was pushed to
 `origin/main`. At the P2-S9.14-C baseline, `main` was synchronized with
 `origin/main` and the working tree was clean.
 
-### Next checkpoint
+### Follow-on checkpoint (completed)
 
 **P2-S9.14-C — Generated Automation Artifact Review**
 
@@ -2961,7 +2965,7 @@ generation, persistence, or execution changes are in scope.
 
 ## P2-S9.14-C — Generated Automation Artifact Review
 
-**Status: COMPLETE — implementation validated, awaiting commit review**
+**Status: COMPLETE — committed as `f5dbc8d`**
 
 ### Implementation scope
 
@@ -2997,5 +3001,48 @@ request from Review, and the existing project-scoped Execute action working
 independently. The P2-S9.14-B execution insights flow remained covered by the
 same browser regression.
 
-The implementation is not committed or pushed. The P2-S9.14-C diff is ready
-for review.
+The P2-S9.14-C implementation is committed as `f5dbc8d` and is present on
+`origin/main`.
+
+
+---
+
+
+## P2-S9.14-D — Persisted Test Case Review
+
+**Status: COMPLETE — implementation validated, awaiting commit review**
+
+### Implementation scope
+
+- Added a Review action to each persisted test case row in the existing
+  Project QA Workspace.
+- Displays preconditions, ordered steps, expected result, priority, test type,
+  and the exact suite ID/version and requirement-version metadata supplied by
+  that workspace row.
+- Binds review to the selected row, so identical test case IDs in separate
+  suite versions retain their row-specific metadata.
+- Uses DOM text APIs for testcase values; markup-like content remains inert.
+- Keeps Review separate from candidate selection, artifact review, and
+  execution. No backend/API, persistence/schema, integration, or execution
+  changes were made.
+
+### Validation
+
+```text
+Focused web tests:                 30 passed
+Full regression suite:             327 passed
+Warnings:                            8
+Failures:                            0
+JavaScript syntax check:             passed
+git diff --check:                    clean
+Browser verification:               passed
+```
+
+Browser coverage verified case-specific details and version metadata,
+precondition and step ordering, inert markup-like values, switching and
+closing review, no mutation/generation/execution requests, candidate
+selection, artifact review, Execute, and empty testcase state. Existing
+P2-S9.14-B Project Execution Insights behavior remained covered.
+
+The P2-S9.14-D implementation is not committed or pushed and is ready for
+review.

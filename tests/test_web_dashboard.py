@@ -1431,12 +1431,40 @@ def test_project_workspace_execution_insights_browser_flow():
                 "title": "Reviewable case",
                 "priority": "High",
                 "test_type": "Functional",
-                "preconditions": [],
-                "steps": ["Run the test"],
-                "expected_result": "It passes",
+                "preconditions": [
+                    "User is signed in",
+                    "Account is active",
+                ],
+                "steps": [
+                    "Open the sign-in page",
+                    "Submit valid credentials",
+                ],
+                "expected_result": "Dashboard appears",
                 "automation_candidate": True,
+                "suite_id": "SUITE-INSIGHT-1",
                 "suite_version": 1,
-            }
+                "requirement_version_id": "REQ-INSIGHT-1",
+            },
+            {
+                "id": "TC-INSIGHT-2",
+                "title": '<img src="x" onerror="window.caseTitleRan=true">',
+                "priority": "Critical",
+                "test_type": "Security",
+                "preconditions": [
+                    "<script>window.caseExecuted=true;</script>"
+                ],
+                "steps": [
+                    "<b>First hostile step</b>",
+                    '<img src="x" onerror="window.caseStepRan=true">',
+                ],
+                "expected_result": (
+                    '<svg onload="window.caseExpectedRan=true">'
+                ),
+                "automation_candidate": True,
+                "suite_id": "SUITE-INSIGHT-2",
+                "suite_version": 2,
+                "requirement_version_id": "REQ-INSIGHT-2",
+            },
         ],
         "automation_artifacts": [
             {
@@ -1498,6 +1526,7 @@ def test_project_workspace_execution_insights_browser_flow():
     }
     requests = []
     execution_requests = []
+    browser_requests = []
 
     def fulfill_json(route, payload, status=200):
         route.fulfill(
@@ -1518,6 +1547,12 @@ def test_project_workspace_execution_insights_browser_flow():
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page()
+            page.on(
+                "request",
+                lambda request: browser_requests.append(
+                    (request.method, request.url)
+                ),
+            )
 
             def handle_projects(route):
                 requests.append(route.request.url)
@@ -1647,6 +1682,117 @@ def test_project_workspace_execution_insights_browser_flow():
             insights.get_by_text(
                 "Expected value was not found"
             ).wait_for()
+
+            # Saved-case review uses the exact selected workspace row and is
+            # read-only. Its content is inserted as inert DOM text.
+            test_case_table = page.get_by_role(
+                "heading",
+                name="Saved Test Cases",
+            ).locator("xpath=following-sibling::table[1]")
+            first_test_case_row = test_case_table.locator(
+                "tbody tr"
+            ).nth(0)
+            second_test_case_row = test_case_table.locator(
+                "tbody tr"
+            ).nth(1)
+            case_review_panel = page.locator(
+                "#project-test-case-review"
+            )
+            requests_before_case_review = len(browser_requests)
+
+            first_test_case_row.get_by_role(
+                "button",
+                name="Review test case TC-INSIGHT-1",
+            ).click()
+            expect(case_review_panel).to_be_visible()
+            expect(case_review_panel).to_contain_text(
+                "Saved Test Case Review"
+            )
+            expect(case_review_panel).to_contain_text(
+                "User is signed in"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Account is active"
+            )
+            steps = case_review_panel.locator("ol li")
+            expect(steps).to_have_count(2)
+            expect(steps.nth(0)).to_have_text(
+                "Open the sign-in page"
+            )
+            expect(steps.nth(1)).to_have_text(
+                "Submit valid credentials"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Expected Result: Dashboard appears"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Priority: High"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Test Type: Functional"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Suite ID: SUITE-INSIGHT-1"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Suite Version: 1"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Requirement Version ID: REQ-INSIGHT-1"
+            )
+
+            second_test_case_row.get_by_role(
+                "button",
+                name="Review test case TC-INSIGHT-2",
+            ).click()
+            expect(case_review_panel).to_contain_text(
+                "Requirement Version ID: REQ-INSIGHT-2"
+            )
+            expect(case_review_panel).to_contain_text(
+                "Suite Version: 2"
+            )
+            expect(case_review_panel.locator("ul li").first).to_have_text(
+                "<script>window.caseExecuted=true;</script>"
+            )
+            expect(steps.nth(0)).to_have_text(
+                "<b>First hostile step</b>"
+            )
+            expect(steps.nth(1)).to_have_text(
+                '<img src="x" onerror="window.caseStepRan=true">'
+            )
+            expect(case_review_panel).to_contain_text(
+                '<svg onload="window.caseExpectedRan=true">'
+            )
+            assert case_review_panel.locator(
+                "script, img, svg, b"
+            ).count() == 0
+            assert page.evaluate(
+                "window.caseExecuted || window.caseStepRan || "
+                "window.caseExpectedRan || window.caseTitleRan || false"
+            ) is False
+
+            case_review_panel.get_by_role(
+                "button",
+                name="Close Review",
+            ).click()
+            expect(case_review_panel).to_be_hidden()
+
+            # Candidate selection still works independently of Review.
+            candidate_checkbox = page.get_by_role(
+                "checkbox",
+                name="Select Reviewable case",
+            )
+            candidate_checkbox.check()
+            expect(page.get_by_role(
+                "button",
+                name="Generate Automation (1 Selected)",
+            )).to_be_visible()
+            candidate_checkbox.uncheck()
+            expect(page.get_by_role(
+                "button",
+                name="Generate Automation for Selected Candidates",
+            )).to_be_visible()
+            assert len(browser_requests) == requests_before_case_review
 
             # Reviewing generated source is read-only and treats markup-like
             # source as text. It must not call the execution endpoint.
@@ -1833,6 +1979,7 @@ def test_project_workspace_execution_insights_browser_flow():
             # Empty artifact lists preserve the workspace and simply render
             # an empty artifact table with no review or execute actions.
             workspace_payload["automation_artifacts"] = []
+            workspace_payload["test_cases"] = []
             page.get_by_role(
                 "button",
                 name="Load Project Workspace",
@@ -1846,6 +1993,15 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Review",
             ).count() == 0
+            expect(test_case_table.locator("tbody tr")).to_have_count(0)
+            assert test_case_table.get_by_role(
+                "button",
+                name="Review",
+            ).count() == 0
+            expect(page.get_by_role(
+                "button",
+                name="Generate Automation for Selected Candidates",
+            )).to_be_disabled()
 
             browser.close()
     finally:

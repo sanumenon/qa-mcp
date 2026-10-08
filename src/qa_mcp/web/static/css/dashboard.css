@@ -125,6 +125,18 @@ button {
     margin-top: 20px;
 }
 
+.test-case-review {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color, #d7dce2);
+    border-radius: 0.5rem;
+    background: var(--surface-color, #fff);
+}
+
+.test-case-review li {
+    margin: 0.35rem 0;
+}
+
 .artifact-review {
     margin-top: 1rem;
     padding: 1rem;
