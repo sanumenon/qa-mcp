@@ -25,19 +25,21 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX
+**Current implementation checkpoint:** P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation
 
-**P2-S9.16 status:** Complete and approved; implementation commit pending user commit.
+**P2-S9.17 status:** Implementation and validation complete; awaiting user review and commit. No P2-S9.17 commit or push has been made.
+
+**Current Git base:** `6b8c532` — Complete P2-S9.16 project-centric workspace UX. This commit is on `main` and `origin/main`.
 
 **Approved product direction:** Model B — Internal QA-Team Platform
 
-**Latest completed/approved checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX. It has not yet been committed or pushed.
+**Latest committed checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX, committed as `6b8c532` and pushed to `origin/main`.
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
 **Branch:** `main`
 
-**Latest verified baseline after P2-S9.15 implementation:**
+**Historical P2-S9.15 verification baseline:**
 
 - Focused artifact/workspace/history/API tests: **30 passed**
 - Focused artifact-review/execution browser test: **1 passed**
@@ -149,7 +151,7 @@ remain unchanged.
 
 ## P2-S9.16 — Project-Centric QA Workspace UX
 
-**Status: COMPLETE AND APPROVED — implementation commit pending user commit**
+**Status: COMPLETE AND APPROVED — committed as `6b8c532` and pushed to `origin/main`**
 
 The approved deployment direction remains Model B — a trusted internal QA
 team. P2-S9.16 organizes the existing Project QA Workspace into these areas:
@@ -188,13 +190,56 @@ generated and persisted test-case review, search/filter and selection/save,
 inert rendering, automation candidate selection, artifact review, explicit
 execution, execution history and insights, and empty states. JavaScript syntax
 checks completed. API/MCP contracts, persistence/database schema, and execution
-behavior remain unchanged. The implementation is complete and approved; its
-commit is pending the user's commit and it has not been pushed.
+behavior remain unchanged. The implementation is complete and approved,
+committed as `6b8c532`, and pushed to `origin/main`.
 
 P2-S9.16 does not claim internal network deployment readiness. Model B
 readiness still requires decisions about identity/access and SQLite
 backup/recovery. Execution remains a local subprocess and is not a sandbox.
 Model C network exposure and Model D untrusted execution remain out of scope.
+
+## P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation
+
+**Status: IMPLEMENTATION COMPLETE AND VALIDATED — awaiting user review/commit**
+
+**Implementation commit:** Pending user commit. No commit hash has been assigned.
+
+The selected identity provider is Google Workspace using Google OAuth 2.0 / OpenID Connect. Google client credentials, redirect URI, and Workspace domain are deployment settings; the Workspace domain is not hard-coded. Production startup requires Google OIDC configuration, a 32-character session secret, an HTTPS redirect URI, and Secure session cookies. The local development actor is configuration-controlled and is rejected in production.
+
+### Identity and project access
+
+- Authlib validates Google OIDC discovery issuer, ID-token signature against Google JWKS, audience, expiry, and nonce. QA-MCP accepts only a verified email and the configured Google `hd` Workspace domain. The stable Google `sub` is the actor key; access/ID tokens are not stored in the application session or exposed to browser JavaScript.
+- Signed, HttpOnly, SameSite=Lax sessions carry the verified subject/email and expiry. Browser state-changing requests use a session-bound CSRF token.
+- The minimal roles are `global_admin` (configured Google subjects) and project-scoped `project_member`. A new project's creator receives membership. Global admins provision additional memberships through the protected project-membership API.
+- The versioned SQLite migration adds membership and security-audit tables transactionally without rebuilding existing tables. `QA_LEGACY_PROJECT_OWNERS` explicitly maps legacy project IDs to Google subject IDs. Unmapped legacy projects are denied to members and counted in readiness; there is no default-wide grant.
+- Project authorization is enforced in shared project, versioning, workspace, and import/export services. Suite creation rejects a requirement version from a different project. Non-admin users receive project-filtered global execution/history/report/failure results.
+
+### Execution, MCP, and operations
+
+- Generated automation receives only the explicit runtime allowlist (`PATH`, `HOME`, temporary-directory/locale variables, `PLAYWRIGHT_BROWSERS_PATH`, `CI`, `SYSTEMROOT`) plus configured `BASE_URL`. Application/provider credentials and arbitrary inherited variables are excluded.
+- MCP remains trusted-local stdio only. Local stdio calls use the explicit local-operator trust boundary; Google browser authentication does not confer MCP access. The `analyze_automation_failures` registration now occurs before the stdio server starts, and the launched process inventory is verified.
+- `/health/live` reports process liveness. `/api/ready` checks the database and reports when legacy project ownership mapping remains outstanding. Existing `/api/health` compatibility is preserved.
+- Sensitive project/API operations record actor, project, action, outcome, timestamp, and request ID without request bodies, credentials, generated source, or execution output. Responses include a validated or generated `X-Request-ID`.
+- SQLite online backup/restore is available through `python -m qa_mcp.operations backup` and `python -m qa_mcp.operations restore <backup-path>`. Backups are integrity-checked, atomically written with mode `0600` in a mode `0700` directory, and pruned to configured retention. Stop QA-MCP before restore and verify the restored service before resuming.
+- The existing project-centric UI is unchanged in structure. It displays the signed-in identity and minimal sign-in, session-expiry, and access-denied states.
+
+### Configuration
+
+Production must set `QA_ENVIRONMENT=production` and `QA_AUTH_MODE=google`, then configure the Google OAuth client ID/secret, exact callback URI, Google Workspace domain, session secret, and global-admin Google subject IDs. Explicit legacy project mappings are required before mapped members can access old projects. See Sections 16 and 17 for the environment-variable contract. Never commit the values or a populated `.env` file.
+
+### Validation
+
+```text
+Focused security, workflow, execution, and MCP tests: 39 passed, 2 warnings
+Full regression:                                  348 passed, 8 warnings, 0 failures
+Browser verification:                             passed (mocked OIDC identity/access states and existing P2-S9.16 workflows)
+JavaScript syntax checks:                         passed
+MCP launched stdio tool inventory:                 passed (all 35 registered tools)
+SQLite online backup/restore/integrity/retention:  passed
+git diff --check:                                  clean
+```
+
+Google OIDC callback behavior was verified through a mocked identity boundary; no live Google credentials or organization deployment were used. P2-S9.17 does not claim deployment readiness until the organization's Google client/domain settings, HTTPS callback, production secret provisioning, legacy ownership mappings, and operational backup schedule are configured and verified. SQLite remains a single-host store, and automation remains a local subprocess rather than a sandbox. Model C network exposure and Model D untrusted execution remain out of scope.
 
 # 2. PRODUCT VISION
 
@@ -1095,7 +1140,19 @@ GITHUB_OWNER=your-github-username-or-org
 SLACK_URL=https://slack.com/api
 SLACK_TOKEN=
 SLACK_DEFAULT_CHANNEL=
+# Google OIDC production configuration (required when QA_AUTH_MODE=google)
+GOOGLE_OIDC_CLIENT_ID=
+GOOGLE_OIDC_CLIENT_SECRET=
+GOOGLE_OIDC_REDIRECT_URI=https://qa.example.test/auth/callback
+GOOGLE_WORKSPACE_DOMAIN=your-workspace-domain.example
+QA_SESSION_SECRET=
+# Optional identity/project administration settings
+QA_GLOBAL_ADMIN_SUBJECTS=
+QA_LEGACY_PROJECT_OWNERS={}
 ```
+
+The Google entries above are placeholders. Do not use a domain or credentials
+that have not been supplied for the deployment.
 
 ## Variable purpose
 
@@ -1110,6 +1167,13 @@ SLACK_DEFAULT_CHANNEL=
 | `SLACK_URL` | Slack API base URL | No |
 | `SLACK_TOKEN` | Slack API authentication | **YES** |
 | `SLACK_DEFAULT_CHANNEL` | Default Slack channel configuration | No |
+| `GOOGLE_OIDC_CLIENT_ID` | Google OAuth web client ID | No |
+| `GOOGLE_OIDC_CLIENT_SECRET` | Google OAuth web client secret | **YES** |
+| `GOOGLE_OIDC_REDIRECT_URI` | Exact registered OIDC callback URI | No |
+| `GOOGLE_WORKSPACE_DOMAIN` | Allowed Google Workspace hosted domain | No |
+| `QA_SESSION_SECRET` | Signs QA-MCP browser sessions; use at least 32 random characters | **YES** |
+| `QA_GLOBAL_ADMIN_SUBJECTS` | Comma-separated stable Google `sub` identifiers for global administrators | No |
+| `QA_LEGACY_PROJECT_OWNERS` | JSON mapping of legacy project IDs to Google `sub` identifiers | No |
 
 ## Deployment/configuration rule
 
@@ -1143,6 +1207,8 @@ The configuration file contains settings for:
 - LLM provider and model configuration
 - Feature flags
 - Automation execution
+- Identity, authentication, and project authorization
+- SQLite database and backup/recovery
 - Jira
 - GitHub
 - Slack
@@ -1158,6 +1224,13 @@ The configuration file contains settings for:
 | `QA_AUTOMATION_TIMEOUT_SECONDS` | Automation execution timeout in seconds |
 | `QA_AUTOMATION_WORKSPACE_ROOT` | Root directory used for automation execution workspaces |
 | `QA_AUTOMATION_KEEP_WORKSPACE` | Controls whether automation workspaces are retained after execution |
+| `QA_AUTH_MODE` | `google` for Google OIDC; explicit `development` mode is only valid outside production |
+| `QA_ENVIRONMENT` | Application environment; production requires Google OIDC configuration |
+| `QA_SESSION_MAX_AGE_SECONDS` | Maximum signed browser session age |
+| `QA_SESSION_COOKIE_SECURE` | Enables Secure session cookies; required in production |
+| `QA_DATABASE_PATH` | SQLite database file path |
+| `QA_BACKUP_DIRECTORY` | Protected SQLite backup destination directory |
+| `QA_BACKUP_RETENTION` | Number of verified backups to retain |
 
 ## Integration environment variables
 
@@ -1172,6 +1245,43 @@ The configuration file contains settings for:
 | `SLACK_URL` | Slack API base URL | No |
 | `SLACK_TOKEN` | Slack API authentication | Yes |
 | `SLACK_DEFAULT_CHANNEL` | Default Slack channel | No |
+
+## Model B authentication and database operations
+
+For production, set `QA_ENVIRONMENT=production`, `QA_AUTH_MODE=google`,
+`QA_SESSION_COOKIE_SECURE=true`, all five Google/session settings shown above,
+and an HTTPS callback URL registered in the Google OAuth client. Configure the
+Workspace domain rather than hard-coding it in application code. Set
+`QA_LEGACY_PROJECT_OWNERS` explicitly for every existing project that should
+be available to a project member; keys are project IDs and values are Google
+stable subject IDs (`sub`). An unmapped project remains inaccessible to
+members and causes readiness to report `mapping_required`.
+
+Project membership uses `global_admin` and `project_member`. Configure at least
+one trusted global administrator with `QA_GLOBAL_ADMIN_SUBJECTS`; administrators
+can provision additional project members through the protected membership API.
+The development actor is a fixed server-side identity, cannot be selected by
+request headers or query values, and cannot start in production.
+
+Create a consistent active-database backup with:
+
+```bash
+python -m qa_mcp.operations backup
+```
+
+The operation uses SQLite's online backup API, verifies `PRAGMA integrity_check`,
+sets backup directory/file permissions to `0700`/`0600`, and retains the newest
+`QA_BACKUP_RETENTION` files. To restore, stop QA-MCP, run:
+
+```bash
+python -m qa_mcp.operations restore /protected/path/to/qa_mcp-backup.sqlite3
+```
+
+The restore path verifies both the source backup and restored database. Restart
+QA-MCP only after the restore succeeds and readiness is healthy. Keep backup
+storage on protected single-host local storage, schedule backups through the
+deployment's existing operations tooling, and periodically perform a restore
+drill. Do not use a shared network filesystem as the live SQLite database.
 
 ## Example local configuration
 
@@ -1693,7 +1803,7 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.15 — Persisted Automation Artifact Identity and Traceability**
+**P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation**
 
 P2-S9.14-A — QA-MCP Production UI Architecture Shell, P2-S9.14-B — Project
 Execution Insights, and P2-S9.14-C — Generated Automation Artifact Review are
@@ -1730,10 +1840,11 @@ clean working tree. Its validation baseline was 327 passed, 8 warnings, and
 0 failures.
 
 P2-S9.15 validation baseline: 329 passed, 8 warnings, and 0 failures.
-P2-S9.16 — Project-Centric QA Workspace UX is complete and approved, with its
-implementation commit pending the user's commit. Once committed, it is the
-latest completed checkpoint. It has not been pushed. Model B remains the
-approved product direction; Model C and Model D remain out of scope.
+P2-S9.16 — Project-Centric QA Workspace UX is complete, committed as
+`6b8c532`, and pushed to `origin/main`. P2-S9.17 implementation and validation
+are complete and awaiting user review/commit; no commit hash exists yet. Model
+B remains the approved product direction; Model C and Model D remain out of
+scope.
 
 Current automation MCP surface:
 
@@ -1755,7 +1866,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Treat **P2-S9.16 — Project-Centric QA Workspace UX** as the latest completed and approved checkpoint; its implementation commit is pending the user's commit and it has not been pushed. Once committed, P2-S9.16 is the latest completed checkpoint. P2-S9.15 remains committed as `ba9e27c`. Model B is the approved deployment direction; Model C and Model D remain out of scope.
+5. Treat **P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation** as the latest implementation checkpoint, complete and validated but awaiting user review/commit. Do not invent its commit hash. P2-S9.16 remains committed as `6b8c532` and pushed to `origin/main`; P2-S9.15 remains committed as `ba9e27c`. Model B is the approved deployment direction; Model C and Model D remain out of scope.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -3153,5 +3264,5 @@ history and project reporting, and browser Review/Execute selection for two
 artifacts.
 
 P2-S9.15 is complete, committed as `ba9e27c`, and pushed to `origin/main`.
-P2-S9.16 — Project-Centric QA Workspace UX is complete and approved; its
-implementation commit is pending the user's commit. It has not been pushed.
+P2-S9.16 — Project-Centric QA Workspace UX is complete, committed as
+`6b8c532`, and pushed to `origin/main`.

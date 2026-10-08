@@ -2,6 +2,17 @@ application:
   name: qa-mcp
   environment: local
 
+auth:
+  # Local developer identity is explicit and rejected in production.
+  mode: development
+  session_max_age_seconds: 28800
+  cookie_secure: false
+
+database:
+  path: data/qa_mcp.db
+  backup_directory: data/backups
+  backup_retention: 14
+
 llm:
   provider: mock
   region: ""

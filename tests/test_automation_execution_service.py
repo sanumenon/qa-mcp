@@ -27,6 +27,7 @@ class FakeRunner:
         self.command = None
         self.cwd = None
         self.timeout_seconds = None
+        self.env = None
 
     def run(
         self,
@@ -38,6 +39,12 @@ class FakeRunner:
         self.cwd = cwd
         self.timeout_seconds = timeout_seconds
         return self.result
+
+
+class EnvironmentRunner(FakeRunner):
+    def run(self, command, cwd, timeout_seconds, env=None):
+        self.env = env
+        return super().run(command, cwd, timeout_seconds)
 
 
 def build_artifact(**overrides):
@@ -105,6 +112,52 @@ def test_execution_runs_generated_artifact(tmp_path):
     assert not (
         tmp_path / "test_successful_login.py"
     ).exists()
+
+
+def test_execution_subprocess_receives_allowlisted_environment_only(
+    tmp_path, monkeypatch
+):
+    import qa_mcp.core.automation.execution_service as execution_service_module
+
+    monkeypatch.setenv("BASE_URL", "should-not-be-inherited")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secret-aws")
+    monkeypatch.setenv("GOOGLE_OIDC_CLIENT_SECRET", "secret-google")
+    monkeypatch.setenv("JIRA_API_TOKEN", "secret-jira")
+    monkeypatch.setenv("GITHUB_TOKEN", "secret-github")
+    monkeypatch.setenv("SLACK_TOKEN", "secret-slack")
+    monkeypatch.setenv("QA_SESSION_SECRET", "secret-session")
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.setattr(
+        execution_service_module,
+        "load_config",
+        lambda: {"automation_execution": {"base_url": "https://qa.example.test"}},
+    )
+    runner = EnvironmentRunner(
+        ExecutionProcessResult(0, "1 passed", "", 0.1)
+    )
+    service = AutomationExecutionService(
+        config=AutomationExecutionConfig(workspace_root=str(tmp_path)),
+        runner=runner,
+    )
+
+    result = service.execute(build_artifact())
+
+    assert result.status == "PASSED"
+    assert runner.env["PATH"] == "/usr/bin"
+    assert runner.env["BASE_URL"] == "https://qa.example.test"
+    assert set(runner.env) <= {
+        *service._SAFE_EXECUTION_ENVIRONMENT_KEYS,
+        "BASE_URL",
+    }
+    for secret_name in (
+        "AWS_SECRET_ACCESS_KEY",
+        "GOOGLE_OIDC_CLIENT_SECRET",
+        "JIRA_API_TOKEN",
+        "GITHUB_TOKEN",
+        "SLACK_TOKEN",
+        "QA_SESSION_SECRET",
+    ):
+        assert secret_name not in runner.env
 
 
 def test_execution_returns_failed_status(tmp_path):

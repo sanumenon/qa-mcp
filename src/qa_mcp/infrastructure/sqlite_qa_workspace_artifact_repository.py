@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import os
 from pathlib import Path
 
 from qa_mcp.models.schemas import GeneratedAutomationArtifact
@@ -11,9 +12,11 @@ class SQLiteQAWorkspaceArtifactRepository:
 
     def __init__(
         self,
-        database_path: str = "data/qa_mcp.db",
+        database_path: str | None = None,
     ):
-        self.database_path = Path(database_path)
+        self.database_path = Path(
+            database_path or os.getenv("QA_DATABASE_PATH", "data/qa_mcp.db")
+        )
         self.database_path.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -174,3 +177,16 @@ class SQLiteQAWorkspaceArtifactRepository:
             ).fetchall()
 
         return [dict(row) for row in rows]
+
+    def list_artifact_ids_for_project(
+        self,
+        project_id: str,
+    ) -> list[str]:
+        """Return every artifact identity for access-scoped execution reports."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT artifact_id FROM qa_workspace_automation_artifacts "
+                "WHERE project_id = ? ORDER BY rowid DESC",
+                (project_id,),
+            ).fetchall()
+        return [row["artifact_id"] for row in rows]

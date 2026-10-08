@@ -12,8 +12,10 @@ class ProjectContext:
     def __init__(
         self,
         repository: ProjectRepository,
+        authorization=None,
     ):
         self.repository = repository
+        self.authorization = authorization
 
     def create_project(
         self,
@@ -28,19 +30,38 @@ class ProjectContext:
                 f"{project.project_id}"
             )
 
-        return self.repository.create(
+        result = self.repository.create(
             project
         )
+        if self.authorization is not None:
+            from qa_mcp.core.security.actor import current_actor
+
+            self.authorization.repository.grant_project_member(
+                project.project_id, current_actor().subject
+            )
+        return result
 
     def list_projects(
         self,
     ) -> list[QAProject]:
-        return self.repository.list()
+        if self.authorization is None:
+            return self.repository.list()
+        visible = self.authorization.visible_project_ids()
+        if visible is None:
+            return self.repository.list()
+        return [
+            project
+            for project_id in visible
+            if (project := self.repository.get(project_id)) is not None
+        ]
 
     def get_project(
         self,
         project_id: str,
     ) -> QAProject:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
 
         project = self.repository.get(
             project_id

@@ -21,8 +21,10 @@ class QARequirementVersioningService:
     def __init__(
         self,
         repository: RequirementVersionRepository,
+        authorization=None,
     ):
         self.repository = repository
+        self.authorization = authorization
 
     def create_requirement_version(
         self,
@@ -31,6 +33,9 @@ class QARequirementVersioningService:
         application: str,
         environment: str,
     ) -> QARequirementVersion:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
 
         versions = (
             self.repository.list_for_project(
@@ -73,12 +78,18 @@ class QARequirementVersioningService:
                 f"{version_id}"
             )
 
+        if self.authorization is not None:
+            self.authorization.require_project(result.project_id)
+
         return result
 
     def list_requirement_versions(
         self,
         project_id: str,
     ) -> list[QARequirementVersion]:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
 
         return self.repository.list_for_project(
             project_id
@@ -90,8 +101,12 @@ class QASuiteVersioningService:
     def __init__(
         self,
         repository: SuiteVersionRepository,
+        requirement_repository: RequirementVersionRepository | None = None,
+        authorization=None,
     ):
         self.repository = repository
+        self.requirement_repository = requirement_repository
+        self.authorization = authorization
 
     def create_suite_version(
         self,
@@ -100,6 +115,21 @@ class QASuiteVersioningService:
         test_cases: TestCaseResponse,
         review: TestCaseReview,
     ) -> QASuiteVersion:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
+        if self.requirement_repository is not None:
+            requirement = self.requirement_repository.get(
+                requirement_version_id
+            )
+            if requirement is None:
+                raise ValueError(
+                    f"Requirement version not found: {requirement_version_id}"
+                )
+            if requirement.project_id != project_id:
+                raise ValueError(
+                    "Requirement version belongs to a different project"
+                )
 
         versions = (
             self.repository.list_for_project(
@@ -144,12 +174,18 @@ class QASuiteVersioningService:
                 f"{suite_id}"
             )
 
+        if self.authorization is not None:
+            self.authorization.require_project(result.project_id)
+
         return result
 
     def list_suite_versions(
         self,
         project_id: str,
     ) -> list[QASuiteVersion]:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
 
         return self.repository.list_for_project(
             project_id

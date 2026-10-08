@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import os
 from pathlib import Path
 
 from qa_mcp.models.schemas import AutomationExecutionResult
@@ -11,9 +12,11 @@ class SQLiteAutomationExecutionRepository:
 
     def __init__(
         self,
-        database_path: str = "data/qa_mcp.db",
+        database_path: str | None = None,
     ):
-        self.database_path = Path(database_path)
+        self.database_path = Path(
+            database_path or os.getenv("QA_DATABASE_PATH", "data/qa_mcp.db")
+        )
         self.database_path.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -141,6 +144,146 @@ class SQLiteAutomationExecutionRepository:
             self._to_model(row)
             for row in rows
         ]
+
+    def list_for_artifact_ids(
+        self, artifact_ids: list[str], limit: int = 50,
+        automation_case_id: str | None = None,
+    ):
+        if limit < 1:
+            raise ValueError("limit must be greater than zero")
+        if not artifact_ids:
+            return []
+        placeholders = ", ".join("?" for _ in artifact_ids)
+        case_clause = " AND automation_case_id = ?" if automation_case_id else ""
+        params = (*artifact_ids, automation_case_id, limit) if automation_case_id else (*artifact_ids, limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM automation_execution_history "
+                f"WHERE automation_artifact_id IN ({placeholders}){case_clause} "
+                "ORDER BY rowid DESC LIMIT ?",
+                params,
+            ).fetchall()
+        return [self._to_model(row) for row in rows]
+
+    def get_for_artifact_ids(self, execution_id: str, artifact_ids: list[str]):
+        if not artifact_ids:
+            return None
+        placeholders = ", ".join("?" for _ in artifact_ids)
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM automation_execution_history "
+                f"WHERE execution_id = ? AND automation_artifact_id IN ({placeholders})",
+                (execution_id, *artifact_ids),
+            ).fetchone()
+        return self._to_model(row) if row is not None else None
+
+    def report_for_artifact_ids(
+        self, artifact_ids: list[str], automation_case_id: str | None = None
+    ):
+        from qa_mcp.models.execution_reporting import AutomationExecutionReport
+
+        if not artifact_ids:
+            return AutomationExecutionReport(
+                total_executions=0, passed=0, failed=0, not_executed=0,
+                error=0, pass_rate_percent=0.0, total_duration_seconds=0.0,
+                average_duration_seconds=0.0, latest_execution_id=None, latest_status=None,
+            )
+        placeholders = ", ".join("?" for _ in artifact_ids)
+        case_clause = " AND automation_case_id = ?" if automation_case_id else ""
+        params = (*artifact_ids, automation_case_id) if automation_case_id else tuple(artifact_ids)
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT execution_id, status, duration_seconds "
+                "FROM automation_execution_history "
+                f"WHERE automation_artifact_id IN ({placeholders}){case_clause} ORDER BY rowid DESC",
+                params,
+            ).fetchall()
+        total = len(rows)
+        passed = sum(row["status"] == "PASSED" for row in rows)
+        durations = [row["duration_seconds"] for row in rows]
+        counts = {status: sum(row["status"] == status for row in rows)
+                  for status in ("FAILED", "NOT_EXECUTED", "ERROR")}
+        return AutomationExecutionReport(
+            total_executions=total,
+            passed=passed,
+            failed=counts["FAILED"],
+            not_executed=counts["NOT_EXECUTED"],
+            error=counts["ERROR"],
+            pass_rate_percent=(passed / total * 100.0) if total else 0.0,
+            total_duration_seconds=sum(durations),
+            average_duration_seconds=(sum(durations) / total) if total else 0.0,
+            latest_execution_id=rows[0]["execution_id"] if rows else None,
+            latest_status=rows[0]["status"] if rows else None,
+        )
+
+    def analyze_failures_for_artifact_ids(
+        self, artifact_ids: list[str], limit: int = 50,
+        automation_case_id: str | None = None,
+    ):
+        from qa_mcp.models.execution_failure_analysis import (
+            AutomationExecutionFailure,
+            AutomationExecutionFailureAnalysis,
+        )
+
+        if limit < 1:
+            raise ValueError("limit must be greater than zero")
+        if not artifact_ids:
+            return AutomationExecutionFailureAnalysis(
+                total_executions=0, failed_executions=0, error_executions=0,
+                total_failures=0, failure_rate_percent=0.0,
+                affected_automation_cases=[], latest_failure_execution_id=None,
+                latest_failure_status=None, failures=[],
+            )
+        placeholders = ", ".join("?" for _ in artifact_ids)
+        case_clause = " AND automation_case_id = ?" if automation_case_id else ""
+        params = (*artifact_ids, automation_case_id) if automation_case_id else tuple(artifact_ids)
+        failure_params = (*params, limit)
+        with self._connect() as connection:
+            all_rows = connection.execute(
+                "SELECT status FROM automation_execution_history "
+                f"WHERE automation_artifact_id IN ({placeholders}){case_clause}",
+                params,
+            ).fetchall()
+            failed_rows = connection.execute(
+                "SELECT * FROM automation_execution_history "
+                f"WHERE automation_artifact_id IN ({placeholders}) "
+                f"AND status IN ('FAILED', 'ERROR'){case_clause} ORDER BY rowid DESC LIMIT ?",
+                failure_params,
+            ).fetchall()
+            cases = connection.execute(
+                "SELECT DISTINCT automation_case_id FROM automation_execution_history "
+                f"WHERE automation_artifact_id IN ({placeholders}) "
+                f"AND status IN ('FAILED', 'ERROR'){case_clause} ORDER BY automation_case_id",
+                params,
+            ).fetchall()
+        failed_count = sum(row["status"] == "FAILED" for row in all_rows)
+        error_count = sum(row["status"] == "ERROR" for row in all_rows)
+        failures = [
+            AutomationExecutionFailure(
+                execution_id=row["execution_id"],
+                automation_artifact_id=row["automation_artifact_id"],
+                automation_case_id=row["automation_case_id"],
+                status=row["status"],
+                exit_code=row["exit_code"],
+                message=row["error"] or row["stderr"] or row["stdout"] or "Automation execution failed",
+                stderr=row["stderr"],
+                duration_seconds=row["duration_seconds"],
+            )
+            for row in failed_rows
+        ]
+        total = len(all_rows)
+        failure_total = failed_count + error_count
+        return AutomationExecutionFailureAnalysis(
+            total_executions=total,
+            failed_executions=failed_count,
+            error_executions=error_count,
+            total_failures=failure_total,
+            failure_rate_percent=(failure_total / total * 100.0) if total else 0.0,
+            affected_automation_cases=[row["automation_case_id"] for row in cases],
+            latest_failure_execution_id=failures[0].execution_id if failures else None,
+            latest_failure_status=failures[0].status if failures else None,
+            failures=failures,
+        )
     def _project_artifact_ids(
         self,
         project_id: str,

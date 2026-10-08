@@ -26,6 +26,7 @@ class QAImportExportService:
         project_repository: ProjectRepository,
         requirement_repository: RequirementVersionRepository,
         suite_repository: SuiteVersionRepository,
+        authorization=None,
     ):
         self.project_repository = (
             project_repository
@@ -38,11 +39,15 @@ class QAImportExportService:
         self.suite_repository = (
             suite_repository
         )
+        self.authorization = authorization
 
     def export_project(
         self,
         project_id: str,
     ) -> str:
+
+        if self.authorization is not None:
+            self.authorization.require_project(project_id)
 
         project = (
             self.project_repository.get(
@@ -185,6 +190,12 @@ class QAImportExportService:
         self.project_repository.create(
             project
         )
+        if self.authorization is not None:
+            from qa_mcp.core.security.actor import current_actor
+
+            self.authorization.repository.grant_project_member(
+                project.project_id, current_actor().subject
+            )
 
         # -------------------------------------------------
         # Persist requirement versions

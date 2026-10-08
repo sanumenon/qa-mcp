@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 
 from qa_mcp.infrastructure.versioning.repositories import (
@@ -27,9 +28,11 @@ class SQLiteRequirementVersionRepository(
 
     def __init__(
         self,
-        database_path: str = "data/qa_mcp.db",
+        database_path: str | None = None,
     ):
-        self.database_path = database_path
+        self.database_path = database_path or os.getenv(
+            "QA_DATABASE_PATH", "data/qa_mcp.db"
+        )
         self._initialize_database()
 
     def _connect(self):
@@ -162,9 +165,11 @@ class SQLiteSuiteVersionRepository(
 
     def __init__(
         self,
-        database_path: str = "data/qa_mcp.db",
+        database_path: str | None = None,
     ):
-        self.database_path = database_path
+        self.database_path = database_path or os.getenv(
+            "QA_DATABASE_PATH", "data/qa_mcp.db"
+        )
         self._initialize_database()
 
     def _connect(self):

@@ -1,6 +1,7 @@
 import uuid
 
 from qa_mcp.server import (
+    create_qa_project,
     create_requirement_version,
     get_requirement_version,
     list_requirement_versions,
@@ -18,11 +19,22 @@ def unique_project_id(
         f"{uuid.uuid4().hex}"
     )
 
+
+def create_project(project_id: str) -> None:
+    create_qa_project(
+        project_id=project_id,
+        name=project_id,
+        application="Customer Portal",
+        environment="QA",
+    )
+
 def test_requirement_version_mcp_tools():
 
     project_id = unique_project_id(
                 "mcp-version-test"
                 )
+
+    create_project(project_id)
 
     first = create_requirement_version(
         project_id=project_id,
@@ -60,6 +72,8 @@ def test_requirement_versions_increment():
     project_id = unique_project_id(
                 "mcp-version-increment"
             )
+
+    create_project(project_id)
 
     first = create_requirement_version(
         project_id=project_id,
@@ -125,7 +139,9 @@ def test_suite_version_mcp_tools():
 
     project_id = unique_project_id(
         "mcp-suite-test"
-    )
+        )
+
+    create_project(project_id)
 
     requirement = create_requirement_version(
         project_id=project_id,

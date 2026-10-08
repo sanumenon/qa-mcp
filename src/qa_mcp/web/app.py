@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import logging
+import secrets
+import time
+
+from fastapi import Request
+from fastapi.responses import RedirectResponse, JSONResponse, PlainTextResponse
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -42,6 +47,16 @@ from qa_mcp.core.llm import (
     create_llm,
 )
 from qa_mcp.core.project.context import ProjectContext
+from qa_mcp.core.security.authorization import ProjectAuthorization
+from qa_mcp.infrastructure.sqlite_authorization_repository import (
+    SQLiteAuthorizationRepository,
+)
+from qa_mcp.infrastructure.sqlite_qa_workspace_artifact_repository import (
+    SQLiteQAWorkspaceArtifactRepository,
+)
+from qa_mcp.web.auth import install_authentication_middleware, install_auth_exception_handler
+from qa_mcp.core.security.oidc import GoogleOIDCProvider
+from qa_mcp.core.security.actor import current_actor
 from qa_mcp.core.versioning.service import (
     QARequirementVersioningService,
     QASuiteVersioningService,
@@ -69,6 +84,34 @@ from qa_mcp.web.qa_workspace_service import (
 
 logger = logging.getLogger(__name__)
 
+workspace_config = load_config()
+auth_settings = dict(workspace_config["auth"])
+auth_settings["environment"] = workspace_config["application"]["environment"]
+auth_settings["backup_directory"] = workspace_config["database"]["backup_directory"]
+auth_settings["backup_retention"] = workspace_config["database"]["backup_retention"]
+
+if auth_settings["mode"] == "google":
+    required_google_settings = (
+        "google_client_id",
+        "google_client_secret",
+        "redirect_uri",
+        "workspace_domain",
+        "session_secret",
+    )
+    missing_google_settings = [
+        key for key in required_google_settings if not auth_settings.get(key)
+    ]
+    if missing_google_settings:
+        raise RuntimeError(
+            "Google OIDC configuration is incomplete: "
+            + ", ".join(missing_google_settings)
+        )
+    if len(auth_settings["session_secret"]) < 32:
+        raise RuntimeError("QA_SESSION_SECRET must contain at least 32 characters")
+    oidc_provider = GoogleOIDCProvider(auth_settings)
+else:
+    oidc_provider = None
+
 history_service = AutomationExecutionHistoryService()
 
 reporting_service = AutomationExecutionReportingService(
@@ -82,13 +125,12 @@ failure_analysis_service = (
 workspace_automation_execution_service = (
     AutomationExecutionService()
 )
+workspace_artifact_repository = SQLiteQAWorkspaceArtifactRepository()
 
 
 # ---------------------------------------------------------
 # QA Workspace
 # ---------------------------------------------------------
-
-workspace_config = load_config()
 
 workspace_llm = create_llm(
     workspace_config
@@ -98,8 +140,18 @@ workspace_project_repository = (
     SQLiteProjectRepository()
 )
 
+authorization_repository = SQLiteAuthorizationRepository(
+    database_path=workspace_config["database"]["path"],
+    legacy_ownership=auth_settings["legacy_project_owners"],
+)
+project_authorization = ProjectAuthorization(
+    authorization_repository,
+    auth_settings["global_admin_subjects"],
+)
+
 workspace_project_context = ProjectContext(
-    workspace_project_repository
+    workspace_project_repository,
+    authorization=project_authorization,
 )
 
 workspace_requirement_version_repository = (
@@ -112,13 +164,16 @@ workspace_suite_version_repository = (
 
 workspace_requirement_versioning_service = (
     QARequirementVersioningService(
-        workspace_requirement_version_repository
+        workspace_requirement_version_repository,
+        authorization=project_authorization,
     )
 )
 
 workspace_suite_versioning_service = (
     QASuiteVersioningService(
-        workspace_suite_version_repository
+        workspace_suite_version_repository,
+        requirement_repository=workspace_requirement_version_repository,
+        authorization=project_authorization,
     )
 )
 
@@ -173,6 +228,7 @@ qa_workspace_service = QAWorkspaceService(
     automation_code_generation_service=(
         workspace_automation_code_generation_service
     ),
+    workspace_artifact_repository=workspace_artifact_repository,
     automation_execution_service=(
         workspace_automation_execution_service
     ),
@@ -186,6 +242,11 @@ app = FastAPI(
     title="QA MCP Dashboard",
     version="0.1.0",
 )
+
+install_authentication_middleware(
+    app, auth_settings, project_authorization, authorization_repository
+)
+install_auth_exception_handler(app)
 
 app.mount(
     "/static",
@@ -203,6 +264,111 @@ def health():
         "status": "ok",
         "application": "QA MCP Dashboard",
     }
+
+
+@app.get("/health/live")
+def liveness():
+    return {"status": "alive", "application": "QA MCP Dashboard"}
+
+
+@app.get("/api/ready")
+def readiness():
+    ready = authorization_repository.database_ready()
+    unmapped_count = len(authorization_repository.unmapped_project_ids())
+    return JSONResponse(
+        {
+            "status": "ready" if ready and unmapped_count == 0 else "not_ready",
+            "checks": {
+                "database": "ok" if ready else "unavailable",
+                "legacy_project_ownership": "ok" if unmapped_count == 0 else "mapping_required",
+            },
+            "unmapped_legacy_project_count": unmapped_count,
+        },
+        status_code=200 if ready and unmapped_count == 0 else 503,
+    )
+
+
+@app.get("/api/auth/me")
+def authenticated_identity():
+    actor = current_actor()
+    return {
+        "subject": actor.subject,
+        "email": actor.email,
+        "authenticated": actor.authenticated,
+        "global_admin": project_authorization.is_global_admin(actor),
+    }
+
+
+@app.get("/auth/login")
+async def login(request: Request):
+    if auth_settings["mode"] == "development":
+        return RedirectResponse("/")
+    try:
+        return await oidc_provider.begin(request)
+    except Exception:
+        logger.warning("Google OIDC login initiation failed")
+        return PlainTextResponse("Authentication could not be started", status_code=503)
+
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    if oidc_provider is None:
+        return PlainTextResponse("Google authentication is disabled", status_code=404)
+    try:
+        actor = await oidc_provider.complete(request)
+        request.session.clear()
+        request.session.update(
+            {
+                "actor_sub": actor.subject,
+                "actor_email": actor.email,
+                "expires_at": time.time() + auth_settings["session_max_age_seconds"],
+                "csrf_token": secrets.token_urlsafe(32),
+            }
+        )
+        return RedirectResponse("/", status_code=303)
+    except Exception:
+        request.session.clear()
+        logger.warning("Google OIDC callback rejected")
+        return PlainTextResponse("Google authentication failed", status_code=401)
+
+
+@app.post("/auth/logout")
+def logout(request: Request):
+    request.session.clear()
+    response = JSONResponse({"status": "signed_out"})
+    response.delete_cookie("qa_session", path="/")
+    response.delete_cookie("qa_csrf", path="/")
+    return response
+
+
+@app.post("/api/projects/{project_id}/members")
+def add_project_member(project_id: str, request: dict):
+    actor_id = request.get("actor_id")
+    if not isinstance(actor_id, str) or not actor_id.strip():
+        raise HTTPException(status_code=400, detail="actor_id is required")
+    project_authorization.grant_member(project_id, actor_id.strip())
+    return {"project_id": project_id, "actor_id": actor_id.strip(), "role": "project_member"}
+
+
+@app.delete("/api/projects/{project_id}/members/{actor_id}")
+def remove_project_member(project_id: str, actor_id: str):
+    if not project_authorization.is_global_admin():
+        raise HTTPException(status_code=403, detail="Project administration denied")
+    project_authorization.require_project(project_id)
+    removed = authorization_repository.revoke_project_member(project_id, actor_id)
+    return {"project_id": project_id, "actor_id": actor_id, "removed": removed}
+
+
+def _authorized_artifact_ids() -> list[str] | None:
+    project_ids = project_authorization.visible_project_ids()
+    if project_ids is None:
+        return None
+    artifact_ids: list[str] = []
+    for project_id in project_ids:
+        artifact_ids.extend(
+            workspace_artifact_repository.list_artifact_ids_for_project(project_id)
+        )
+    return artifact_ids
 
 
 # ---------------------------------------------------------
@@ -515,9 +681,16 @@ def executions(
     automation_case_id: str | None = None,
     limit: int = 50,
 ):
-    results = history_service.list(
-        automation_case_id=automation_case_id,
-        limit=limit,
+    artifact_ids = _authorized_artifact_ids()
+    results = (
+        history_service.list(
+            automation_case_id=automation_case_id,
+            limit=limit,
+        )
+        if artifact_ids is None
+        else history_service.repository.list_for_artifact_ids(
+            artifact_ids, limit=limit, automation_case_id=automation_case_id
+        )
     )
 
     return [
@@ -530,9 +703,15 @@ def executions(
 def execution_report(
     automation_case_id: str | None = None,
 ):
-    return reporting_service.report(
-        automation_case_id=automation_case_id,
-    ).model_dump()
+    artifact_ids = _authorized_artifact_ids()
+    result = (
+        reporting_service.report(automation_case_id=automation_case_id)
+        if artifact_ids is None
+        else history_service.repository.report_for_artifact_ids(
+            artifact_ids, automation_case_id=automation_case_id
+        )
+    )
+    return result.model_dump()
 
 
 @app.get("/api/executions/failures")
@@ -540,10 +719,17 @@ def execution_failures(
     automation_case_id: str | None = None,
     limit: int = 50,
 ):
-    return failure_analysis_service.analyze(
-        automation_case_id=automation_case_id,
-        limit=limit,
-    ).model_dump()
+    artifact_ids = _authorized_artifact_ids()
+    result = (
+        failure_analysis_service.analyze(
+            automation_case_id=automation_case_id, limit=limit
+        )
+        if artifact_ids is None
+        else failure_analysis_service.repository.analyze_failures_for_artifact_ids(
+            artifact_ids, limit=limit, automation_case_id=automation_case_id
+        )
+    )
+    return result.model_dump()
 
 # ---------------------------------------------------------
 # Workflow Pages
@@ -700,6 +886,7 @@ without changing execution behavior.
 
 </main>
 
+<script src="/static/js/auth.js"></script>
 <script src="/static/js/execution.js"></script>
 
 </body>
@@ -849,6 +1036,7 @@ using the existing backend capabilities.
 
 </main>
 
+<script src="/static/js/auth.js"></script>
 <script src="/static/js/reports.js"></script>
 
 </body>
@@ -1246,6 +1434,7 @@ test suite from a requirement.
 
 
 
+    <script src="/static/js/auth.js"></script>
     <script src="/static/js/dashboard.js"></script>
 
 </body>
@@ -1431,6 +1620,7 @@ already prepared for the selected project.
 
 </main>
 
+<script src="/static/js/auth.js"></script>
 <script src="/static/js/project_workspace.js"></script>
 
 </body>

@@ -78,9 +78,13 @@ from qa_mcp.models.schemas import (
 )
 
 from qa_mcp.core.project.context import ProjectContext
+from qa_mcp.core.security.authorization import ProjectAuthorization
 
 from qa_mcp.infrastructure.sqlite_project_repository import (
     SQLiteProjectRepository,
+)
+from qa_mcp.infrastructure.sqlite_authorization_repository import (
+    SQLiteAuthorizationRepository,
 )
 
 from qa_mcp.infrastructure.versioning.sqlite_version_repository import (
@@ -192,8 +196,18 @@ automation_execution_failure_analysis_service = (
 
 project_repository = SQLiteProjectRepository()
 
+authorization_repository = SQLiteAuthorizationRepository(
+    database_path=config["database"]["path"],
+    legacy_ownership=config["auth"]["legacy_project_owners"],
+)
+project_authorization = ProjectAuthorization(
+    authorization_repository,
+    config["auth"]["global_admin_subjects"],
+)
+
 project_context = ProjectContext(
-    project_repository
+    project_repository,
+    authorization=project_authorization,
 )
 
 requirement_version_repository = (
@@ -212,18 +226,22 @@ import_export_service = QAImportExportService(
     suite_repository=(
         suite_version_repository
     ),
+    authorization=project_authorization,
 )
 
 
 requirement_versioning_service = (
     QARequirementVersioningService(
-        requirement_version_repository
+        requirement_version_repository,
+        authorization=project_authorization,
     )
 )
 
 suite_versioning_service = (
     QASuiteVersioningService(
-        suite_version_repository
+        suite_version_repository,
+        requirement_repository=requirement_version_repository,
+        authorization=project_authorization,
     )
 )
 
@@ -1034,9 +1052,6 @@ def list_automation_executions(
         for result in results
     ]
     
-if __name__ == "__main__":
-    mcp.run()
-
 # ---------------------------------------------------------
 # Automation Execution Failure Analysis
 # ---------------------------------------------------------
@@ -1054,3 +1069,8 @@ def analyze_automation_failures(
     )
 
     return result.model_dump()
+
+
+if __name__ == "__main__":
+    # MCP stdio remains a trusted local-operator boundary, separate from web OIDC.
+    mcp.run(transport="stdio")

@@ -24,6 +24,19 @@ from qa_mcp.models.schemas import (
 class AutomationExecutionService:
     """Execute generated automation artifacts."""
 
+    _SAFE_EXECUTION_ENVIRONMENT_KEYS = (
+        "PATH",
+        "HOME",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "LC_ALL",
+        "PLAYWRIGHT_BROWSERS_PATH",
+        "CI",
+        "SYSTEMROOT",
+    )
+
     def __init__(
         self,
         config: AutomationExecutionConfig | None = None,
@@ -80,7 +93,11 @@ class AutomationExecutionService:
         execution_config = config["automation_execution"]
         base_url = execution_config["base_url"]
 
-        execution_environment = os.environ.copy()
+        execution_environment = {
+            key: os.environ[key]
+            for key in self._SAFE_EXECUTION_ENVIRONMENT_KEYS
+            if key in os.environ
+        }
         execution_environment["BASE_URL"] = base_url
 
         return execution_environment

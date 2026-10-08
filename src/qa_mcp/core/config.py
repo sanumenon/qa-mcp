@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import json
 import yaml
 from dotenv import load_dotenv
 
@@ -39,6 +40,10 @@ def load_config() -> dict:
         encoding="utf-8",
     ) as file:
         config = yaml.safe_load(file) or {}
+    config.setdefault("application", {})
+    config["application"]["environment"] = os.getenv(
+        "QA_ENVIRONMENT", config["application"].get("environment", "local")
+    )
 
     config["llm"]["provider"] = os.getenv(
         "LLM_PROVIDER",
@@ -162,6 +167,65 @@ def load_config() -> dict:
             "default_channel",
             "",
         ),
+    )
+
+    config.setdefault("auth", {})
+    config["auth"].update(
+        {
+            "mode": os.getenv(
+                "QA_AUTH_MODE", config["auth"].get("mode", "development")
+            ).strip().lower(),
+            "google_client_id": os.getenv("GOOGLE_OIDC_CLIENT_ID", ""),
+            "google_client_secret": os.getenv("GOOGLE_OIDC_CLIENT_SECRET", ""),
+            "redirect_uri": os.getenv("GOOGLE_OIDC_REDIRECT_URI", ""),
+            "workspace_domain": os.getenv("GOOGLE_WORKSPACE_DOMAIN", "").strip().lower(),
+            "session_secret": os.getenv("QA_SESSION_SECRET", ""),
+            "session_max_age_seconds": int(
+                os.getenv(
+                    "QA_SESSION_MAX_AGE_SECONDS",
+                    str(config["auth"].get("session_max_age_seconds", 28800)),
+                )
+            ),
+            "cookie_secure": os.getenv(
+                "QA_SESSION_COOKIE_SECURE",
+                "true" if config.get("application", {}).get("environment") == "production" else "false",
+            ).strip().lower() in {"1", "true", "yes"},
+            "global_admin_subjects": [
+                value.strip()
+                for value in os.getenv("QA_GLOBAL_ADMIN_SUBJECTS", "").split(",")
+                if value.strip()
+            ],
+        }
+    )
+    try:
+        config["auth"]["legacy_project_owners"] = json.loads(
+            os.getenv("QA_LEGACY_PROJECT_OWNERS", "{}")
+        )
+    except json.JSONDecodeError as exc:
+        raise ValueError("QA_LEGACY_PROJECT_OWNERS must be a JSON object") from exc
+    if not isinstance(config["auth"]["legacy_project_owners"], dict):
+        raise ValueError("QA_LEGACY_PROJECT_OWNERS must be a JSON object")
+    if any(
+        not isinstance(project_id, str)
+        or not project_id.strip()
+        or not isinstance(subject, str)
+        or not subject.strip()
+        for project_id, subject in config["auth"]["legacy_project_owners"].items()
+    ):
+        raise ValueError(
+            "QA_LEGACY_PROJECT_OWNERS must map non-empty project IDs to Google subject IDs"
+        )
+
+    config.setdefault("database", {})
+    config["database"]["path"] = os.getenv(
+        "QA_DATABASE_PATH", config["database"].get("path", "data/qa_mcp.db")
+    )
+    os.environ.setdefault("QA_DATABASE_PATH", config["database"]["path"])
+    config["database"]["backup_directory"] = os.getenv(
+        "QA_BACKUP_DIRECTORY", config["database"].get("backup_directory", "data/backups")
+    )
+    config["database"]["backup_retention"] = int(
+        os.getenv("QA_BACKUP_RETENTION", str(config["database"].get("backup_retention", 14)))
     )
 
     config.setdefault("automation_execution", {})

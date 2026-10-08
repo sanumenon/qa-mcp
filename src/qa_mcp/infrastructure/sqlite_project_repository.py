@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -17,10 +18,10 @@ class SQLiteProjectRepository(
 
     def __init__(
         self,
-        database_path: str = "data/qa_mcp.db",
+        database_path: str | None = None,
     ):
         self.database_path = Path(
-            database_path
+            database_path or os.getenv("QA_DATABASE_PATH", "data/qa_mcp.db")
         )
 
         self.database_path.parent.mkdir(
