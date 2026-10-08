@@ -21,6 +21,52 @@ function getProjectId() {
 }
 
 
+async function selectProjectWorkspace() {
+    const projectId = getProjectId();
+    const url = new URL(window.location.href);
+    if (projectId) {
+        url.searchParams.set("project_id", projectId);
+    } else {
+        url.searchParams.delete("project_id");
+    }
+    window.history.replaceState(null, "", url);
+
+    if (projectId) {
+        await loadProjectQAWorkspace();
+    } else {
+        const actionContainer = document.getElementById(
+            "project-workspace-action"
+        );
+        const actionMount = document.getElementById(
+            "project-workspace-action-mount"
+        );
+        if (actionContainer && actionMount) {
+            actionMount.appendChild(actionContainer);
+            actionContainer.hidden = true;
+        }
+        const automationButton = getProjectWorkspaceActionButton();
+        if (automationButton) {
+            automationButton.disabled = true;
+        }
+        document.getElementById(
+            "project-workspace-result"
+        ).replaceChildren();
+        document.querySelectorAll(".project-area-panel").forEach(panel => {
+            panel.hidden = true;
+        });
+        document.getElementById(
+            "project-execution-history"
+        ).replaceChildren();
+        document.getElementById(
+            "project-execution-review"
+        ).replaceChildren();
+        document.getElementById(
+            "project-execution-insights"
+        ).textContent = "Select a project to view its execution insights.";
+    }
+}
+
+
 function getProjectWorkspaceActionButton() {
 
     return document.getElementById(
@@ -69,6 +115,348 @@ function updateProjectAutomationButton() {
 }
 
 
+function setProjectWorkspaceArea(area) {
+    const tabs = Array.from(
+        document.querySelectorAll("[data-project-area]")
+    );
+
+    tabs.forEach(tab => {
+        const selected = tab.dataset.projectArea === area;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+    });
+
+    document.querySelectorAll(".project-area-panel").forEach(panel => {
+        panel.hidden = panel.id !== `project-area-${area}`;
+    });
+
+    const actionContainer = document.getElementById(
+        "project-workspace-action"
+    );
+    if (actionContainer) {
+        actionContainer.hidden = area !== "automation";
+    }
+}
+
+
+function updateProjectOverview(report, analysis) {
+    const values = {
+        "project-overview-execution-count": report.total_executions || 0,
+        "project-overview-passed": report.passed || 0,
+        "project-overview-failed": report.failed || 0,
+        "project-overview-pass-rate":
+            `${Number(report.pass_rate_percent || 0).toFixed(1)}%`,
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = String(value);
+        }
+    });
+
+    const activity = document.getElementById(
+        "project-overview-activity"
+    );
+    if (!activity) {
+        return;
+    }
+
+    activity.replaceChildren();
+    const latestFailure = Array.isArray(analysis.failures)
+        ? analysis.failures[0]
+        : null;
+    const message = document.createElement("p");
+    if (latestFailure) {
+        message.textContent =
+            `Recent failure: ${latestFailure.message || "Execution failed"}`;
+        const reviewButton = document.createElement("button");
+        reviewButton.type = "button";
+        reviewButton.textContent = "Review failure";
+        reviewButton.addEventListener("click", () => {
+            setProjectWorkspaceArea("executions");
+            openProjectExecutionReview(latestFailure.execution_id);
+        });
+        activity.append(message, reviewButton);
+    } else if (Number(report.total_executions || 0) === 0) {
+        message.textContent = "No executions have been recorded for this project yet.";
+        activity.appendChild(message);
+    } else {
+        message.textContent = "No recent failures recorded for this project.";
+        activity.appendChild(message);
+    }
+}
+
+
+function renderProjectOverviewError(message) {
+    [
+        "project-overview-execution-count",
+        "project-overview-passed",
+        "project-overview-failed",
+        "project-overview-pass-rate",
+    ].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = "Unavailable";
+        }
+    });
+    const activity = document.getElementById(
+        "project-overview-activity"
+    );
+    if (activity) {
+        activity.textContent = message;
+    }
+}
+
+
+function applySavedTestCaseFilters() {
+    const search = (
+        document.getElementById("saved-test-case-search")?.value || ""
+    ).trim().toLowerCase();
+    const priority =
+        document.getElementById("saved-test-case-priority")?.value || "";
+    const testType =
+        document.getElementById("saved-test-case-type")?.value || "";
+    const candidate =
+        document.getElementById("saved-test-case-candidate")?.value || "";
+    const rows = Array.from(
+        document.querySelectorAll("[data-test-case-filter-row]")
+    );
+
+    let visible = 0;
+    rows.forEach(row => {
+        const matches =
+            (!search || row.dataset.search.includes(search)) &&
+            (!priority || row.dataset.priority === priority) &&
+            (!testType || row.dataset.testType === testType) &&
+            (!candidate || row.dataset.automationCandidate === candidate);
+        row.hidden = !matches;
+        if (matches) {
+            visible += 1;
+        }
+    });
+
+    const count = document.getElementById("saved-test-case-count");
+    if (count) {
+        count.textContent = `Showing ${visible} of ${rows.length} test cases`;
+    }
+}
+
+
+function getGeneratedProjectTestCaseIds() {
+    return Array.from(
+        document.querySelectorAll(
+            "#generated-project-test-cases input[type=checkbox]:checked"
+        )
+    ).map(checkbox => checkbox.value);
+}
+
+
+function updateGeneratedProjectTestCaseCount() {
+    const selected = getGeneratedProjectTestCaseIds().length;
+    const total = document.querySelectorAll(
+        "#generated-project-test-cases input[type=checkbox]"
+    ).length;
+    const count = document.getElementById(
+        "generated-project-test-case-count"
+    );
+    if (count) {
+        count.textContent = `Selected ${selected} of ${total} test cases`;
+    }
+}
+
+
+function selectAllGeneratedProjectTestCases(selected) {
+    document.querySelectorAll(
+        "#generated-project-test-cases input[type=checkbox]"
+    ).forEach(checkbox => {
+        checkbox.checked = selected;
+    });
+    updateGeneratedProjectTestCaseCount();
+}
+
+
+async function generateProjectQASuite(event) {
+    event.preventDefault();
+    const projectId = getProjectId();
+    const requirement = document.getElementById(
+        "project-qa-requirement"
+    ).value.trim();
+    const errorElement = document.getElementById(
+        "project-qa-generation-error"
+    );
+    const resultElement = document.getElementById(
+        "project-qa-generation-result"
+    );
+    const button = document.getElementById(
+        "project-qa-generate-button"
+    );
+    errorElement.textContent = "";
+    const noticeElement = document.getElementById(
+        "project-workspace-notice"
+    );
+    if (noticeElement) {
+        noticeElement.textContent = "";
+    }
+    resultElement.replaceChildren();
+
+    if (!projectId || !requirement) {
+        errorElement.textContent = !projectId
+            ? "Select a project before generating a QA suite."
+            : "Requirement is required.";
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Generating QA Suite...";
+    try {
+        const response = await fetch(
+            `/api/projects/${encodeURIComponent(projectId)}/qa-suite`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ requirement }),
+            }
+        );
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(
+                payload.detail || "Unable to generate QA suite."
+            );
+        }
+        window.projectQASuitePayload = payload;
+        renderProjectQASuitePreview(payload);
+    } catch (error) {
+        errorElement.textContent =
+            error.message || "Unable to generate QA suite.";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Generate QA Suite";
+    }
+}
+
+
+function renderProjectQASuitePreview(payload) {
+    const result = document.getElementById(
+        "project-qa-generation-result"
+    );
+    const casesPayload = payload.test_cases || {};
+    const testCases = Array.isArray(casesPayload)
+        ? casesPayload
+        : casesPayload.test_cases || [];
+    const analysis = payload.analysis || {};
+    const review = payload.review || {};
+    const coverage = review.coverage_score == null
+        ? ""
+        : `${escapeHtml(String(review.coverage_score))}%`;
+    const rows = testCases.map((testCase, index) => `
+<tr>
+    <td><input type="checkbox" checked value="${escapeHtml(testCase.id || "")}" aria-label="Select generated test case ${escapeHtml(testCase.id || "")}" onchange="updateGeneratedProjectTestCaseCount()"></td>
+    <td>${escapeHtml(testCase.id || "")}</td>
+    <td>${escapeHtml(testCase.title || "")}</td>
+    <td>${escapeHtml(testCase.priority || "")}</td>
+    <td>${escapeHtml(testCase.test_type || "")}</td>
+    <td><button type="button" data-generated-case-review="${index}">Review</button></td>
+</tr>
+`).join("");
+
+    result.innerHTML = `
+<div class="project-qa-generation-summary">
+    <h4>Generated QA Suite</h4>
+    <p>${escapeHtml(analysis.summary || "Requirement analysis complete.")}</p>
+    <p>Coverage review: ${escapeHtml(review.overall_quality || "Available")}${coverage ? ` · ${coverage}` : ""}</p>
+</div>
+<div class="generated-case-selection" id="generated-project-test-cases">
+    <div class="generated-case-actions">
+        <button type="button" class="secondary-button" data-select-generated-cases="all">Select All</button>
+        <button type="button" class="secondary-button" data-select-generated-cases="none">Clear All</button>
+        <span id="generated-project-test-case-count" role="status">Selected ${testCases.length} of ${testCases.length} test cases</span>
+    </div>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Select</th><th>ID</th><th>Title</th><th>Priority</th><th>Type</th><th>Review</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="6">No test cases were generated.</td></tr>'}</tbody>
+    </table></div>
+    <section id="generated-project-test-case-review" class="test-case-review" aria-live="polite" hidden></section>
+    <button type="button" class="primary-button" id="save-generated-project-test-cases">Save Selected Test Cases</button>
+    <div id="project-qa-save-error" class="error" role="alert"></div>
+</div>
+`;
+
+    result.querySelectorAll("[data-select-generated-cases]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                selectAllGeneratedProjectTestCases(
+                    button.dataset.selectGeneratedCases === "all"
+                );
+            });
+        });
+    result.querySelectorAll("[data-generated-case-review]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                const testCase = testCases[
+                    Number(button.dataset.generatedCaseReview)
+                ];
+                const panel = document.getElementById(
+                    "generated-project-test-case-review"
+                );
+                if (testCase && panel) {
+                    renderProjectTestCaseReview(
+                        testCase,
+                        panel,
+                        "Generated Test Case Review",
+                        false
+                    );
+                }
+            });
+        });
+    document.getElementById(
+        "save-generated-project-test-cases"
+    ).addEventListener("click", saveGeneratedProjectTestCases);
+}
+
+
+async function saveGeneratedProjectTestCases() {
+    const suite = window.projectQASuitePayload;
+    const errorElement = document.getElementById("project-qa-save-error");
+    const successElement = document.getElementById("project-workspace-notice");
+    const selectedIds = getGeneratedProjectTestCaseIds();
+    errorElement.textContent = "";
+    successElement.textContent = "";
+    if (!selectedIds.length) {
+        errorElement.textContent = "Select at least one test case to save.";
+        return;
+    }
+
+    const projectId = getProjectId();
+    const requirementVersion = suite.requirement_version || {};
+    try {
+        const response = await fetch(
+            `/api/projects/${encodeURIComponent(projectId)}/qa-suite/save`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    requirement_version_id: requirementVersion.version_id,
+                    test_cases: suite.test_cases,
+                    review: suite.review,
+                    selected_test_case_ids: selectedIds,
+                }),
+            }
+        );
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || "Unable to save test cases.");
+        }
+        await loadProjectQAWorkspace();
+        setProjectWorkspaceArea("test-cases");
+        successElement.textContent =
+            `Saved ${selectedIds.length} test case${selectedIds.length === 1 ? "" : "s"}.`;
+    } catch (error) {
+        errorElement.textContent =
+            error.message || "Unable to save test cases.";
+    }
+}
+
+
 async function loadProjectQAProjects() {
 
     const select =
@@ -110,6 +498,21 @@ async function loadProjectQAProjects() {
 
         });
 
+        const requestedProjectId =
+            new URLSearchParams(window.location.search)
+                .get("project_id");
+
+        if (
+            requestedProjectId &&
+            payload.some(
+                project =>
+                    project.project_id === requestedProjectId
+            )
+        ) {
+            select.value = requestedProjectId;
+            await loadProjectQAWorkspace();
+        }
+
     } catch (error) {
 
         document.getElementById(
@@ -146,7 +549,18 @@ async function loadProjectQAWorkspace() {
         getProjectWorkspaceActionButton();
 
     errorElement.textContent = "";
+    document.getElementById("project-workspace-notice").textContent = "";
+    const actionContainer = document.getElementById(
+        "project-workspace-action"
+    );
+    const actionMount = document.getElementById(
+        "project-workspace-action-mount"
+    );
+    if (actionContainer && actionMount) {
+        actionMount.appendChild(actionContainer);
+    }
     resultElement.innerHTML = "";
+    setProjectWorkspaceArea("overview");
 
     if (!projectId) {
 
@@ -194,8 +608,10 @@ async function loadProjectQAWorkspace() {
             projectId
         );
 
-        await loadProjectExecutionHistory();
-        await loadProjectExecutionInsights(projectId);
+        await Promise.all([
+            loadProjectExecutionHistory(),
+            loadProjectExecutionInsights(projectId),
+        ]);
 
     } catch (error) {
 
@@ -535,13 +951,15 @@ function appendTestCaseReviewList(
 
 function renderProjectTestCaseReview(
     testCase,
-    reviewElement
+    reviewElement,
+    headingText = "Saved Test Case Review",
+    includeVersionMetadata = true
 ) {
     reviewElement.replaceChildren();
     reviewElement.hidden = false;
 
     const heading = document.createElement("h4");
-    heading.textContent = "Saved Test Case Review";
+    heading.textContent = headingText;
     reviewElement.appendChild(heading);
 
     const closeButton = document.createElement("button");
@@ -573,21 +991,23 @@ function renderProjectTestCaseReview(
         "Test Type",
         testCase.test_type
     );
-    appendTestCaseReviewValue(
-        reviewElement,
-        "Suite ID",
-        testCase.suite_id
-    );
-    appendTestCaseReviewValue(
-        reviewElement,
-        "Suite Version",
-        testCase.suite_version
-    );
-    appendTestCaseReviewValue(
-        reviewElement,
-        "Requirement Version ID",
-        testCase.requirement_version_id
-    );
+    if (includeVersionMetadata) {
+        appendTestCaseReviewValue(
+            reviewElement,
+            "Suite ID",
+            testCase.suite_id
+        );
+        appendTestCaseReviewValue(
+            reviewElement,
+            "Suite Version",
+            testCase.suite_version
+        );
+        appendTestCaseReviewValue(
+            reviewElement,
+            "Requirement Version ID",
+            testCase.requirement_version_id
+        );
+    }
     appendTestCaseReviewList(
         reviewElement,
         "Preconditions",
@@ -681,13 +1101,18 @@ function renderProjectQAWorkspace(
                         : "";
 
                 return `
-<tr>
+<tr data-test-case-filter-row
+    data-search="${escapeHtml(`${item.id || ""} ${item.title || ""} ${item.requirement_version_id || ""} ${item.suite_id || ""}`.toLowerCase())}"
+    data-priority="${escapeHtml(item.priority || "")}"
+    data-test-type="${escapeHtml(item.test_type || "")}"
+    data-automation-candidate="${isCandidate ? "yes" : "no"}">
 <td>${checkbox}</td>
 <td>${escapeHtml(item.id || "")}</td>
 <td>${escapeHtml(item.title || "")}</td>
 <td>${escapeHtml(item.priority || "")}</td>
 <td>${escapeHtml(item.test_type || "")}</td>
-<td>${isCandidate ? "Yes" : "No"}</td>
+<td>${isCandidate ? "Candidate" : "Manual-only"}</td>
+<td>${escapeHtml(item.requirement_version_id || "")}</td>
 <td>${escapeHtml(String(item.suite_version || ""))}</td>
 <td>
 <button
@@ -739,113 +1164,190 @@ function renderProjectQAWorkspace(
     const project =
         payload.project || {};
 
+    const priorities = Array.from(
+        new Set(
+            testCases
+                .map(item => String(item.priority || "").trim())
+                .filter(Boolean)
+        )
+    ).sort((left, right) => left.localeCompare(right));
+
+    const testTypes = Array.from(
+        new Set(
+            testCases
+                .map(item => String(item.test_type || "").trim())
+                .filter(Boolean)
+        )
+    ).sort((left, right) => left.localeCompare(right));
+
+    const projectName =
+        project.name || project.project_id || projectId;
+
+    const projectDetails = [
+        project.application,
+        project.environment,
+    ].filter(Boolean).map(escapeHtml).join(" · ");
+
+    const requirementCount = requirements.length;
+    const testCaseCount = testCases.length;
+    const candidateCount = testCases.filter(
+        item => item.automation_candidate === true
+    ).length;
+    const artifactCount = automationArtifacts.length;
+
+    const nextAction = testCaseCount === 0
+        ? "Generate a QA suite from a project requirement."
+        : candidateCount > 0 && artifactCount === 0
+            ? "Select automation candidates and generate automation."
+            : artifactCount > 0
+                ? "Review generated automation or inspect recent executions."
+                : "Review the saved test cases and available requirements.";
+
+    const priorityOptions = priorities.map(value =>
+        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+    ).join("");
+
+    const testTypeOptions = testTypes.map(value =>
+        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+    ).join("");
+
     resultElement.innerHTML = `
+<header class="project-context-header">
+    <h2>${escapeHtml(projectName)}</h2>
+    <p>${projectDetails || `Project ID: ${escapeHtml(projectId)}`}</p>
+    ${project.description
+        ? `<p>${escapeHtml(project.description)}</p>`
+        : ""}
+</header>
 
-<h3>
-${escapeHtml(
-    project.name ||
-    project.project_id
-)}
-</h3>
+<nav class="project-area-navigation" aria-label="Project areas" role="tablist">
+    <button type="button" role="tab" aria-selected="true" aria-controls="project-area-overview" data-project-area="overview">Overview</button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="project-area-requirements" data-project-area="requirements">Requirements</button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="project-area-test-cases" data-project-area="test-cases">Test Cases <span>${testCaseCount}</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="project-area-automation" data-project-area="automation">Automation <span>${artifactCount}</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="project-area-executions" data-project-area="executions">Executions</button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="project-area-reports" data-project-area="reports">Reports</button>
+</nav>
 
-<h4>Requirement Versions</h4>
+<section id="project-area-overview" class="project-area-panel" role="tabpanel" tabindex="0">
+    <h3>Project Overview</h3>
+    <div class="project-overview-grid">
+        <div class="project-overview-card"><span>Requirement versions</span><strong>${requirementCount}</strong></div>
+        <div class="project-overview-card"><span>Saved test cases</span><strong>${testCaseCount}</strong></div>
+        <div class="project-overview-card"><span>Automation candidates</span><strong>${candidateCount}</strong></div>
+        <div class="project-overview-card"><span>Generated artifacts</span><strong>${artifactCount}</strong></div>
+        <div class="project-overview-card"><span>Executions</span><strong id="project-overview-execution-count">Loading</strong></div>
+        <div class="project-overview-card"><span>Passed</span><strong id="project-overview-passed">Loading</strong></div>
+        <div class="project-overview-card"><span>Failed</span><strong id="project-overview-failed">Loading</strong></div>
+        <div class="project-overview-card"><span>Pass rate</span><strong id="project-overview-pass-rate">Loading</strong></div>
+    </div>
+    <div id="project-overview-activity" class="project-overview-activity" role="status">Loading recent project activity.</div>
+    <div class="project-next-action">
+        <strong>Suggested next action</strong>
+        <p>${escapeHtml(nextAction)}</p>
+        <button type="button" class="primary-button" data-project-next-action="requirements">Generate or review a QA suite</button>
+    </div>
+</section>
 
-<table>
+<section id="project-area-requirements" class="project-area-panel" role="tabpanel" tabindex="0" hidden>
+    <h3>Requirements</h3>
+    <form id="project-qa-generation-form" class="project-qa-generation-form">
+        <label for="project-qa-requirement">Requirement</label>
+        <textarea id="project-qa-requirement" rows="5" required placeholder="Describe the behavior this project needs to verify."></textarea>
+        <button type="submit" class="primary-button" id="project-qa-generate-button">Generate QA Suite</button>
+    </form>
+    <div id="project-qa-generation-error" class="error" role="alert"></div>
+    <div id="project-qa-generation-result" class="result-block"></div>
+    <h4>Requirement Versions</h4>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Version ID</th><th>Version</th><th>Requirement</th></tr></thead>
+        <tbody>${requirementRows || '<tr><td colspan="3">No requirement versions have been saved.</td></tr>'}</tbody>
+    </table></div>
+    <h4>Saved Suite Versions</h4>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Suite ID</th><th>Version</th><th>Requirement Version</th></tr></thead>
+        <tbody>${suiteRows || '<tr><td colspan="3">No suite versions have been saved.</td></tr>'}</tbody>
+    </table></div>
+</section>
 
-<thead>
-<tr>
-<th>Version ID</th>
-<th>Version</th>
-<th>Requirement</th>
-</tr>
-</thead>
+<section id="project-area-test-cases" class="project-area-panel" role="tabpanel" tabindex="0" hidden>
+    <h3>Saved Test Cases</h3>
+    <div class="test-case-filters" aria-label="Filter saved test cases">
+        <label>Search<input id="saved-test-case-search" type="search" placeholder="Search ID or title"></label>
+        <label>Priority<select id="saved-test-case-priority"><option value="">All priorities</option>${priorityOptions}</select></label>
+        <label>Type<select id="saved-test-case-type"><option value="">All types</option>${testTypeOptions}</select></label>
+        <label>Automation suitability<select id="saved-test-case-candidate"><option value="">All cases</option><option value="yes">Candidates</option><option value="no">Manual-only</option></select></label>
+    </div>
+    <p id="saved-test-case-count" class="filter-result-count" role="status">${testCaseCount} test cases</p>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Select</th><th>ID</th><th>Title</th><th>Priority</th><th>Type</th><th>Suitability</th><th>Requirement Version</th><th>Suite Version</th><th>Actions</th></tr></thead>
+        <tbody>${testCaseRows || '<tr><td colspan="9">No saved test cases are available for this project.</td></tr>'}</tbody>
+    </table></div>
+    <section id="project-test-case-review" class="test-case-review" aria-live="polite" hidden></section>
+</section>
 
-<tbody>
-${requirementRows}
-</tbody>
-
-</table>
-
-
-<h4>Saved Suite Versions</h4>
-
-<table>
-
-<thead>
-<tr>
-<th>Suite ID</th>
-<th>Version</th>
-<th>Requirement Version</th>
-</tr>
-</thead>
-
-<tbody>
-${suiteRows}
-</tbody>
-
-</table>
-
-
-<h4>Saved Test Cases</h4>
-
-<table>
-
-<thead>
-<tr>
-<th>Select</th>
-<th>ID</th>
-<th>Title</th>
-<th>Priority</th>
-<th>Type</th>
-<th>Automation Candidate</th>
-<th>Suite Version</th>
-<th>Actions</th>
-</tr>
-</thead>
-
-<tbody>
-${testCaseRows}
-</tbody>
-
-</table>
-
-<section
-    id="project-test-case-review"
-    class="test-case-review"
-    aria-live="polite"
-    hidden
-></section>
-
-
-<h4>Generated Automation Artifacts</h4>
-
-<table>
-
-<thead>
-<tr>
-<th>Artifact ID</th>
-<th>Test Case</th>
-<th>Automation Case</th>
-<th>Framework</th>
-<th>Language</th>
-<th>Actions</th>
-</tr>
-</thead>
-
-<tbody>
-${artifactRows}
-</tbody>
-
-</table>
-
-<section
-    id="project-artifact-review"
-    class="artifact-review"
-    aria-live="polite"
-    hidden
-></section>
+<section id="project-area-automation" class="project-area-panel" role="tabpanel" tabindex="0" hidden>
+    <h3>Automation</h3>
+    <p>Choose persisted test-case candidates to generate automation. Review and execution are separate actions.</p>
+    <h4>Generated Automation Artifacts</h4>
+    <div class="table-scroll"><table>
+        <thead><tr><th>Artifact ID</th><th>Test Case</th><th>Automation Case</th><th>Framework</th><th>Language</th><th>Actions</th></tr></thead>
+        <tbody>${artifactRows || '<tr><td colspan="6">No automation artifacts have been generated for this project.</td></tr>'}</tbody>
+    </table></div>
+    <section id="project-artifact-review" class="artifact-review" aria-live="polite" hidden></section>
+</section>
 
 `;
+
+    const automationArea = document.getElementById(
+        "project-area-automation"
+    );
+    const workspaceAction = document.getElementById(
+        "project-workspace-action"
+    );
+    if (automationArea && workspaceAction) {
+        automationArea.appendChild(workspaceAction);
+    }
+
+    const areaTabs = Array.from(
+        resultElement.querySelectorAll("[data-project-area]")
+    );
+    areaTabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => {
+            setProjectWorkspaceArea(tab.dataset.projectArea);
+        });
+        tab.addEventListener("keydown", event => {
+            if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                return;
+            }
+            event.preventDefault();
+            const offset = event.key === "ArrowRight" ? 1 : -1;
+            const nextTab = areaTabs[
+                (index + offset + areaTabs.length) % areaTabs.length
+            ];
+            nextTab.focus();
+            nextTab.click();
+        });
+    });
+
+    setProjectWorkspaceArea("overview");
+    resultElement.querySelectorAll("[data-project-next-action]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                setProjectWorkspaceArea(button.dataset.projectNextAction);
+                document.getElementById("project-qa-requirement").focus();
+            });
+        });
+    document.getElementById("project-qa-generation-form")
+        .addEventListener("submit", generateProjectQASuite);
+    document.querySelectorAll(
+        "#saved-test-case-search, #saved-test-case-priority, " +
+        "#saved-test-case-type, #saved-test-case-candidate"
+    ).forEach(control => {
+        control.addEventListener("input", applySavedTestCaseFilters);
+        control.addEventListener("change", applySavedTestCaseFilters);
+    });
+    applySavedTestCaseFilters();
 
     const testCaseReviewElement = document.getElementById(
         "project-test-case-review"
@@ -1150,6 +1652,8 @@ async function openProjectExecutionReview(executionId) {
 
         return;
     }
+
+    setProjectWorkspaceArea("executions");
 
     if (reviewElement) {
         reviewElement.innerHTML =
@@ -1507,7 +2011,12 @@ async function loadProjectExecutionInsights(projectId) {
             report,
             analysis
         );
+        updateProjectOverview(report, analysis);
     } catch (error) {
+        renderProjectOverviewError(
+            error.message ||
+            "Unable to load project execution overview."
+        );
         renderProjectExecutionInsightsError(
             error.message ||
             "Unable to load project execution insights."

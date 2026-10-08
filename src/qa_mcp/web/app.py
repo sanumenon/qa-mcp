@@ -1059,6 +1059,14 @@ test suite from a requirement.
             class="success"
             style="margin-top: 8px;"
         ></div>
+        <a
+            id="open-project-workspace-link"
+            class="secondary-button project-workspace-link"
+            href="/project-workspace"
+            hidden
+        >
+            Open Project Workspace
+        </a>
 
     </div>
 
@@ -1326,7 +1334,7 @@ already prepared for the selected project.
             Project
         </label>
 
-        <select id="repository-project-id">
+        <select id="repository-project-id" onchange="selectProjectWorkspace()">
 
             <option value="">
                 Select a project
@@ -1356,19 +1364,22 @@ already prepared for the selected project.
     class="error"
 ></div>
 
-<div
-    id="project-workspace-action"
-    style="margin-top: 16px;"
->
-    <button
-        id="generate-project-automation-button"
-        class="primary-button"
-        type="button"
-        onclick="generateProjectAutomation()"
-        disabled
+<div id="project-workspace-action-mount">
+    <div
+        id="project-workspace-action"
+        style="margin-top: 16px;"
+        hidden
     >
-        Generate Automation for Selected Candidates
-    </button>
+        <button
+            id="generate-project-automation-button"
+            class="primary-button"
+            type="button"
+            onclick="generateProjectAutomation()"
+            disabled
+        >
+            Generate Automation for Selected Candidates
+        </button>
+    </div>
 </div>
 
 <div
@@ -1376,18 +1387,15 @@ already prepared for the selected project.
     class="result-block"
 ></div>
 
-<div
-    id="project-execution-insights"
-    class="result-block project-execution-insights"
-    aria-live="polite"
->
-    <h3>Project Execution Insights</h3>
-    <p>
-        Select a project and load its workspace to view
-        project-scoped execution metrics and failures.
-    </p>
-</div>
+<div id="project-workspace-notice" class="success" role="status" aria-live="polite"></div>
 
+<section
+    id="project-area-executions"
+    class="project-area-panel"
+    role="tabpanel"
+    tabindex="0"
+    hidden
+>
 <div
     id="project-execution-history"
     class="result-block"
@@ -1397,6 +1405,27 @@ already prepared for the selected project.
     id="project-execution-review"
     class="result-block"
 ></div>
+</section>
+
+<section
+    id="project-area-reports"
+    class="project-area-panel"
+    role="tabpanel"
+    tabindex="0"
+    hidden
+>
+    <div
+        id="project-execution-insights"
+        class="result-block project-execution-insights"
+        aria-live="polite"
+    >
+        <h3>Project Execution Insights</h3>
+        <p>
+            Select a project and load its workspace to view
+            project-scoped execution metrics and failures.
+        </p>
+    </div>
+</section>
 
 </section>
 

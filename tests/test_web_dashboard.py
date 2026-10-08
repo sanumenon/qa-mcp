@@ -747,7 +747,7 @@ def test_dashboard_ai_qa_workspace_browser_flow():
     import time
 
     import uvicorn
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import expect, sync_playwright
 
     server = uvicorn.Server(
         uvicorn.Config(
@@ -995,6 +995,16 @@ def test_dashboard_ai_qa_workspace_browser_flow():
                 "#qa-project-id"
             ).select_option("qa-project")
 
+            expect(
+                page.locator("#open-project-workspace-link")
+            ).to_be_visible()
+            expect(
+                page.locator("#open-project-workspace-link")
+            ).to_have_attribute(
+                "href",
+                "/project-workspace?project_id=qa-project",
+            )
+
             page.locator(
                 "#qa-requirement"
             ).fill(
@@ -1054,10 +1064,14 @@ def test_dashboard_ai_qa_workspace_browser_flow():
                 "#qa-save-success"
             ).wait_for()
 
-            assert page.locator(
+            assert "2 test cases saved successfully." in page.locator(
                 "#qa-save-success"
-            ).inner_text() == (
-                "2 test cases saved successfully."
+            ).inner_text()
+            expect(
+                page.locator("#qa-save-success a")
+            ).to_have_attribute(
+                "href",
+                "/project-workspace?project_id=qa-project",
             )
 
             assert len(save_requests) == 1
@@ -1088,11 +1102,9 @@ def test_dashboard_ai_qa_workspace_browser_flow():
                 "#qa-save-success"
             ).wait_for()
 
-            assert page.locator(
+            assert "3 test cases saved successfully." in page.locator(
                 "#qa-save-success"
-            ).inner_text() == (
-                "3 test cases saved successfully."
-            )
+            ).inner_text()
 
             assert len(save_requests) == 2
 
@@ -1524,6 +1536,33 @@ def test_project_workspace_execution_insights_browser_flow():
             }
         ],
     }
+    generated_suite_payload = {
+        "project": {"project_id": "insights-project", "name": "Insights Project"},
+        "requirement_version": {"version_id": "REQ-NEW-1", "version": 3},
+        "test_cases": {
+            "test_cases": [
+                {
+                    "id": "TC-GENERATED-1",
+                    "title": "Generated requirement check",
+                    "priority": "High",
+                    "test_type": "Functional",
+                    "preconditions": [
+                        '<script>window.generatedCaseRan=true;</script>'
+                    ],
+                    "steps": [
+                        '<img src="x" onerror="window.generatedCaseRan=true">'
+                    ],
+                    "expected_result": (
+                        '<svg onload="window.generatedCaseRan=true">'
+                    ),
+                }
+            ]
+        },
+        "analysis": {"summary": "Requirement analyzed."},
+        "review": {"overall_quality": "Good", "coverage_score": 90},
+    }
+    qa_suite_requests = []
+    qa_suite_save_requests = []
     requests = []
     execution_requests = []
     browser_requests = []
@@ -1547,6 +1586,15 @@ def test_project_workspace_execution_insights_browser_flow():
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page()
+            console_errors = []
+            page_errors = []
+            page.on(
+                "console",
+                lambda message: console_errors.append(message.text)
+                if message.type == "error"
+                else None,
+            )
+            page.on("pageerror", lambda error: page_errors.append(str(error)))
             page.on(
                 "request",
                 lambda request: browser_requests.append(
@@ -1573,6 +1621,27 @@ def test_project_workspace_execution_insights_browser_flow():
             def handle_workspace(route):
                 requests.append(route.request.url)
                 fulfill_json(route, workspace_payload)
+
+            def handle_qa_suite(route):
+                qa_suite_requests.append(route.request.post_data_json)
+                fulfill_json(route, generated_suite_payload)
+
+            def handle_qa_suite_save(route):
+                request_payload = route.request.post_data_json
+                qa_suite_save_requests.append(request_payload)
+                workspace_payload["test_cases"].append(
+                    {
+                        **generated_suite_payload["test_cases"]["test_cases"][0],
+                        "automation_candidate": False,
+                        "suite_id": "SUITE-NEW-1",
+                        "suite_version": 3,
+                        "requirement_version_id": "REQ-NEW-1",
+                    }
+                )
+                fulfill_json(
+                    route,
+                    {"suite_id": "SUITE-NEW-1", "project_id": "insights-project", "version": 3},
+                )
 
             def handle_history(route):
                 requests.append(route.request.url)
@@ -1642,6 +1711,14 @@ def test_project_workspace_execution_insights_browser_flow():
                 handle_workspace,
             )
             page.route(
+                "**/api/projects/insights-project/qa-suite",
+                handle_qa_suite,
+            )
+            page.route(
+                "**/api/projects/insights-project/qa-suite/save",
+                handle_qa_suite_save,
+            )
+            page.route(
                 "**/api/projects/insights-project/executions?limit=50",
                 handle_history,
             )
@@ -1663,32 +1740,55 @@ def test_project_workspace_execution_insights_browser_flow():
             )
 
             page.goto(
-                "http://127.0.0.1:8766/project-workspace",
+                "http://127.0.0.1:8766/project-workspace?project_id=insights-project",
                 wait_until="networkidle",
             )
 
-            page.locator(
-                "#repository-project-id"
-            ).select_option("insights-project")
-
-            page.get_by_role(
-                "button",
-                name="Load Project Workspace",
-            ).click()
-
+            expect(page.get_by_role("heading", name="Insights Project")).to_be_visible()
+            expect(page.get_by_role("heading", name="Project Overview")).to_be_visible()
+            expect(page.locator("#project-overview-execution-count")).to_have_text("3")
+            expect(page.locator("#project-overview-passed")).to_have_text("2")
+            expect(page.locator("#project-overview-failed")).to_have_text("1")
+            expect(page.locator("#project-overview-pass-rate")).to_have_text("66.7%")
+            expect(page.locator("#project-overview-activity")).to_contain_text(
+                "Recent failure: Expected value was not found"
+            )
+            expect(page.get_by_role("button", name="Generate or review a QA suite")).to_be_visible()
+            overview_tab = page.get_by_role("tab", name="Overview")
+            overview_tab.focus()
+            overview_tab.press("ArrowRight")
+            expect(page.get_by_role("tab", name="Requirements")).to_have_attribute(
+                "aria-selected",
+                "true",
+            )
+            overview_tab.click()
             insights = page.locator(
                 "#project-execution-insights"
             )
+            page.get_by_role("tab", name="Reports").click()
             insights.get_by_text(
                 "Expected value was not found"
             ).wait_for()
 
+            page.get_by_role("tab", name="Test Cases").click()
+            test_case_count = page.locator("#saved-test-case-count")
+            expect(test_case_count).to_have_text("Showing 2 of 2 test cases")
+            page.get_by_label("Search").fill("TC-INSIGHT-2")
+            expect(test_case_count).to_have_text("Showing 1 of 2 test cases")
+            expect(page.locator("[data-test-case-filter-row]:visible")).to_have_count(1)
+            page.get_by_label("Search").fill("")
+            page.get_by_label("Priority").select_option("Critical")
+            expect(page.locator("[data-test-case-filter-row]:visible")).to_have_count(1)
+            page.get_by_label("Priority").select_option("")
+
             # Saved-case review uses the exact selected workspace row and is
             # read-only. Its content is inserted as inert DOM text.
-            test_case_table = page.get_by_role(
-                "heading",
-                name="Saved Test Cases",
-            ).locator("xpath=following-sibling::table[1]")
+            test_case_table = page.locator(
+                "#project-area-test-cases table"
+            )
+            expect(test_case_table).to_contain_text("Requirement Version")
+            expect(test_case_table).to_contain_text("REQ-INSIGHT-1")
+            expect(test_case_table).to_contain_text("REQ-INSIGHT-2")
             first_test_case_row = test_case_table.locator(
                 "tbody tr"
             ).nth(0)
@@ -1783,11 +1883,14 @@ def test_project_workspace_execution_insights_browser_flow():
                 name="Select Reviewable case",
             )
             candidate_checkbox.check()
+            page.get_by_role("tab", name="Automation").click()
             expect(page.get_by_role(
                 "button",
                 name="Generate Automation (1 Selected)",
             )).to_be_visible()
+            page.get_by_role("tab", name="Test Cases").click()
             candidate_checkbox.uncheck()
+            page.get_by_role("tab", name="Automation").click()
             expect(page.get_by_role(
                 "button",
                 name="Generate Automation for Selected Candidates",
@@ -1796,6 +1899,7 @@ def test_project_workspace_execution_insights_browser_flow():
 
             # Reviewing generated source is read-only and treats markup-like
             # source as text. It must not call the execution endpoint.
+            page.get_by_role("tab", name="Automation").click()
             review_panel = page.locator("#project-artifact-review")
             artifact_row = page.locator(
                 "#project-workspace-result table"
@@ -1863,6 +1967,7 @@ def test_project_workspace_execution_insights_browser_flow():
                 "http://127.0.0.1:8766/api/projects/insights-project/automation/ART-INSIGHT-2/execute",
             ]
 
+            page.get_by_role("tab", name="Reports").click()
             assert insights.get_by_text("3", exact=True).first.is_visible()
             assert insights.locator(
                 "#project-insights-passed"
@@ -1928,6 +2033,7 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Load Project Workspace",
             ).click()
+            page.get_by_role("tab", name="Reports").click()
             expect(
                 insights.locator("#project-insights-total")
             ).to_have_text("0")
@@ -1937,6 +2043,80 @@ def test_project_workspace_execution_insights_browser_flow():
             insights.get_by_text(
                 "No failures recorded for this project."
             ).wait_for()
+
+            # Project Requirements reuses the existing generate and save APIs.
+            page.get_by_role("tab", name="Overview").click()
+            page.get_by_role("button", name="Generate or review a QA suite").click()
+            expect(page.get_by_role("tab", name="Requirements")).to_have_attribute(
+                "aria-selected", "true"
+            )
+            page.locator("#project-qa-requirement").fill(
+                "An authenticated user can complete the requirement flow."
+            )
+            page.get_by_role("button", name="Generate QA Suite").click()
+            expect(page.get_by_role("heading", name="Generated QA Suite")).to_be_visible()
+            expect(page.locator("#project-qa-generation-result")).to_contain_text(
+                "Generated requirement check"
+            )
+            generated_review = page.locator(
+                "#generated-project-test-case-review"
+            )
+            page.locator(
+                "#generated-project-test-cases [data-generated-case-review]"
+            ).click()
+            expect(generated_review).to_be_visible()
+            expect(generated_review.locator("ul li")).to_have_text(
+                "<script>window.generatedCaseRan=true;</script>"
+            )
+            expect(generated_review.locator("ol li")).to_have_text(
+                '<img src="x" onerror="window.generatedCaseRan=true">'
+            )
+            expect(generated_review).to_contain_text(
+                '<svg onload="window.generatedCaseRan=true">'
+            )
+            assert generated_review.locator("script, img, svg").count() == 0
+            assert page.evaluate("window.generatedCaseRan || false") is False
+            generated_review.get_by_role(
+                "button", name="Close Review"
+            ).click()
+            expect(generated_review).to_be_hidden()
+
+            generated_case_checkbox = page.get_by_role(
+                "checkbox", name="Select generated test case TC-GENERATED-1"
+            )
+            generated_case_checkbox.uncheck()
+            page.get_by_role("button", name="Save Selected Test Cases").click()
+            expect(page.locator("#project-qa-save-error")).to_have_text(
+                "Select at least one test case to save."
+            )
+            assert qa_suite_save_requests == []
+            generated_case_checkbox.check()
+            page.get_by_role("button", name="Select All").click()
+            expect(page.locator("#generated-project-test-case-count")).to_have_text(
+                "Selected 1 of 1 test cases"
+            )
+            page.get_by_role("button", name="Clear All").click()
+            expect(page.locator("#generated-project-test-case-count")).to_have_text(
+                "Selected 0 of 1 test cases"
+            )
+            generated_case_checkbox.check()
+            page.get_by_role("button", name="Save Selected Test Cases").click()
+            expect(page.locator("#project-workspace-notice")).to_have_text(
+                "Saved 1 test case."
+            )
+            expect(page.get_by_role("tab", name="Test Cases")).to_have_attribute(
+                "aria-selected", "true"
+            )
+            expect(page.locator("#project-area-test-cases table")).to_contain_text(
+                "TC-GENERATED-1"
+            )
+            assert qa_suite_requests == [
+                {"requirement": "An authenticated user can complete the requirement flow."}
+            ]
+            assert qa_suite_save_requests[0]["requirement_version_id"] == "REQ-NEW-1"
+            assert qa_suite_save_requests[0]["selected_test_case_ids"] == [
+                "TC-GENERATED-1"
+            ]
 
             # A project with executions and no failures is healthy.
             report_payload.update(
@@ -1953,6 +2133,7 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Load Project Workspace",
             ).click()
+            page.get_by_role("tab", name="Reports").click()
             expect(
                 insights.locator("#project-insights-total")
             ).to_have_text("1")
@@ -1969,16 +2150,19 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Load Project Workspace",
             ).click()
+            page.get_by_role("tab", name="Reports").click()
             insights.get_by_text(
                 "Project failure analysis unavailable"
             ).wait_for()
 
             # Existing workspace and automation controls remain available.
+            page.get_by_role("tab", name="Test Cases").click()
             assert page.get_by_text("Reviewable case").is_visible()
             assert page.get_by_role(
                 "checkbox",
                 name="Select Reviewable case",
             ).is_visible()
+            page.get_by_role("tab", name="Automation").click()
             assert page.get_by_role(
                 "button",
                 name="Generate Automation for Selected Candidates",
@@ -1996,16 +2180,22 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Load Project Workspace",
             ).click()
-            artifact_table = page.get_by_role(
-                "heading",
-                name="Generated Automation Artifacts",
-            ).locator("xpath=following-sibling::table[1]")
-            expect(artifact_table.locator("tbody tr")).to_have_count(0)
+            page.get_by_role("tab", name="Automation").click()
+            artifact_table = page.locator(
+                "#project-area-automation table"
+            )
+            expect(artifact_table.locator("tbody tr")).to_have_count(1)
+            expect(artifact_table).to_contain_text(
+                "No automation artifacts have been generated for this project."
+            )
             assert artifact_table.get_by_role(
                 "button",
                 name="Review",
             ).count() == 0
-            expect(test_case_table.locator("tbody tr")).to_have_count(0)
+            expect(test_case_table.locator("tbody tr")).to_have_count(1)
+            expect(test_case_table).to_contain_text(
+                "No saved test cases are available for this project."
+            )
             assert test_case_table.get_by_role(
                 "button",
                 name="Review",
@@ -2014,6 +2204,25 @@ def test_project_workspace_execution_insights_browser_flow():
                 "button",
                 name="Generate Automation for Selected Candidates",
             )).to_be_disabled()
+
+            page.locator("#repository-project-id").select_option("")
+            expect(
+                page.get_by_role("heading", name="Insights Project")
+            ).to_have_count(0)
+            expect(page.locator("#project-area-executions")).to_be_hidden()
+            expect(
+                page.locator("#project-workspace-action")
+            ).to_be_hidden()
+
+            page.set_viewport_size({"width": 390, "height": 844})
+            assert page.evaluate(
+                "document.documentElement.scrollWidth <= window.innerWidth"
+            ) is True
+            assert all(
+                "Failed to load resource" in message
+                for message in console_errors
+            )
+            assert page_errors == []
 
             browser.close()
     finally:

@@ -95,6 +95,17 @@ function updateSelectedProjectId() {
     } else {
         display.textContent = "";
     }
+
+    const workspaceLink = document.getElementById(
+        "open-project-workspace-link"
+    );
+    if (workspaceLink) {
+        workspaceLink.hidden = !selectedProjectId;
+        workspaceLink.href = selectedProjectId
+            ? "/project-workspace?project_id=" +
+                encodeURIComponent(selectedProjectId)
+            : "/project-workspace";
+    }
 }
 
 async function createQAProject() {
@@ -785,6 +796,14 @@ async function saveSelectedTestCases() {
             ) +
             " saved successfully.";
 
+        const workspaceLink = document.createElement("a");
+        workspaceLink.className = "inline-action-link";
+        workspaceLink.href =
+            "/project-workspace?project_id=" +
+            encodeURIComponent(projectId);
+        workspaceLink.textContent = " Open project workspace";
+        successElement.appendChild(workspaceLink);
+
     } catch (error) {
 
         errorElement.textContent =
@@ -793,9 +812,6 @@ async function saveSelectedTestCases() {
 }
 
 async function loadDashboard() {
-
-    await loadQAProjects();
-
     try {
 
         const report =
@@ -934,7 +950,10 @@ ${escapeHtml(item.message)}
 
 
 async function initializeDashboard() {
-    await loadQAProjects();
+    const selectedProjectId =
+        new URLSearchParams(window.location.search)
+            .get("project_id") || "";
+    await loadQAProjects(selectedProjectId);
     await loadDashboard();
 }
 

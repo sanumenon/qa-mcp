@@ -25,9 +25,13 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.15 — Persisted Automation Artifact Identity and Traceability
+**Current checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX
 
-**Checkpoint commit:** `ba9e27c` — Complete P2-S9.15 artifact identity traceability
+**P2-S9.16 status:** Complete and approved; implementation commit pending user commit.
+
+**Approved product direction:** Model B — Internal QA-Team Platform
+
+**Latest completed/approved checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX. It has not yet been committed or pushed.
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
@@ -142,6 +146,55 @@ persisted test case details from the existing project workspace response.
 Review remains separate from candidate selection, artifact review, and
 execution. The global Execution and Reports pages and all backend contracts
 remain unchanged.
+
+## P2-S9.16 — Project-Centric QA Workspace UX
+
+**Status: COMPLETE AND APPROVED — implementation commit pending user commit**
+
+The approved deployment direction remains Model B — a trusted internal QA
+team. P2-S9.16 organizes the existing Project QA Workspace into these areas:
+
+- Overview
+- Requirements
+- Test Cases
+- Automation
+- Executions
+- Reports
+
+The workspace carries project context through the existing `project_id`.
+Overview metrics and recent failure information derive from existing workspace,
+reporting, and failure-analysis data. The Requirements area retains the
+existing QA-suite generation, generated-case review and selection, and
+selective-save workflow. Client-side testcase search and filtering use
+persisted fields already returned by the workspace API.
+
+P2-S9.16 preserves the explicit separation between Review and Execute and
+safe, inert rendering. It includes responsive layout and accessibility
+improvements. Existing API and MCP contracts, persistence behavior, database
+schema, and execution behavior are unchanged.
+
+### Validation
+
+```text
+Focused web tests:                 30 passed, 1 warning
+Full regression suite:             329 passed, 8 warnings, 0 failures
+JavaScript syntax checks:           passed
+git diff --check:                    clean
+Project Workspace browser flow:    passed
+```
+
+Browser verification covered project navigation and overview metrics,
+generated and persisted test-case review, search/filter and selection/save,
+inert rendering, automation candidate selection, artifact review, explicit
+execution, execution history and insights, and empty states. JavaScript syntax
+checks completed. API/MCP contracts, persistence/database schema, and execution
+behavior remain unchanged. The implementation is complete and approved; its
+commit is pending the user's commit and it has not been pushed.
+
+P2-S9.16 does not claim internal network deployment readiness. Model B
+readiness still requires decisions about identity/access and SQLite
+backup/recovery. Execution remains a local subprocess and is not a sandbox.
+Model C network exposure and Model D untrusted execution remain out of scope.
 
 # 2. PRODUCT VISION
 
@@ -1677,9 +1730,10 @@ clean working tree. Its validation baseline was 327 passed, 8 warnings, and
 0 failures.
 
 P2-S9.15 validation baseline: 329 passed, 8 warnings, and 0 failures.
-P2-S9.15 is the latest completed checkpoint. No next implementation
-checkpoint is currently approved. Further implementation should be selected
-only after the target deployment model is decided.
+P2-S9.16 — Project-Centric QA Workspace UX is complete and approved, with its
+implementation commit pending the user's commit. Once committed, it is the
+latest completed checkpoint. It has not been pushed. Model B remains the
+approved product direction; Model C and Model D remain out of scope.
 
 Current automation MCP surface:
 
@@ -1701,7 +1755,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Treat **P2-S9.15 — Persisted Automation Artifact Identity and Traceability** as the latest completed checkpoint (`ba9e27c`). No next implementation checkpoint is currently approved; select further implementation only after deciding the target deployment model.
+5. Treat **P2-S9.16 — Project-Centric QA Workspace UX** as the latest completed and approved checkpoint; its implementation commit is pending the user's commit and it has not been pushed. Once committed, P2-S9.16 is the latest completed checkpoint. P2-S9.15 remains committed as `ba9e27c`. Model B is the approved deployment direction; Model C and Model D remain out of scope.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -3099,5 +3153,5 @@ history and project reporting, and browser Review/Execute selection for two
 artifacts.
 
 P2-S9.15 is complete, committed as `ba9e27c`, and pushed to `origin/main`.
-No next implementation checkpoint is currently approved. Select further
-implementation only after deciding the target deployment model.
+P2-S9.16 — Project-Centric QA Workspace UX is complete and approved; its
+implementation commit is pending the user's commit. It has not been pushed.
