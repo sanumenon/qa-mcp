@@ -195,6 +195,7 @@ async function loadProjectQAWorkspace() {
         );
 
         await loadProjectExecutionHistory();
+        await loadProjectExecutionInsights(projectId);
 
     } catch (error) {
 
@@ -469,6 +470,7 @@ async function executeProjectAutomation(
         );
 
         await loadProjectExecutionHistory();
+        await loadProjectExecutionInsights(projectId);
 
     } catch (error) {
 
@@ -1003,6 +1005,237 @@ ${rows}
 </tbody>
 </table>
 `;
+}
+
+
+function renderProjectExecutionInsightsLoading(projectId) {
+    const insightsElement = document.getElementById(
+        "project-execution-insights"
+    );
+
+    if (!insightsElement) {
+        return;
+    }
+
+    insightsElement.innerHTML = `
+<h3>Project Execution Insights</h3>
+<p role="status">
+Loading execution insights for
+${escapeHtml(projectId)}...
+</p>
+`;
+}
+
+
+function renderProjectExecutionInsightsError(message) {
+    const insightsElement = document.getElementById(
+        "project-execution-insights"
+    );
+
+    if (!insightsElement) {
+        return;
+    }
+
+    insightsElement.innerHTML = `
+<h3>Project Execution Insights</h3>
+<p class="error" role="alert">
+${escapeHtml(message)}
+</p>
+`;
+}
+
+
+function renderProjectExecutionInsights(report, analysis) {
+    const insightsElement = document.getElementById(
+        "project-execution-insights"
+    );
+
+    if (!insightsElement) {
+        return;
+    }
+
+    const totalExecutions = Number(
+        report.total_executions || 0
+    );
+    const passed = Number(report.passed || 0);
+    const failed = Number(report.failed || 0);
+    const errors = Number(report.error || 0);
+    const passRate = Number(
+        report.pass_rate_percent || 0
+    ).toFixed(1);
+    const failures = Array.isArray(analysis.failures)
+        ? analysis.failures
+        : [];
+
+    const failureRows = failures.map(failure => {
+        const executionId = failure.execution_id || "";
+        const status = failure.status || "Unknown";
+
+        return `
+<tr>
+<td>${escapeHtml(executionId)}</td>
+<td>
+<span class="${executionStatusClass(status)}">
+${escapeHtml(status)}
+</span>
+</td>
+<td>${escapeHtml(failure.automation_case_id || "")}</td>
+<td class="project-execution-failure-message">
+${escapeHtml(failure.message || "Automation execution failed")}
+</td>
+<td>
+<button
+    type="button"
+    onclick="openProjectExecutionReview('${escapeHtml(executionId)}')"
+>
+    Review
+</button>
+</td>
+</tr>
+`;
+    }).join("");
+
+    const executionState = totalExecutions === 0
+        ? `
+<p class="execution-insight-empty" role="status">
+No executions have been recorded for this project yet.
+</p>
+`
+        : "";
+
+    let failureState;
+
+    if (Number(analysis.total_failures || 0) === 0) {
+        failureState = `
+<p class="execution-insight-healthy" role="status">
+No failures recorded for this project.
+</p>
+`;
+    } else if (failures.length === 0) {
+        failureState = `
+<p class="execution-insight-empty" role="status">
+Failures are recorded, but no recent failure details were returned.
+</p>
+`;
+    } else {
+        failureState = `
+<table>
+<thead>
+<tr>
+<th>Execution</th>
+<th>Status</th>
+<th>Automation Case</th>
+<th>Failure</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+${failureRows}
+</tbody>
+</table>
+`;
+    }
+
+    insightsElement.innerHTML = `
+<h3>Project Execution Insights</h3>
+<div class="execution-insight-grid">
+    <div class="execution-insight-card">
+        Total Executions
+        <strong id="project-insights-total">
+            ${escapeHtml(totalExecutions)}
+        </strong>
+    </div>
+    <div class="execution-insight-card">
+        Passed
+        <strong id="project-insights-passed">
+            ${escapeHtml(passed)}
+        </strong>
+    </div>
+    <div class="execution-insight-card">
+        Failed
+        <strong id="project-insights-failed">
+            ${escapeHtml(failed)}
+        </strong>
+    </div>
+    <div class="execution-insight-card">
+        Errors
+        <strong id="project-insights-errors">
+            ${escapeHtml(errors)}
+        </strong>
+    </div>
+    <div class="execution-insight-card">
+        Pass Rate
+        <strong id="project-insights-pass-rate">
+            ${escapeHtml(passRate)}%
+        </strong>
+    </div>
+</div>
+${executionState}
+<h4>Recent Project Failures</h4>
+${failureState}
+`;
+}
+
+
+async function loadProjectExecutionInsights(projectId) {
+    const insightsElement = document.getElementById(
+        "project-execution-insights"
+    );
+
+    if (!insightsElement) {
+        return;
+    }
+
+    if (!projectId) {
+        renderProjectExecutionInsightsError(
+            "Select a project to view project-scoped execution insights."
+        );
+        return;
+    }
+
+    renderProjectExecutionInsightsLoading(projectId);
+
+    const projectPath =
+        "/api/projects/" +
+        encodeURIComponent(projectId) +
+        "/executions";
+
+    try {
+        const [reportResponse, failuresResponse] =
+            await Promise.all([
+                fetch(projectPath + "/report"),
+                fetch(projectPath + "/failures?limit=10"),
+            ]);
+
+        const [report, analysis] = await Promise.all([
+            reportResponse.json(),
+            failuresResponse.json(),
+        ]);
+
+        if (!reportResponse.ok) {
+            throw new Error(
+                report.detail ||
+                "Unable to load project execution metrics."
+            );
+        }
+
+        if (!failuresResponse.ok) {
+            throw new Error(
+                analysis.detail ||
+                "Unable to load project failure analysis."
+            );
+        }
+
+        renderProjectExecutionInsights(
+            report,
+            analysis
+        );
+    } catch (error) {
+        renderProjectExecutionInsightsError(
+            error.message ||
+            "Unable to load project execution insights."
+        );
+    }
 }
 
 

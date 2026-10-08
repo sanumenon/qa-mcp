@@ -25,26 +25,26 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.14-A — QA-MCP Production UI Architecture Shell
+**Current checkpoint:** P2-S9.14-B — Project Execution Insights
 
-**Checkpoint commit:** `<pending commit>`
+**Checkpoint commit:** Not committed; implementation is in the working tree
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
 **Branch:** `main`
 
-**Latest verified baseline:**
+**Latest verified baseline after P2-S9.14-B:**
 
-- Focused web tests: **29 passed**
-- Full regression: **326 passed**
+- Focused web tests: **30 passed**
+- Full regression: **327 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Browser/API verification: **passed**
+- Project Execution Insights browser verification: **passed**
 - Existing Dashboard and Project QA Workspace workflows preserved
-- Existing execution, reporting, and failure-analysis APIs verified through the new UI
+- Existing project-scoped execution reporting and failure-analysis APIs reused
 - No backend API contracts were changed
-- Current checkpoint changes are **not yet committed or pushed**
+- Current checkpoint changes are **not committed or pushed**
 
 ## Latest verified implementation notes
 
@@ -135,27 +135,15 @@ The following capabilities are implemented and verified:
 
 ## Current implementation boundary
 
-The current checkpoint covers Bedrock test-case generation output handling and the ongoing QA-suite completeness verification.
+P2-S9.14-B adds project-scoped execution metrics and recent failure review to
+the existing Project QA Workspace. It reuses the existing project execution
+report, failure-analysis, and execution-detail APIs. The global Execution and
+Reports pages and all backend contracts remain unchanged.
 
-Do not redesign the existing UI.
-
-Do not rebuild completed functionality.
-
-Do not introduce unrelated features.
-
-All future implementation must preserve the existing architecture, tests, configuration approach, and README continuity rules.
-
-## Next implementation
-
-**Investigate automation execution failures (FAILED / exit code 1)**
-
-The Project QA Workspace rendering and automation-candidate selection path is now verified. The next investigation should focus separately on the existing automation execution failures reporting FAILED / exit code 1. Do not redesign the Project QA Workspace or change the established QA-suite generation contract as part of that investigation.
-
-### Next investigation sequence
-
-1. Inspect the existing automation execution failure and identify the actual exit-code-1 root cause.
-2. Add focused regression coverage, implement the smallest safe fix, run the full regression suite, and verify the runtime path.
-3. Update this README with the verified result before the next checkpoint commit and push.
+The proposed next UI increment is **P2-S9.14-C — Generated Automation
+Artifact Review**. This is a proposal only; inspect the current code and agree
+on its boundary before implementation. Do not redesign completed workflows or
+introduce backend functionality solely to populate the UI.
 
 # 2. PRODUCT VISION
 
@@ -1654,9 +1642,11 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.14-A — QA-MCP Production UI Architecture Shell**
+**P2-S9.14-B — Project Execution Insights**
 
-P2-S9.1.a — Safe Workspace/File Handling and P2-S9.1.b.1 — Controlled Automation Command Boundary are complete and must not be recreated.
+P2-S9.14-A — QA-MCP Production UI Architecture Shell is complete and must not
+be recreated. P2-S9.14-B adds project-scoped insights by reusing existing
+execution reporting, failure-analysis, history, and detail capabilities.
 
 Previous completed checkpoints:
 
@@ -1668,28 +1658,17 @@ P2-S8.8+  Automation Code Generation              COMPLETE
 P2-S8.9   Controlled Automation Execution         COMPLETE
 ```
 
-Verified baseline after P2-S9.1.b.1:
+Latest verified baseline:
 
 ```text
-207 passed
-7 warnings
+Focused web tests: 30 passed
+Full regression: 327 passed
+8 warnings
 0 failures
 ```
-Latest repository implementation commit:
 
-```text
-b6190d9 Harden automation workspace file handling
-```
-Current checkpoint commit:
-
-```text
-3de8511
-```
-
-Previous implementation checkpoint:
-```text
-3bdf761 Implement controlled automation execution
-```
+Current repository commit: `7162865` (P2-S9.14-A). P2-S9.14-B is validated
+but remains uncommitted in the working tree.
 
 Current automation MCP surface:
 
@@ -1711,7 +1690,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.14-A — QA-MCP Production UI Architecture Shell**.
+5. Start from **P2-S9.14-B — Project Execution Insights**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -2914,3 +2893,63 @@ Before implementation:
 4. Do not invent backend capabilities merely to populate UI pages.
 5. Do not redesign existing working workflows.
 6. Obtain approval for the next sub-step before coding.
+
+
+---
+
+## P2-S9.14-B — Project Execution Insights
+
+**Status: COMPLETE — implementation validated, not committed**
+
+### Implementation scope
+
+- Added a compact Project Execution Insights section to the existing Project
+  QA Workspace.
+- Displays project-scoped total, passed, failed, error, and pass-rate metrics.
+- Displays recent project-scoped failures with status, automation case,
+  failure message, and a Review action.
+- Reuses the existing project execution detail flow for failure review.
+- Handles loading, no executions, no failures, unavailable failure details,
+  and API errors explicitly.
+- Refreshes project insights after the existing project automation execution
+  action completes.
+- Preserved existing workspace controls, Dashboard behavior, global Execution
+  and Reports pages, backend services, and API contracts.
+
+### Reused project-scoped capabilities
+
+```text
+GET /api/projects/{project_id}/executions/report
+GET /api/projects/{project_id}/executions/failures?limit=10
+GET /api/projects/{project_id}/executions/{execution_id}
+```
+
+No backend execution, reporting, failure-analysis, or persistence changes were
+required.
+
+### Validation
+
+```text
+Focused web tests:                 30 passed
+Full regression suite:             327 passed
+Warnings:                            8
+Failures:                            0
+git diff --check:                    clean
+Browser verification:               passed
+```
+
+The browser verification covered project selection, project-scoped metrics and
+failures, execution Review/detail, empty execution state, healthy no-failure
+state, API error state, and continued availability of existing workspace
+controls.
+
+The implementation is not committed or pushed. The repository HEAD remains
+`7162865`, and the changes are in the working tree.
+
+### Proposed next checkpoint
+
+**P2-S9.14-C — Generated Automation Artifact Review**
+
+This is a proposal only. Reinspect the existing workspace artifact response and
+agree on the smallest UI boundary before implementation. Do not add backend
+capabilities merely to support artifact display.

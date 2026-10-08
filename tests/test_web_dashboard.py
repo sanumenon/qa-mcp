@@ -588,6 +588,11 @@ def test_project_qa_workspace_page_contains_repository_controls():
     )
 
     assert (
+        'id="project-execution-insights"'
+        in html
+    )
+
+    assert (
         "/static/js/project_workspace.js"
         in html
     )
@@ -630,6 +635,21 @@ def test_project_qa_workspace_javascript_is_served():
 
     assert (
         "loadProjectQAWorkspace"
+        in javascript
+    )
+
+    assert (
+        "loadProjectExecutionInsights"
+        in javascript
+    )
+
+    assert (
+        'fetch(projectPath + "/report")'
+        in javascript
+    )
+
+    assert (
+        'fetch(projectPath + "/failures?limit=10")'
         in javascript
     )
 
@@ -1368,3 +1388,356 @@ def test_project_qa_workspace_javascript_contains_automation_wiring():
         "/execute"
         in javascript
     )
+
+
+def test_project_workspace_execution_insights_browser_flow():
+    import json
+    import threading
+    import time
+
+    import uvicorn
+    from playwright.sync_api import expect, sync_playwright
+
+    server = uvicorn.Server(
+        uvicorn.Config(
+            "qa_mcp.web.app:app",
+            host="127.0.0.1",
+            port=8766,
+            log_level="error",
+        )
+    )
+    thread = threading.Thread(
+        target=server.run,
+        daemon=True,
+    )
+    thread.start()
+
+    workspace_payload = {
+        "project": {
+            "project_id": "insights-project",
+            "name": "Insights Project",
+            "application": "QA app",
+            "environment": "test",
+        },
+        "requirement_versions": [],
+        "suite_versions": [],
+        "test_cases": [
+            {
+                "id": "TC-INSIGHT-1",
+                "title": "Reviewable case",
+                "priority": "High",
+                "test_type": "Functional",
+                "preconditions": [],
+                "steps": ["Run the test"],
+                "expected_result": "It passes",
+                "automation_candidate": True,
+                "suite_version": 1,
+            }
+        ],
+        "automation_artifacts": [
+            {
+                "artifact_id": "ART-INSIGHT-1",
+                "test_case_id": "TC-INSIGHT-1",
+                "automation_case_id": "AC-INSIGHT-1",
+                "framework": "Playwright",
+                "language": "Python",
+            }
+        ],
+    }
+    report_payload = {
+        "total_executions": 3,
+        "passed": 2,
+        "failed": 1,
+        "not_executed": 0,
+        "error": 0,
+        "pass_rate_percent": 66.7,
+        "total_duration_seconds": 2.5,
+        "average_duration_seconds": 0.83,
+    }
+    failures_payload = {
+        "total_executions": 3,
+        "failed_executions": 1,
+        "error_executions": 0,
+        "total_failures": 1,
+        "failure_rate_percent": 33.3,
+        "affected_automation_cases": ["AC-INSIGHT-1"],
+        "latest_failure_execution_id": "EX-INSIGHT-1",
+        "latest_failure_status": "FAILED",
+        "failures": [
+            {
+                "execution_id": "EX-INSIGHT-1",
+                "automation_artifact_id": "ART-INSIGHT-1",
+                "automation_case_id": "AC-INSIGHT-1",
+                "status": "FAILED",
+                "exit_code": 1,
+                "message": "Expected value was not found",
+                "stderr": "",
+                "duration_seconds": 0.8,
+            }
+        ],
+    }
+    requests = []
+
+    def fulfill_json(route, payload, status=200):
+        route.fulfill(
+            status=status,
+            content_type="application/json",
+            body=json.dumps(payload),
+        )
+
+    try:
+        deadline = time.time() + 10
+        while not server.started:
+            if time.time() >= deadline:
+                raise AssertionError(
+                    "Uvicorn server did not start within 10 seconds"
+                )
+            time.sleep(0.05)
+
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+
+            def handle_projects(route):
+                requests.append(route.request.url)
+                fulfill_json(
+                    route,
+                    [
+                        {
+                            "project_id": "insights-project",
+                            "name": "Insights Project",
+                            "application": "QA app",
+                            "environment": "test",
+                            "description": "",
+                            "metadata": {},
+                        }
+                    ],
+                )
+
+            def handle_workspace(route):
+                requests.append(route.request.url)
+                fulfill_json(route, workspace_payload)
+
+            def handle_history(route):
+                requests.append(route.request.url)
+                fulfill_json(
+                    route,
+                    [
+                        {
+                            "execution_id": "EX-INSIGHT-1",
+                            "automation_artifact_id": "ART-INSIGHT-1",
+                            "automation_case_id": "AC-INSIGHT-1",
+                            "status": "FAILED",
+                            "exit_code": 1,
+                            "stdout": "",
+                            "stderr": "Expected value was not found",
+                            "duration_seconds": 0.8,
+                            "error": None,
+                        }
+                    ],
+                )
+
+            def handle_report(route):
+                requests.append(route.request.url)
+                fulfill_json(route, report_payload)
+
+            def handle_failures(route):
+                requests.append(route.request.url)
+                if failures_payload.get("api_error"):
+                    fulfill_json(
+                        route,
+                        {"detail": "Project failure analysis unavailable"},
+                        status=500,
+                    )
+                else:
+                    fulfill_json(route, failures_payload)
+
+            def handle_execution_detail(route):
+                requests.append(route.request.url)
+                fulfill_json(
+                    route,
+                    {
+                        "execution_id": "EX-INSIGHT-1",
+                        "automation_artifact_id": "ART-INSIGHT-1",
+                        "automation_case_id": "AC-INSIGHT-1",
+                        "status": "FAILED",
+                        "exit_code": 1,
+                        "stdout": "",
+                        "stderr": "Expected value was not found",
+                        "duration_seconds": 0.8,
+                        "error": None,
+                    },
+                )
+
+            page.route("**/api/projects", handle_projects)
+            page.route(
+                "**/api/projects/insights-project/workspace",
+                handle_workspace,
+            )
+            page.route(
+                "**/api/projects/insights-project/executions?limit=50",
+                handle_history,
+            )
+            page.route(
+                "**/api/projects/insights-project/executions/report",
+                handle_report,
+            )
+            page.route(
+                "**/api/projects/insights-project/executions/failures*",
+                handle_failures,
+            )
+            page.route(
+                "**/api/projects/insights-project/executions/EX-INSIGHT-1",
+                handle_execution_detail,
+            )
+
+            page.goto(
+                "http://127.0.0.1:8766/project-workspace",
+                wait_until="networkidle",
+            )
+
+            page.locator(
+                "#repository-project-id"
+            ).select_option("insights-project")
+
+            page.get_by_role(
+                "button",
+                name="Load Project Workspace",
+            ).click()
+
+            insights = page.locator(
+                "#project-execution-insights"
+            )
+            insights.get_by_text(
+                "Expected value was not found"
+            ).wait_for()
+
+            assert insights.get_by_text("3", exact=True).first.is_visible()
+            assert insights.locator(
+                "#project-insights-passed"
+            ).inner_text().strip() == "2"
+            assert insights.locator(
+                "#project-insights-failed"
+            ).inner_text().strip() == "1"
+            assert insights.locator(
+                "#project-insights-errors"
+            ).inner_text().strip() == "0"
+            assert insights.get_by_text("66.7%", exact=True).is_visible()
+            assert insights.get_by_text("EX-INSIGHT-1").is_visible()
+            assert insights.get_by_text("AC-INSIGHT-1").is_visible()
+
+            assert page.locator(
+                '#project-execution-insights button[onclick*="openProjectExecutionReview"]'
+            ).is_visible()
+            insights.get_by_role(
+                "button",
+                name="Review",
+            ).click()
+            page.locator(
+                "#project-execution-review"
+            ).get_by_text("EX-INSIGHT-1").wait_for()
+
+            assert any(
+                "/api/projects/insights-project/executions/report"
+                in url
+                for url in requests
+            )
+            assert any(
+                "/api/projects/insights-project/executions/failures?limit=10"
+                in url
+                for url in requests
+            )
+            assert not any(
+                url.endswith("/api/executions/report")
+                or "/api/executions/failures" in url
+                for url in requests
+            )
+
+            # No executions is an empty state, not an API error.
+            report_payload.update(
+                total_executions=0,
+                passed=0,
+                failed=0,
+                error=0,
+                pass_rate_percent=0.0,
+            )
+            failures_payload.update(
+                total_executions=0,
+                failed_executions=0,
+                error_executions=0,
+                total_failures=0,
+                failure_rate_percent=0.0,
+                failures=[],
+            )
+            page.get_by_role(
+                "button",
+                name="Load Project Workspace",
+            ).click()
+            expect(
+                insights.locator("#project-insights-total")
+            ).to_have_text("0")
+            insights.get_by_text(
+                "No executions have been recorded for this project yet."
+            ).wait_for()
+            insights.get_by_text(
+                "No failures recorded for this project."
+            ).wait_for()
+
+            # A project with executions and no failures is healthy.
+            report_payload.update(
+                total_executions=1,
+                passed=1,
+                pass_rate_percent=100.0,
+            )
+            failures_payload.update(
+                total_executions=1,
+                total_failures=0,
+                failures=[],
+            )
+            page.get_by_role(
+                "button",
+                name="Load Project Workspace",
+            ).click()
+            expect(
+                insights.locator("#project-insights-total")
+            ).to_have_text("1")
+            insights.get_by_text(
+                "No failures recorded for this project."
+            ).wait_for()
+            assert insights.get_by_text(
+                "No executions have been recorded for this project yet."
+            ).count() == 0
+
+            # An API error is shown as an error, with no global fallback.
+            failures_payload["api_error"] = True
+            page.get_by_role(
+                "button",
+                name="Load Project Workspace",
+            ).click()
+            insights.get_by_text(
+                "Project failure analysis unavailable"
+            ).wait_for()
+
+            # Existing workspace and automation controls remain available.
+            assert page.get_by_text("Reviewable case").is_visible()
+            assert page.get_by_role(
+                "checkbox",
+                name="Select Reviewable case",
+            ).is_visible()
+            assert page.get_by_role(
+                "button",
+                name="Generate Automation for Selected Candidates",
+            ).is_visible()
+            assert page.get_by_role(
+                "button",
+                name="Execute",
+            ).is_visible()
+
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+        if thread.is_alive():
+            raise AssertionError(
+                "Uvicorn server did not shut down cleanly"
+            )

@@ -1377,6 +1377,18 @@ already prepared for the selected project.
 ></div>
 
 <div
+    id="project-execution-insights"
+    class="result-block project-execution-insights"
+    aria-live="polite"
+>
+    <h3>Project Execution Insights</h3>
+    <p>
+        Select a project and load its workspace to view
+        project-scoped execution metrics and failures.
+    </p>
+</div>
+
+<div
     id="project-execution-history"
     class="result-block"
 ></div>

@@ -125,6 +125,54 @@ button {
     margin-top: 20px;
 }
 
+.project-execution-insights {
+    padding: 16px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+.project-execution-insights h3 {
+    margin-top: 0;
+}
+
+.execution-insight-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(135px, 1fr));
+    gap: 10px;
+    margin: 14px 0 18px;
+}
+
+.execution-insight-card {
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+}
+
+.execution-insight-card strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 22px;
+}
+
+.execution-insight-empty,
+.execution-insight-healthy {
+    margin: 12px 0;
+}
+
+.execution-insight-healthy {
+    color: #166534;
+}
+
+.project-execution-failure-message {
+    max-width: 480px;
+    max-height: 5em;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
 .result-block ul {
     padding-left: 22px;
 }
