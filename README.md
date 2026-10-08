@@ -25,24 +25,24 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.14-B — Project Execution Insights
+**Current checkpoint:** P2-S9.14-C — Generated Automation Artifact Review
 
-**Checkpoint commit:** Not committed; implementation is in the working tree
+**Checkpoint commit:** Pending review; implementation is in the working tree
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
 **Branch:** `main`
 
-**Latest verified baseline after P2-S9.14-B:**
+**Latest verified baseline after P2-S9.14-C:**
 
 - Focused web tests: **30 passed**
 - Full regression: **327 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Project Execution Insights browser verification: **passed**
+- Project QA Workspace artifact-review browser verification: **passed**
 - Existing Dashboard and Project QA Workspace workflows preserved
-- Existing project-scoped execution reporting and failure-analysis APIs reused
+- Existing workspace artifact data reused; no new API added
 - No backend API contracts were changed
 - Current checkpoint changes are **not committed or pushed**
 
@@ -136,14 +136,11 @@ The following capabilities are implemented and verified:
 ## Current implementation boundary
 
 P2-S9.14-B adds project-scoped execution metrics and recent failure review to
-the existing Project QA Workspace. It reuses the existing project execution
-report, failure-analysis, and execution-detail APIs. The global Execution and
-Reports pages and all backend contracts remain unchanged.
-
-The proposed next UI increment is **P2-S9.14-C — Generated Automation
-Artifact Review**. This is a proposal only; inspect the current code and agree
-on its boundary before implementation. Do not redesign completed workflows or
-introduce backend functionality solely to populate the UI.
+the existing Project QA Workspace. P2-S9.14-C adds read-only review of
+generated automation artifacts in that workspace, reusing artifact data
+already returned by the workspace API. Review and Execute remain separate
+actions. The global Execution and Reports pages and all backend contracts
+remain unchanged.
 
 # 2. PRODUCT VISION
 
@@ -1642,11 +1639,12 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.14-B — Project Execution Insights**
+**P2-S9.14-C — Generated Automation Artifact Review**
 
-P2-S9.14-A — QA-MCP Production UI Architecture Shell is complete and must not
-be recreated. P2-S9.14-B adds project-scoped insights by reusing existing
-execution reporting, failure-analysis, history, and detail capabilities.
+P2-S9.14-A — QA-MCP Production UI Architecture Shell and P2-S9.14-B — Project
+Execution Insights are complete and must not be recreated. P2-S9.14-C adds
+read-only review of generated automation source in the existing Project QA
+Workspace.
 
 Previous completed checkpoints:
 
@@ -1658,7 +1656,7 @@ P2-S8.8+  Automation Code Generation              COMPLETE
 P2-S8.9   Controlled Automation Execution         COMPLETE
 ```
 
-Latest verified baseline:
+P2-S9.14-B verified baseline:
 
 ```text
 Focused web tests: 30 passed
@@ -1667,8 +1665,9 @@ Full regression: 327 passed
 0 failures
 ```
 
-Current repository commit: `7162865` (P2-S9.14-A). P2-S9.14-B is validated
-but remains uncommitted in the working tree.
+P2-S9.14-B checkpoint commit: `7439119`. At the start of P2-S9.14-C, `main`
+was synchronized with `origin/main` and the working tree was clean. Its
+validation baseline was 327 passed, 8 warnings, and 0 failures.
 
 Current automation MCP surface:
 
@@ -1690,7 +1689,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.14-B — Project Execution Insights**.
+5. Start from **P2-S9.14-C — Generated Automation Artifact Review**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -2899,7 +2898,7 @@ Before implementation:
 
 ## P2-S9.14-B — Project Execution Insights
 
-**Status: COMPLETE — implementation validated, not committed**
+**Status: COMPLETE — committed as `7439119`**
 
 ### Implementation scope
 
@@ -2943,13 +2942,60 @@ failures, execution Review/detail, empty execution state, healthy no-failure
 state, API error state, and continued availability of existing workspace
 controls.
 
-The implementation is not committed or pushed. The repository HEAD remains
-`7162865`, and the changes are in the working tree.
+The P2-S9.14-B implementation is committed as `7439119` and was pushed to
+`origin/main`. At the P2-S9.14-C baseline, `main` was synchronized with
+`origin/main` and the working tree was clean.
 
-### Proposed next checkpoint
+### Next checkpoint
 
 **P2-S9.14-C — Generated Automation Artifact Review**
 
-This is a proposal only. Reinspect the existing workspace artifact response and
-agree on the smallest UI boundary before implementation. Do not add backend
-capabilities merely to support artifact display.
+Adds read-only inspection of generated automation artifact source in the
+existing Project QA Workspace, reusing artifact data already returned by the
+workspace API. Review and Execute remain separate actions. No backend/API,
+generation, persistence, or execution changes are in scope.
+
+
+---
+
+
+## P2-S9.14-C — Generated Automation Artifact Review
+
+**Status: COMPLETE — implementation validated, awaiting commit review**
+
+### Implementation scope
+
+- Added a Review action for each generated automation artifact in the existing
+  Project QA Workspace.
+- Added an inline read-only panel with filename, framework, language, creation
+  time when available, project, associated test case, automation case, and
+  generated source.
+- Rendered generated source through DOM text nodes so markup-like source stays
+  inert; the source area is scrollable for long files.
+- Added close and artifact-switch behavior while leaving Execute as a separate
+  action.
+- Reused artifact data from the existing project workspace response. No new
+  endpoint or backend/API contract was added.
+- Preserved project scoping, artifact generation/persistence, execution
+  semantics, Project Execution Insights, and other existing workflows.
+
+### Validation
+
+```text
+Focused web tests:                 30 passed
+Full regression suite:             327 passed
+Warnings:                            8
+Failures:                            0
+JavaScript syntax check:             passed
+git diff --check:                    clean
+Browser verification:               passed
+```
+
+The browser verification covered artifact metadata and source display,
+inert markup-like source, switching artifacts, closing review, no execution
+request from Review, and the existing project-scoped Execute action working
+independently. The P2-S9.14-B execution insights flow remained covered by the
+same browser regression.
+
+The implementation is not committed or pushed. The P2-S9.14-C diff is ready
+for review.

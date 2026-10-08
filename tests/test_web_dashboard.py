@@ -1379,6 +1379,10 @@ def test_project_qa_workspace_javascript_contains_automation_wiring():
         in javascript
     )
 
+    assert "data-review-artifact" in javascript
+    assert "project-artifact-review" in javascript
+    assert "source.textContent" in javascript
+
     assert (
         "/automation/"
         in javascript
@@ -1441,6 +1445,22 @@ def test_project_workspace_execution_insights_browser_flow():
                 "automation_case_id": "AC-INSIGHT-1",
                 "framework": "Playwright",
                 "language": "Python",
+                "file_name": "test_reviewable.py",
+                "created_at": "2026-01-02T03:04:05+00:00",
+                "code": (
+                    "<script>window.artifactExecuted = true;</script>\n"
+                    "print('safe')"
+                ),
+            },
+            {
+                "artifact_id": "ART-INSIGHT-2",
+                "test_case_id": "TC-INSIGHT-1",
+                "automation_case_id": "AC-INSIGHT-2",
+                "framework": "Playwright",
+                "language": "Python",
+                "file_name": "test_second.py",
+                "created_at": "2026-01-03T03:04:05+00:00",
+                "code": "print('second artifact')",
             }
         ],
     }
@@ -1477,6 +1497,7 @@ def test_project_workspace_execution_insights_browser_flow():
         ],
     }
     requests = []
+    execution_requests = []
 
     def fulfill_json(route, payload, status=200):
         route.fulfill(
@@ -1569,6 +1590,17 @@ def test_project_workspace_execution_insights_browser_flow():
                     },
                 )
 
+            def handle_artifact_execution(route):
+                execution_requests.append(route.request.url)
+                fulfill_json(
+                    route,
+                    {
+                        "status": "PASSED",
+                        "stdout": "Execution completed",
+                        "stderr": "",
+                    },
+                )
+
             page.route("**/api/projects", handle_projects)
             page.route(
                 "**/api/projects/insights-project/workspace",
@@ -1589,6 +1621,10 @@ def test_project_workspace_execution_insights_browser_flow():
             page.route(
                 "**/api/projects/insights-project/executions/EX-INSIGHT-1",
                 handle_execution_detail,
+            )
+            page.route(
+                "**/api/projects/insights-project/automation/*/execute",
+                handle_artifact_execution,
             )
 
             page.goto(
@@ -1611,6 +1647,63 @@ def test_project_workspace_execution_insights_browser_flow():
             insights.get_by_text(
                 "Expected value was not found"
             ).wait_for()
+
+            # Reviewing generated source is read-only and treats markup-like
+            # source as text. It must not call the execution endpoint.
+            review_panel = page.locator("#project-artifact-review")
+            artifact_row = page.locator(
+                "#project-workspace-result table"
+            ).locator("tr").filter(has_text="ART-INSIGHT-1")
+            artifact_row.get_by_role("button", name="Review").click()
+            expect(review_panel).to_be_visible()
+            expect(review_panel).to_contain_text("test_reviewable.py")
+            expect(review_panel).to_contain_text("Playwright")
+            expect(review_panel).to_contain_text("Python")
+            expect(review_panel).to_contain_text("Created:")
+            expect(review_panel).to_contain_text("Insights Project")
+            expect(review_panel).to_contain_text(
+                "TC-INSIGHT-1 — Reviewable case"
+            )
+            expect(review_panel).to_contain_text("AC-INSIGHT-1")
+            expect(review_panel.locator("pre")).to_contain_text(
+                "<script>window.artifactExecuted = true;</script>"
+            )
+            assert review_panel.locator("script").count() == 0
+            assert page.evaluate(
+                "window.artifactExecuted === true"
+            ) is False
+            assert not any(
+                url.endswith("/automation/ART-INSIGHT-1/execute")
+                for url in requests
+            )
+
+            second_row = page.locator(
+                "#project-workspace-result table"
+            ).locator("tr").filter(has_text="ART-INSIGHT-2")
+            second_row.get_by_role("button", name="Review").click()
+            expect(review_panel).to_contain_text("test_second.py")
+            expect(review_panel.locator("pre")).to_have_text(
+                "print('second artifact')"
+            )
+            expect(review_panel).not_to_contain_text("test_reviewable.py")
+            review_panel.get_by_role(
+                "button", name="Close Review"
+            ).click()
+            expect(review_panel).to_be_hidden()
+            assert not any(
+                "/automation/" in url and url.endswith("/execute")
+                for url in requests
+            )
+
+            # Execute remains a distinct action and still calls the existing
+            # project-scoped execution endpoint.
+            artifact_row.get_by_role("button", name="Execute").click()
+            page.get_by_text(
+                "Execution result for ART-INSIGHT-1: PASSED"
+            ).wait_for()
+            assert execution_requests == [
+                "http://127.0.0.1:8766/api/projects/insights-project/automation/ART-INSIGHT-1/execute"
+            ]
 
             assert insights.get_by_text("3", exact=True).first.is_visible()
             assert insights.locator(
@@ -1640,6 +1733,10 @@ def test_project_workspace_execution_insights_browser_flow():
             assert any(
                 "/api/projects/insights-project/executions/report"
                 in url
+                for url in requests
+            )
+            assert any(
+                url.endswith("/api/projects/insights-project/workspace")
                 for url in requests
             )
             assert any(
@@ -1731,7 +1828,24 @@ def test_project_workspace_execution_insights_browser_flow():
             assert page.get_by_role(
                 "button",
                 name="Execute",
-            ).is_visible()
+            ).count() == 2
+
+            # Empty artifact lists preserve the workspace and simply render
+            # an empty artifact table with no review or execute actions.
+            workspace_payload["automation_artifacts"] = []
+            page.get_by_role(
+                "button",
+                name="Load Project Workspace",
+            ).click()
+            artifact_table = page.get_by_role(
+                "heading",
+                name="Generated Automation Artifacts",
+            ).locator("xpath=following-sibling::table[1]")
+            expect(artifact_table.locator("tbody tr")).to_have_count(0)
+            assert artifact_table.get_by_role(
+                "button",
+                name="Review",
+            ).count() == 0
 
             browser.close()
     finally:

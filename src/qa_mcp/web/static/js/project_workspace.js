@@ -509,6 +509,10 @@ function renderProjectQAWorkspace(
     const automationArtifacts =
         payload.automation_artifacts || [];
 
+    const testCasesById = new Map(
+        testCases.map(item => [String(item.id || ""), item])
+    );
+
     const requirementRows =
         requirements.map(
             item => `
@@ -580,6 +584,12 @@ function renderProjectQAWorkspace(
 <td>${escapeHtml(item.framework || "")}</td>
 <td>${escapeHtml(item.language || "")}</td>
 <td>
+<button
+    type="button"
+    data-review-artifact="${escapeHtml(artifactId)}"
+>
+    Review
+</button>
 <button
     type="button"
     onclick="executeProjectAutomation('${escapeHtml(artifactId)}')"
@@ -686,7 +696,108 @@ ${artifactRows}
 
 </table>
 
+<section
+    id="project-artifact-review"
+    class="artifact-review"
+    aria-live="polite"
+    hidden
+></section>
+
 `;
+
+    const reviewElement = document.getElementById(
+        "project-artifact-review"
+    );
+
+    const setReviewText = (label, value) => {
+        const row = document.createElement("p");
+        const heading = document.createElement("strong");
+        heading.textContent = `${label}: `;
+        row.appendChild(heading);
+        row.appendChild(
+            document.createTextNode(
+                value == null ? "" : String(value)
+            )
+        );
+        reviewElement.appendChild(row);
+    };
+
+    resultElement
+        .querySelectorAll("[data-review-artifact]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                const artifact = automationArtifacts.find(
+                    item =>
+                        String(item.artifact_id || "") ===
+                        button.dataset.reviewArtifact
+                );
+
+                if (!artifact || !reviewElement) {
+                    return;
+                }
+
+                reviewElement.replaceChildren();
+                reviewElement.hidden = false;
+
+                const heading = document.createElement("h4");
+                heading.textContent = "Generated Artifact Review";
+                reviewElement.appendChild(heading);
+
+                const closeButton = document.createElement("button");
+                closeButton.type = "button";
+                closeButton.textContent = "Close Review";
+                closeButton.addEventListener("click", () => {
+                    reviewElement.hidden = true;
+                    reviewElement.replaceChildren();
+                });
+                reviewElement.appendChild(closeButton);
+
+                setReviewText("Artifact ID", artifact.artifact_id);
+                setReviewText("Filename", artifact.file_name);
+                setReviewText("Framework", artifact.framework);
+                setReviewText("Language", artifact.language);
+                if (artifact.created_at) {
+                    setReviewText(
+                        "Created",
+                        formatExecutionDate(artifact.created_at)
+                    );
+                }
+                setReviewText(
+                    "Project",
+                    project.name || project.project_id || projectId
+                );
+
+                const testCase = testCasesById.get(
+                    String(artifact.test_case_id || "")
+                );
+                setReviewText(
+                    "Test Case",
+                    testCase
+                        ? `${testCase.id || artifact.test_case_id}${
+                            testCase.title ? ` — ${testCase.title}` : ""
+                        }`
+                        : artifact.test_case_id
+                );
+                setReviewText(
+                    "Automation Case",
+                    artifact.automation_case_id
+                );
+
+                const sourceHeading = document.createElement("h5");
+                sourceHeading.textContent = "Generated Source";
+                reviewElement.appendChild(sourceHeading);
+
+                const source = document.createElement("pre");
+                source.className = "artifact-review-source";
+                source.setAttribute(
+                    "aria-label",
+                    "Generated artifact source code"
+                );
+                source.textContent =
+                    artifact.code == null ? "" : String(artifact.code);
+                reviewElement.appendChild(source);
+            });
+        });
 
     updateProjectAutomationButton();
 }

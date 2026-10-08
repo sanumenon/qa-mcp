@@ -125,6 +125,23 @@ button {
     margin-top: 20px;
 }
 
+.artifact-review {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color, #d7dce2);
+    border-radius: 0.5rem;
+    background: var(--surface-color, #fff);
+}
+
+.artifact-review-source {
+    max-height: 32rem;
+    overflow: auto;
+    padding: 1rem;
+    border-radius: 0.35rem;
+    background: var(--code-background, #f4f6f8);
+    white-space: pre;
+}
+
 .project-execution-insights {
     padding: 16px;
     border: 1px solid #dbeafe;
