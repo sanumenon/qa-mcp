@@ -1,4 +1,5 @@
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 from qa_mcp.models.schemas import (
     AutomationCase,
@@ -46,7 +47,7 @@ class AutomationCodeGenerationService:
         )
 
         return GeneratedAutomationArtifact(
-            id="GA001",
+            id=str(uuid4()),
             automation_case_id=automation_case.id,
             framework="Playwright",
             language="Python",

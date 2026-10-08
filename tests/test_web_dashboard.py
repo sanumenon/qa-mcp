@@ -1851,6 +1851,18 @@ def test_project_workspace_execution_insights_browser_flow():
                 "http://127.0.0.1:8766/api/projects/insights-project/automation/ART-INSIGHT-1/execute"
             ]
 
+            second_row.get_by_role(
+                "button",
+                name="Execute",
+            ).click()
+            page.get_by_text(
+                "Execution result for ART-INSIGHT-2: PASSED"
+            ).wait_for()
+            assert execution_requests == [
+                "http://127.0.0.1:8766/api/projects/insights-project/automation/ART-INSIGHT-1/execute",
+                "http://127.0.0.1:8766/api/projects/insights-project/automation/ART-INSIGHT-2/execute",
+            ]
+
             assert insights.get_by_text("3", exact=True).first.is_visible()
             assert insights.locator(
                 "#project-insights-passed"

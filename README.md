@@ -25,25 +25,24 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.14-D — Persisted Test Case Review
+**Current checkpoint:** P2-S9.15 — Persisted Automation Artifact Identity and Traceability
 
-**Checkpoint commit:** Pending review; implementation is in the working tree
+**Checkpoint commit:** Pending review; implementation is validated in the working tree
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
 **Branch:** `main`
 
-**Latest verified baseline after P2-S9.14-D:**
+**Latest verified baseline after P2-S9.15 implementation:**
 
-- Focused web tests: **30 passed**
-- Full regression: **327 passed**
+- Focused artifact/workspace/history/API tests: **30 passed**
+- Focused artifact-review/execution browser test: **1 passed**
+- Full regression: **329 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Project QA Workspace test-case/artifact review browser verification: **passed**
-- Existing Dashboard and Project QA Workspace workflows preserved
-- Existing project workspace response reused; no new API added
-- No backend API contracts were changed
+- Project Workspace two-artifact review and execution browser verification: **passed**
+- Existing artifact response shape, API/MCP fields, persistence schema, and execution behavior preserved
 - Current checkpoint changes are **not committed or pushed**
 
 ## Latest verified implementation notes
@@ -1348,9 +1347,9 @@ This section is retained for historical continuity.
 
 It is not the current development checkpoint.
 
-The current development checkpoint is defined at the beginning of this README under:
-
-**P2-S9.12 — Automation Execution Configuration Hardening**
+The current development checkpoint is defined at the beginning of this README.
+This historical roadmap has been superseded by the completed P2-S9.12 and
+P2-S9.14 checkpoints and the current P2-S9.15 implementation.
 
 The earlier P2-S9.1 execution-hardening roadmap has been superseded by the completed implementation and later P2-S9.12 work.
 
@@ -1641,12 +1640,15 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.14-D — Persisted Test Case Review**
+**P2-S9.15 — Persisted Automation Artifact Identity and Traceability**
 
 P2-S9.14-A — QA-MCP Production UI Architecture Shell, P2-S9.14-B — Project
 Execution Insights, and P2-S9.14-C — Generated Automation Artifact Review are
-complete and must not be recreated. P2-S9.14-D adds read-only review of
-persisted test case details in the existing Project QA Workspace.
+complete and must not be recreated. P2-S9.14-D — Persisted Test Case Review
+is complete, committed as `207e31e`, and pushed to `origin/main`. P2-S9.15
+corrects persisted automation artifact identity while preserving legacy
+records and existing execution behavior. Its implementation is validated
+and awaiting review; do not commit or push until authorized.
 
 Previous completed checkpoints:
 
@@ -1669,9 +1671,14 @@ Full regression: 327 passed
 
 P2-S9.14-B checkpoint commit: `7439119`.
 P2-S9.14-C checkpoint commit: `f5dbc8d` — Complete P2-S9.14-C generated
-artifact review. At the start of P2-S9.14-D, `main` was synchronized with
-`origin/main` and the working tree was clean. The prior validation baseline
-was 327 passed, 8 warnings, and 0 failures.
+artifact review. P2-S9.14-D checkpoint commit: `207e31e` — Complete
+P2-S9.14-D persisted test case review. It was pushed to `origin/main` with a
+clean working tree. Its validation baseline was 327 passed, 8 warnings, and
+0 failures.
+
+P2-S9.15 validation baseline: 329 passed, 8 warnings, and 0 failures. The
+implementation is currently in the working tree and has not been committed
+or pushed.
 
 Current automation MCP surface:
 
@@ -1693,7 +1700,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.14-D — Persisted Test Case Review**.
+5. Start from **P2-S9.15 — Persisted Automation Artifact Identity and Traceability**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -2610,7 +2617,7 @@ Project QA Workspace
 
 Completed automation candidate selection, candidate generation, automation case generation, validation, Playwright code generation, artifact generation, command-boundary enforcement, execution configuration, controlled execution, execution history, reporting, and failure-analysis services must continue to be reused rather than rebuilt.
 
-Current checkpoint:
+Checkpoint status at P2-S9.12:
 
 P2-S9.12 — Controlled Automation Execution from Project QA Workspace
 
@@ -3010,7 +3017,7 @@ The P2-S9.14-C implementation is committed as `f5dbc8d` and is present on
 
 ## P2-S9.14-D — Persisted Test Case Review
 
-**Status: COMPLETE — implementation validated, awaiting commit review**
+**Status: COMPLETE — committed as `207e31e`**
 
 ### Implementation scope
 
@@ -3044,5 +3051,52 @@ closing review, no mutation/generation/execution requests, candidate
 selection, artifact review, Execute, and empty testcase state. Existing
 P2-S9.14-B Project Execution Insights behavior remained covered.
 
-The P2-S9.14-D implementation is not committed or pushed and is ready for
-review.
+P2-S9.14-D was committed as `207e31e`, pushed to `origin/main`, and verified
+with a clean working tree. Its verified baseline was 327 passed, 8 warnings,
+and 0 failures.
+
+
+---
+
+
+## P2-S9.15 — Persisted Automation Artifact Identity and Traceability
+
+**Status: COMPLETE — implementation validated, awaiting commit review**
+
+### Root cause
+
+`AutomationCodeGenerationService.generate()` assigned every generated
+automation artifact the ID `GA001`. The SQLite artifact repository uses
+`artifact_id` as its primary key and saves with replace semantics, so distinct
+artifacts could overwrite one another. This broke artifact listing and could
+misassociate execution history and project reporting.
+
+### Implementation scope
+
+- Generate a UUID string for each new artifact inside
+  `AutomationCodeGenerationService`.
+- Keep the artifact model, API response shape, MCP fields, repository schema,
+  replace semantics, UI behavior, and execution semantics unchanged.
+- Preserve existing stored artifact IDs, including legacy `GA001` records.
+- No migration or general-purpose ID framework was added.
+
+### Validation
+
+```text
+Focused artifact/workspace/history/API tests: 30 passed, 1 warning
+Focused Project Workspace browser test:        1 passed, 1 warning
+Full regression suite:                         329 passed
+Warnings:                                        8
+Failures:                                        0
+git diff --check:                                clean
+```
+
+Regression coverage verifies distinct IDs across repeated generation,
+multiple artifacts persisting within and across projects, legacy `GA001`
+readability, exact artifact source selection during execution, execution
+history and project reporting, and browser Review/Execute selection for two
+artifacts.
+
+P2-S9.15 is validated and awaiting review. It has not been committed or
+pushed. Select any subsequent checkpoint only after reviewing this change;
+none is proposed here.

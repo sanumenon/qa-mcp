@@ -2,6 +2,7 @@ from qa_mcp.core.automation.code_generation_service import (
     AutomationCodeGenerationService,
 )
 from qa_mcp.models.schemas import AutomationCase
+from uuid import UUID
 
 def test_code_generation_service_generates_playwright_python_artifact():
 
@@ -30,8 +31,11 @@ def test_code_generation_service_generates_playwright_python_artifact():
     service = AutomationCodeGenerationService()
 
     result = service.generate(automation_case)
+    second_result = service.generate(automation_case)
 
-    assert result.id == "GA001"
+    assert result.id != second_result.id
+    assert str(UUID(result.id)) == result.id
+    assert str(UUID(second_result.id)) == second_result.id
     assert result.automation_case_id == "AC001"
     assert result.framework == "Playwright"
     assert result.language == "Python"

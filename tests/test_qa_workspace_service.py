@@ -2,9 +2,23 @@ from unittest.mock import Mock
 
 import pytest
 
+from qa_mcp.core.automation.code_generation_service import (
+    AutomationCodeGenerationService,
+)
+from qa_mcp.core.automation.execution_history_service import (
+    AutomationExecutionHistoryService,
+)
+from qa_mcp.infrastructure.sqlite_automation_execution_repository import (
+    SQLiteAutomationExecutionRepository,
+)
+from qa_mcp.infrastructure.sqlite_qa_workspace_artifact_repository import (
+    SQLiteQAWorkspaceArtifactRepository,
+)
 from qa_mcp.models.schemas import (
     QAProject,
     QASuiteResult,
+    AutomationCase,
+    AutomationExecutionResult,
     RequirementAnalysis,
     RequirementRequest,
     TestCaseResponse,
@@ -960,3 +974,141 @@ def test_execute_project_automation_rejects_missing_artifact():
 
     execution_service.execute.assert_not_called()
     execution_history_service.save.assert_not_called()
+
+
+def test_generated_artifacts_execute_with_independent_history_lineage(
+    tmp_path,
+):
+    artifact_repository = SQLiteQAWorkspaceArtifactRepository(
+        str(tmp_path / "workspace.db")
+    )
+    execution_repository = SQLiteAutomationExecutionRepository(
+        str(tmp_path / "workspace.db")
+    )
+    history_service = AutomationExecutionHistoryService(
+        execution_repository
+    )
+    project_context = Mock()
+    project_context.get_project.return_value = build_project()
+    execution_service = Mock()
+    executed_artifacts = []
+
+    def execute(artifact):
+        executed_artifacts.append(artifact)
+        return AutomationExecutionResult(
+            execution_id=f"EX-{artifact.id}",
+            automation_artifact_id=artifact.id,
+            automation_case_id=artifact.automation_case_id,
+            status=(
+                "PASSED"
+                if "#artifact-a" in artifact.code
+                else "FAILED"
+            ),
+            exit_code=(
+                0 if "#artifact-a" in artifact.code else 1
+            ),
+            stdout=artifact.id,
+            stderr="",
+            duration_seconds=0.1,
+        )
+
+    execution_service.execute.side_effect = execute
+    requirement_versioning_service = Mock()
+    requirement_versioning_service.list_requirement_versions.return_value = []
+    suite_versioning_service = Mock()
+    suite_versioning_service.list_suite_versions.return_value = []
+    service = QAWorkspaceService(
+        project_context=project_context,
+        qa_suite_workflow=Mock(),
+        requirement_versioning_service=requirement_versioning_service,
+        suite_versioning_service=suite_versioning_service,
+        workspace_artifact_repository=artifact_repository,
+        automation_execution_service=execution_service,
+        automation_execution_history_service=history_service,
+    )
+    code_generation_service = AutomationCodeGenerationService()
+
+    artifact_a = code_generation_service.generate(
+        AutomationCase(
+            id="AC-A",
+            test_case_id="TC-A",
+            title="Artifact A",
+            automation_type="UI",
+            framework="Playwright",
+            priority="High",
+            confidence="High",
+            preconditions=[],
+            test_data=[],
+            steps=["click: #artifact-a"],
+            assertions=["visible: #artifact-a"],
+            limitations=[],
+        )
+    )
+    artifact_b = code_generation_service.generate(
+        AutomationCase(
+            id="AC-B",
+            test_case_id="TC-B",
+            title="Artifact B",
+            automation_type="UI",
+            framework="Playwright",
+            priority="High",
+            confidence="High",
+            preconditions=[],
+            test_data=[],
+            steps=["click: #artifact-b"],
+            assertions=["visible: #artifact-b"],
+            limitations=[],
+        )
+    )
+
+    for artifact, test_case_id in (
+        (artifact_a, "TC-A"),
+        (artifact_b, "TC-B"),
+    ):
+        artifact_repository.save(
+            artifact=artifact,
+            project_id="qa-project",
+            test_case_id=test_case_id,
+            created_at="2026-10-08T00:00:00+00:00",
+        )
+
+    workspace = service.get_project_qa_workspace("qa-project")
+    assert {
+        item["artifact_id"]
+        for item in workspace["automation_artifacts"]
+    } == {artifact_a.id, artifact_b.id}
+    assert {
+        item["code"]
+        for item in workspace["automation_artifacts"]
+    } == {artifact_a.code, artifact_b.code}
+
+    result_a = service.execute_project_automation(
+        "qa-project",
+        artifact_a.id,
+    )
+    result_b = service.execute_project_automation(
+        "qa-project",
+        artifact_b.id,
+    )
+
+    assert [item.id for item in executed_artifacts] == [
+        artifact_a.id,
+        artifact_b.id,
+    ]
+    assert [item.code for item in executed_artifacts] == [
+        artifact_a.code,
+        artifact_b.code,
+    ]
+    assert result_a["automation_artifact_id"] == artifact_a.id
+    assert result_b["automation_artifact_id"] == artifact_b.id
+
+    history = service.list_project_executions("qa-project")
+    assert {
+        item.automation_artifact_id
+        for item in history
+    } == {artifact_a.id, artifact_b.id}
+
+    report = service.project_execution_report("qa-project")
+    assert report.total_executions == 2
+    assert report.passed == 1
+    assert report.failed == 1
