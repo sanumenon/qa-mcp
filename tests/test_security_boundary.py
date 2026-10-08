@@ -5,13 +5,19 @@ import sqlite3
 import stat
 import time
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from qa_mcp.core.project.context import ProjectContext
-from qa_mcp.core.security.actor import Actor, reset_current_actor, set_current_actor
+from qa_mcp.core.security.actor import (
+    LOCAL_OPERATOR,
+    Actor,
+    reset_current_actor,
+    set_current_actor,
+)
 from qa_mcp.core.security.authorization import AuthorizationError, ProjectAuthorization
 from qa_mcp.core.security.backup import create_database_backup, restore_database_backup
 from qa_mcp.core.security.oidc import GoogleOIDCProvider
@@ -196,7 +202,10 @@ def test_oidc_provider_accepts_only_verified_workspace_claims():
         async def authorize_access_token(self, request):
             return {"userinfo": dict(self.claims), "access_token": "must-not-persist"}
 
-    provider.oauth = SimpleNamespace(google=VerifiedGoogleClient())
+    provider.oauth = cast(
+        Any,
+        SimpleNamespace(google=VerifiedGoogleClient()),
+    )
     actor = __import__("asyncio").run(provider.complete(object()))
     assert actor.subject == "stable-google-subject"
     assert actor.email == "qa-user@qa.example.test"
@@ -569,12 +578,27 @@ def test_expired_session_fails_closed():
 
     middleware = object.__new__(AuthenticationMiddleware)
     middleware.settings = {"mode": "google"}
-    request = SimpleNamespace(
-        session={"actor_sub": "subject", "actor_email": "x@example.test", "expires_at": time.time() - 1}
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [],
+            "query_string": b"",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "client": ("testclient", 50000),
+            "root_path": "",
+            "session": {
+                "actor_sub": "subject",
+                "actor_email": "x@example.test",
+                "expires_at": time.time() - 1,
+            },
+        }
     )
+
     assert middleware._session_actor(request) is None
-
-
 @pytest.mark.parametrize(
     "settings,match",
     [
@@ -639,3 +663,22 @@ def test_online_backup_restore_integrity_retention_and_permissions(tmp_path):
     assert restored_projects.exists("restore-me")
     assert restored_projects.exists("also-backup")
     assert restored_projects.exists("latest")
+
+def test_development_local_operator_uses_trusted_local_operator():
+    from qa_mcp.web.auth import AuthenticationMiddleware
+    from qa_mcp.core.security.actor import LOCAL_OPERATOR
+
+    settings = {
+        "mode": "development",
+        "development_subject": "local-operator",
+    }
+
+    middleware = object.__new__(AuthenticationMiddleware)
+    middleware.settings = settings
+
+    request = Request({"type": "http", "method": "GET", "path": "/"})
+    actor = middleware._session_actor(request)
+
+    assert actor is not None
+    assert actor is LOCAL_OPERATOR
+    assert actor.local_operator is True

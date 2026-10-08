@@ -3,8 +3,9 @@ application:
   environment: local
 
 auth:
-  # Local developer identity is explicit and rejected in production.
   mode: development
+  development_subject: local-operator
+  development_email: local-operator@localhost
   session_max_age_seconds: 28800
   cookie_secure: false
 

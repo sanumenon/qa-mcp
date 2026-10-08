@@ -10,7 +10,12 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from qa_mcp.core.security.actor import Actor, reset_current_actor, set_current_actor
+from qa_mcp.core.security.actor import (
+    LOCAL_OPERATOR,
+    Actor,
+    reset_current_actor,
+    set_current_actor,
+)
 from qa_mcp.core.security.authorization import AuthorizationError, ProjectAuthorization
 
 
@@ -30,9 +35,20 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
     def _session_actor(self, request: Request) -> Actor | None:
         if self.settings["mode"] == "development":
+            subject = self.settings.get(
+                "development_subject",
+                "local-development",
+            )
+
+            if subject == LOCAL_OPERATOR.subject:
+                return LOCAL_OPERATOR
+
             return Actor(
-                subject=self.settings.get("development_subject", "local-development"),
-                email=self.settings.get("development_email", "local-development@localhost"),
+                subject=subject,
+                email=self.settings.get(
+                    "development_email",
+                    "local-development@localhost",
+                ),
             )
         session = request.session
         subject = session.get("actor_sub")
@@ -95,7 +111,9 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 )
                 response.headers["X-Request-ID"] = request_id
                 return response
-        token: Token = set_current_actor(actor) if actor is not None else None
+        token: Token[Actor] | None = (
+            set_current_actor(actor) if actor is not None else None
+        )
         try:
             response = await call_next(request)
         finally:
