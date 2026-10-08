@@ -27,6 +27,170 @@ def test_dashboard_page():
     assert "Recent Executions" in response.text
     assert "Failures" in response.text
 
+def test_execution_page():
+    response = client.get("/execution")
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    assert "QA MCP — Execution" in html
+    assert "<h1>Execution</h1>" in html
+    assert "Recent Executions" in html
+    assert (
+        '<script src="/static/js/execution.js"></script>'
+        in html
+    )
+
+    assert (
+        'href="/project-workspace"'
+        in html
+    )
+
+    assert (
+        'href="/reports"'
+        in html
+    )
+
+
+def test_reports_page():
+    response = client.get("/reports")
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    assert (
+        "QA MCP — Reports &amp; Analysis"
+        in html
+    )
+
+    assert (
+        "<h1>Reports &amp; Analysis</h1>"
+        in html
+    )
+
+    assert "Failure Analysis" in html
+
+    assert (
+        '<script src="/static/js/reports.js"></script>'
+        in html
+    )
+
+    assert (
+        'href="/execution"'
+        in html
+    )
+
+
+def test_workflow_navigation_is_present_on_existing_pages():
+    dashboard_response = client.get("/")
+
+    assert dashboard_response.status_code == 200
+
+    dashboard_html = dashboard_response.text
+
+    assert (
+        'class="workflow-navigation"'
+        in dashboard_html
+    )
+
+    assert (
+        'href="/project-workspace"'
+        in dashboard_html
+    )
+
+    assert (
+        'href="/execution"'
+        in dashboard_html
+    )
+
+    assert (
+        'href="/reports"'
+        in dashboard_html
+    )
+
+
+    workspace_response = client.get(
+        "/project-workspace"
+    )
+
+    assert workspace_response.status_code == 200
+
+    workspace_html = workspace_response.text
+
+    assert (
+        'class="workflow-navigation"'
+        in workspace_html
+    )
+
+    assert (
+        'href="/"'
+        in workspace_html
+    )
+
+    assert (
+        'href="/execution"'
+        in workspace_html
+    )
+
+    assert (
+        'href="/reports"'
+        in workspace_html
+    )
+
+
+def test_workflow_static_assets_are_served():
+
+    execution_response = client.get(
+        "/static/js/execution.js"
+    )
+
+    assert execution_response.status_code == 200
+
+    assert (
+        "loadExecutionPage"
+        in execution_response.text
+    )
+
+    assert (
+        "/api/executions/report"
+        in execution_response.text
+    )
+
+
+    reports_response = client.get(
+        "/static/js/reports.js"
+    )
+
+    assert reports_response.status_code == 200
+
+    assert (
+        "loadReportsPage"
+        in reports_response.text
+    )
+
+    assert (
+        "/api/executions/failures"
+        in reports_response.text
+    )
+
+
+    css_response = client.get(
+        "/static/css/dashboard.css"
+    )
+
+    assert css_response.status_code == 200
+
+    assert (
+        ".workflow-navigation"
+        in css_response.text
+    )
+
+    assert (
+        ".workflow-nav-link"
+        in css_response.text
+    )
 
 def test_executions_endpoint():
     response = client.get(

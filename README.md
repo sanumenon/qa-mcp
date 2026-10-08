@@ -25,9 +25,9 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 # 1. CURRENT DEVELOPMENT CHECKPOINT
 
-**Current checkpoint:** P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection
+**Current checkpoint:** P2-S9.14-A — QA-MCP Production UI Architecture Shell
 
-**Checkpoint commit:** `3de8511`
+**Checkpoint commit:** `<pending commit>`
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
@@ -35,15 +35,15 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 **Latest verified baseline:**
 
-- Full regression: **322 passed**
+- Focused web tests: **29 passed**
+- Full regression: **326 passed**
 - Warnings: **8**
 - Failures: **0**
 - `git diff --check`: clean
-- Live QA-suite generation: **HTTP 200**
-- Live generated test cases: **50**
-- Live generated IDs: **TC001 → TC050**
-- Project-workspace JavaScript contract verified against the backend response shape
-- Working tree contains only the current checkpoint changes; no unrelated modifications were introduced
+- Browser/API verification: **passed**
+- Existing Dashboard and Project QA Workspace workflows preserved
+- Existing execution, reporting, and failure-analysis APIs verified through the new UI
+- No backend API contracts were changed
 - Current checkpoint changes are **not yet committed or pushed**
 
 ## Latest verified implementation notes
@@ -1654,7 +1654,7 @@ The following principles must remain unchanged:
 
 ## Resume from
 
-**P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection**
+**P2-S9.14-A — QA-MCP Production UI Architecture Shell**
 
 P2-S9.1.a — Safe Workspace/File Handling and P2-S9.1.b.1 — Controlled Automation Command Boundary are complete and must not be recreated.
 
@@ -1711,7 +1711,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Start from **P2-S9.13 — Restore Project Workspace Saved-Test-Case Rendering and Automation Selection**.
+5. Start from **P2-S9.14-A — QA-MCP Production UI Architecture Shell**.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
@@ -2816,3 +2816,101 @@ P2-S9.12 — Test Case Persistence and Automation Candidate Workflow
 P2-S9.12 has progressed from the persistent Project QA Workspace to actionable automation-candidate selection and generation. The workspace can now select persisted automation candidates and invoke the existing automation generation and artifact-generation pipeline. This implementation is committed as `e186391`. The remaining work is to continue from generated automation artifacts into the completed controlled execution, execution-history, reporting, and failure-analysis pipeline.
 
 Do not redesign or rebuild completed automation generation, validation, artifact generation, workspace handling, command boundary, execution configuration, controlled execution, execution history, reporting, failure analysis, web-dashboard functionality, AI QA Workspace functionality, automation candidate selection functionality, automation case generation functionality, production automation-generation wiring, or automation artifact generation.
+
+
+---
+
+## P2-S9.14-A — QA-MCP Production UI Architecture Shell
+
+**Status: COMPLETE**
+
+Implementation scope:
+
+- Introduced explicit workflow navigation across the existing QA-MCP web UI.
+- Added dedicated `/execution` workflow page.
+- Added dedicated `/reports` workflow page.
+- Added shared workflow navigation styling.
+- Connected the Execution page to the existing execution reporting and execution-history APIs.
+- Connected the Reports page to the existing execution reporting and failure-analysis APIs.
+- Added dedicated JavaScript assets for the new workflow pages.
+- Added regression coverage for the new page routes, navigation, and static assets.
+- Preserved the existing Dashboard implementation.
+- Preserved the existing Project QA Workspace implementation.
+- Preserved all existing backend API contracts.
+- No core business logic, persistence, execution, reporting, or failure-analysis services were redesigned.
+
+### Production UI workflow structure
+
+```text
+QA MCP
+  |
+  +-- Dashboard
+  |
+  +-- Projects / QA Workspace
+  |
+  +-- Execution
+  |      +-- Execution Metrics
+  |      +-- Recent Executions
+  |      +-- Execution History
+  |
+  +-- Reports & Analysis
+         +-- Execution Reporting
+         +-- Pass Rate
+         +-- Average Duration
+         +-- Failure Analysis
+```
+
+### Backend capability reuse
+
+```text
+Execution UI
+    |
+    +-- GET /api/executions/report
+    +-- GET /api/executions?limit=20
+
+Reports UI
+    |
+    +-- GET /api/executions/report
+    +-- GET /api/executions/failures?limit=20
+```
+
+No duplicate execution or reporting business logic was introduced in the UI.
+
+### Navigation
+
+```text
+Dashboard
+Projects / QA Workspace
+Execution
+Reports & Analysis
+```
+
+The active workflow is visually identified on each page.
+
+### Validation
+
+```text
+Focused web tests:                 29 passed
+Full regression suite:             326 passed
+Warnings:                            8 known non-blocking warnings
+Failures:                            0
+git diff --check:                    clean
+Browser/API verification:            passed
+```
+
+**P2-S9.14-A is complete.**
+
+Do not redesign or rebuild the existing Dashboard, Project QA Workspace, execution services, reporting services, failure-analysis services, or established backend API contracts as part of the next increment.
+
+### Next implementation
+
+**P2-S9.14-B — Production UI workflow expansion**
+
+Before implementation:
+
+1. Inspect the existing backend capabilities.
+2. Identify stable APIs/services that already exist.
+3. Define ONE next UI workflow boundary.
+4. Do not invent backend capabilities merely to populate UI pages.
+5. Do not redesign existing working workflows.
+6. Obtain approval for the next sub-step before coding.

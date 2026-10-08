@@ -545,6 +545,317 @@ def execution_failures(
         limit=limit,
     ).model_dump()
 
+# ---------------------------------------------------------
+# Workflow Pages
+# ---------------------------------------------------------
+
+
+@app.get(
+    "/execution",
+    response_class=HTMLResponse,
+)
+def execution_page():
+    return HTMLResponse(
+        """
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>QA MCP — Execution</title>
+
+<link
+    rel="stylesheet"
+    href="/static/css/dashboard.css"
+>
+
+</head>
+
+<body>
+
+<nav class="workflow-navigation">
+
+    <a
+        class="workflow-nav-link"
+        href="/"
+    >
+        Dashboard
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/project-workspace"
+    >
+        Projects / QA Workspace
+    </a>
+
+    <a
+        class="workflow-nav-link active"
+        href="/execution"
+    >
+        Execution
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/reports"
+    >
+        Reports &amp; Analysis
+    </a>
+
+</nav>
+
+<main>
+
+<section>
+
+<h1>Execution</h1>
+
+<p>
+Review automation execution history and execution details
+without changing execution behavior.
+</p>
+
+<div
+    id="execution-error"
+    class="error"
+></div>
+
+<div class="grid">
+
+    <div class="card">
+        Total Executions
+        <div
+            class="value"
+            id="execution-total"
+        >
+            -
+        </div>
+    </div>
+
+    <div class="card">
+        Passed
+        <div
+            class="value"
+            id="execution-passed"
+        >
+            -
+        </div>
+    </div>
+
+    <div class="card">
+        Failed
+        <div
+            class="value"
+            id="execution-failed"
+        >
+            -
+        </div>
+    </div>
+
+    <div class="card">
+        Errors
+        <div
+            class="value"
+            id="execution-errors"
+        >
+            -
+        </div>
+    </div>
+
+</div>
+
+</section>
+
+
+<section>
+
+<h2>Recent Executions</h2>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Execution</th>
+<th>Automation Case</th>
+<th>Status</th>
+<th>Duration</th>
+</tr>
+
+</thead>
+
+<tbody id="execution-body"></tbody>
+
+</table>
+
+</section>
+
+</main>
+
+<script src="/static/js/execution.js"></script>
+
+</body>
+
+</html>
+"""
+    )
+
+
+@app.get(
+    "/reports",
+    response_class=HTMLResponse,
+)
+def reports_page():
+    return HTMLResponse(
+        """
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>QA MCP — Reports &amp; Analysis</title>
+
+<link
+    rel="stylesheet"
+    href="/static/css/dashboard.css"
+>
+
+</head>
+
+<body>
+
+<nav class="workflow-navigation">
+
+    <a
+        class="workflow-nav-link"
+        href="/"
+    >
+        Dashboard
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/project-workspace"
+    >
+        Projects / QA Workspace
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/execution"
+    >
+        Execution
+    </a>
+
+    <a
+        class="workflow-nav-link active"
+        href="/reports"
+    >
+        Reports &amp; Analysis
+    </a>
+
+</nav>
+
+<main>
+
+<section>
+
+<h1>Reports &amp; Analysis</h1>
+
+<p>
+Review aggregate execution reporting and failure analysis
+using the existing backend capabilities.
+</p>
+
+<div
+    id="reports-error"
+    class="error"
+></div>
+
+<div class="grid">
+
+    <div class="card">
+        Total Executions
+        <div
+            class="value"
+            id="report-total"
+        >
+            -
+        </div>
+    </div>
+
+    <div class="card">
+        Pass Rate
+        <div
+            class="value"
+            id="report-pass-rate"
+        >
+            -
+        </div>
+    </div>
+
+    <div class="card">
+        Average Duration
+        <div
+            class="value"
+            id="report-average-duration"
+        >
+            -
+        </div>
+    </div>
+
+</div>
+
+</section>
+
+
+<section>
+
+<h2>Failure Analysis</h2>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Execution</th>
+<th>Automation Case</th>
+<th>Status</th>
+<th>Message</th>
+</tr>
+
+</thead>
+
+<tbody id="failure-body"></tbody>
+
+</table>
+
+</section>
+
+</main>
+
+<script src="/static/js/reports.js"></script>
+
+</body>
+
+</html>
+"""
+    )
 
 # ---------------------------------------------------------
 # Dashboard
@@ -573,13 +884,34 @@ def dashboard():
 </head>
 
 <body>
-<nav class="dashboard-navigation">
+<nav class="workflow-navigation">
 
     <a
-        href="/project-workspace"
-        class="secondary-button"
+        class="workflow-nav-link active"
+        href="/"
     >
-        Project QA Workspace
+        Dashboard
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/project-workspace"
+    >
+        Projects / QA Workspace
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/execution"
+    >
+        Execution
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/reports"
+    >
+        Reports &amp; Analysis
     </a>
 
 </nav>
@@ -942,13 +1274,34 @@ def project_workspace():
 
 <body>
 
-<nav class="dashboard-navigation">
+<nav class="workflow-navigation">
 
     <a
+        class="workflow-nav-link"
         href="/"
-        class="secondary-button"
     >
-        ← QA Dashboard
+        Dashboard
+    </a>
+
+    <a
+        class="workflow-nav-link active"
+        href="/project-workspace"
+    >
+        Projects / QA Workspace
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/execution"
+    >
+        Execution
+    </a>
+
+    <a
+        class="workflow-nav-link"
+        href="/reports"
+    >
+        Reports &amp; Analysis
     </a>
 
 </nav>

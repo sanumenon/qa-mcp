@@ -168,3 +168,30 @@ pre {
     color: #6c757d;
     font-weight: 600;
 }
+.workflow-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.workflow-nav-link {
+    display: inline-block;
+    padding: 9px 14px;
+    border-radius: 6px;
+    color: #1f2937;
+    background: #e5e7eb;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.workflow-nav-link:hover {
+    text-decoration: none;
+}
+
+.workflow-nav-link.active {
+    background: #2563eb;
+    color: white;
+}
