@@ -27,13 +27,13 @@ The project is being developed incrementally toward a full-fledged AI-powered QA
 
 **Current implementation checkpoint:** P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation
 
-**P2-S9.17 status:** Implementation and validation complete; awaiting user review and commit. No P2-S9.17 commit or push has been made.
+**P2-S9.17 status:** COMPLETE — committed as `5759211` and `f94f05c`, pushed to `origin/main`.
 
-**Current Git base:** `6b8c532` — Complete P2-S9.16 project-centric workspace UX. This commit is on `main` and `origin/main`.
+**Current Git base:** `f94f05c` — Fix local development operator access (corrective commit for P2-S9.17). This commit is on `main` and `origin/main`.
 
 **Approved product direction:** Model B — Internal QA-Team Platform
 
-**Latest committed checkpoint:** P2-S9.16 — Project-Centric QA Workspace UX, committed as `6b8c532` and pushed to `origin/main`.
+**Latest committed checkpoint:** P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation, committed as `5759211` (implementation) and `f94f05c` (local development operator correction), pushed to `origin/main`.
 
 **Repository:** `https://github.com/sanumenon/qa-mcp`
 
@@ -200,9 +200,11 @@ Model C network exposure and Model D untrusted execution remain out of scope.
 
 ## P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation
 
-**Status: IMPLEMENTATION COMPLETE AND VALIDATED — awaiting user review/commit**
+**Status: COMPLETE**
 
-**Implementation commit:** Pending user commit. No commit hash has been assigned.
+**Implementation commit:** `5759211` — Complete P2-S9.17 internal identity and authorization
+
+**Corrective commit:** `f94f05c` — Fix local development operator access (ensures configured development subject maps to trusted LOCAL_OPERATOR identity)
 
 The selected identity provider is Google Workspace using Google OAuth 2.0 / OpenID Connect. Google client credentials, redirect URI, and Workspace domain are deployment settings; the Workspace domain is not hard-coded. Production startup requires Google OIDC configuration, a 32-character session secret, an HTTPS redirect URI, and Secure session cookies. The local development actor is configuration-controlled and is rejected in production.
 
@@ -240,6 +242,14 @@ git diff --check:                                  clean
 ```
 
 Google OIDC callback behavior was verified through a mocked identity boundary; no live Google credentials or organization deployment were used. P2-S9.17 does not claim deployment readiness until the organization's Google client/domain settings, HTTPS callback, production secret provisioning, legacy ownership mappings, and operational backup schedule are configured and verified. SQLite remains a single-host store, and automation remains a local subprocess rather than a sandbox. Model C network exposure and Model D untrusted execution remain out of scope.
+
+### Model B Readiness Assessment
+
+A post-P2-S9.17 production-readiness audit was completed on 2026-10-09. The audit covered 12 security and operational areas including continuity, authentication, authorization, web security, MCP boundary, execution security, database/recovery, legacy data, health/operations, UI/workflow, test confidence, and Model B deployment readiness.
+
+**Readiness Classification:** READY FOR MODEL B WITH DEPLOYMENT/OPERATIONAL PREREQUISITES
+
+The technical implementation is complete for a trusted internal QA-team platform (Model B). Deployment requires configuration of Google OAuth credentials, Workspace domain, production session secret, global administrator subjects, legacy project ownership mappings, HTTPS deployment, and operational backup scheduling. Model C network exposure hardening and Model D untrusted execution sandboxing remain explicitly out of scope.
 
 # 2. PRODUCT VISION
 
@@ -1841,10 +1851,12 @@ clean working tree. Its validation baseline was 327 passed, 8 warnings, and
 
 P2-S9.15 validation baseline: 329 passed, 8 warnings, and 0 failures.
 P2-S9.16 — Project-Centric QA Workspace UX is complete, committed as
-`6b8c532`, and pushed to `origin/main`. P2-S9.17 implementation and validation
-are complete and awaiting user review/commit; no commit hash exists yet. Model
-B remains the approved product direction; Model C and Model D remain out of
-scope.
+`6b8c532`, and pushed to `origin/main`. P2-S9.17 — Internal Identity, Project
+Authorization, and Execution Credential Isolation is complete, committed as
+`5759211` (implementation) and `f94f05c` (corrective commit for local development
+operator access), and pushed to `origin/main`. P2-S9.17 validation baseline:
+349 passed (full regression), 8 warnings, and 0 failures. Model B remains the
+approved product direction; Model C and Model D remain out of scope.
 
 Current automation MCP surface:
 
@@ -1866,7 +1878,7 @@ A future development session must:
    `https://github.com/sanumenon/qa-mcp/tree/main`
 3. Confirm the latest commit and test baseline.
 4. Inspect the existing implementation before proposing changes.
-5. Treat **P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation** as the latest implementation checkpoint, complete and validated but awaiting user review/commit. Do not invent its commit hash. P2-S9.16 remains committed as `6b8c532` and pushed to `origin/main`; P2-S9.15 remains committed as `ba9e27c`. Model B is the approved deployment direction; Model C and Model D remain out of scope.
+5. Treat **P2-S9.17 — Internal Identity, Project Authorization, and Execution Credential Isolation** as the latest implementation checkpoint. P2-S9.17 is committed as `5759211` (implementation) and `f94f05c` (corrective commit for local development operator access) and pushed to `origin/main`. P2-S9.16 remains committed as `6b8c532`; P2-S9.15 remains committed as `ba9e27c`. Model B is the approved deployment direction; Model C and Model D remain out of scope.
 6. Treat **P2-S9.1.a — Safe Workspace/File Handling** as complete.
 7. Treat **P2-S9.1.b.1 — Controlled Automation Command Boundary** as complete.
 8. Do not recreate candidate selection.
